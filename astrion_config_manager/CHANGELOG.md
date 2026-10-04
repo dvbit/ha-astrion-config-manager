@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.0 - 2026-10-05
+
+- Docs: English translation of the specification (`SPEC.en.md`), linked from both READMEs and from the Italian spec.
+- No functional changes.
+
 ## 1.0.0 - 2026-10-05
 
 First release (spec v1.2, phase 1: RF1-RF5).

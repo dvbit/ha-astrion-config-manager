@@ -8,9 +8,9 @@ Home Assistant **app (add-on)** to manage the `dashboard.json` of one or more
 form editor, full version history with undo/redo and named versions,
 validation against your HA entities, push/pull with drift detection.
 
-🇮🇹 [Versione italiana](README.it.md) · 📄 [Specification (IT)](SPEC.md)
+🇮🇹 [Versione italiana](README.it.md) · 📄 Specification: [English](SPEC.en.md) · [Italiano](SPEC.md)
 
-> v1.0.0 = phase 1 of the specification (RF1–RF5). The visual simulator with
+> v1.x = phase 1 of the specification (RF1–RF5). The visual simulator with
 > real Harmony / Broadlink execution (RF6) is planned for v2.0.
 
 ## Installation

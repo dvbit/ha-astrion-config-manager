@@ -8,9 +8,9 @@ più telecomandi **Astrion HA100** con
 editor a form, storico completo con undo/redo e versioni con nome, validazione
 sulle entità HA, push/pull con rilevamento della deriva.
 
-🇬🇧 [English version](README.md) · 📄 [Specifica](SPEC.md)
+🇬🇧 [English version](README.md) · 📄 Specifica: [Italiano](SPEC.md) · [English](SPEC.en.md)
 
-> v1.0.0 = fase 1 della specifica (RF1–RF5). Il simulatore visivo con
+> v1.x = fase 1 della specifica (RF1–RF5). Il simulatore visivo con
 > esecuzione reale Harmony / Broadlink (RF6) è previsto nella v2.0.
 
 ## Installazione

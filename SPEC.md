@@ -1,6 +1,6 @@
 # Requisito — Astrion Config Manager (add-on HA) v1.2
 
-Stato: approvato dal richiedente. Sostituisce la v1.0: Harmony e IR rientrano nell'ambito; aggiunte le versioni con nome (RF2.11–RF2.13). Lingua del documento: italiano.
+Stato: approvato dal richiedente. Sostituisce la v1.0: Harmony e IR rientrano nell'ambito; aggiunte le versioni con nome (RF2.11–RF2.13). Lingua del documento: italiano. Traduzione inglese: [SPEC.en.md](SPEC.en.md).
 
 ## 1. Scopo
 
