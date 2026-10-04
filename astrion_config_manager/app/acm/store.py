@@ -359,9 +359,7 @@ class Store:
         meta.update({"head": hist.head, **hist.undo_redo()})
         return meta
 
-    def create_remote(
-        self, fields: dict[str, Any], content: Any, user: str | None, device_hash: str
-    ) -> dict[str, Any]:
+    def create_remote(self, fields: dict[str, Any], content: Any, user: str | None, device_hash: str) -> dict[str, Any]:
         """RF1.2: register after a successful pull; v1 is an ``import``."""
         clean = clean_fields(fields, partial=False)
         self.check_unique_name(clean["name"])

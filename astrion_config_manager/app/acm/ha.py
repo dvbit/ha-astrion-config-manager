@@ -5,8 +5,9 @@ add-on's ``SUPERVISOR_TOKEN`` (``homeassistant_api: true`` in config.yaml);
 the user never enters a token.  Outside the Supervisor (development) the
 ``HA_WS_URL`` / ``HA_TOKEN`` environment variables are used instead.
 
-v1.0 only needs the list of existing entity ids (RF4.2).  Live state for the
-simulator (RF6.4) is planned for v2.0.
+* RF4.2  list of existing entity ids (validation);
+* RF6.4  live states for the simulator (``get_states`` + ``state_changed``);
+* RF6.5  real service calls (``call_service``).
 """
 
 from __future__ import annotations
@@ -14,6 +15,8 @@ from __future__ import annotations
 import logging
 import os
 import time
+from collections.abc import AsyncIterator
+from typing import Any
 
 import aiohttp
 
@@ -38,19 +41,23 @@ class HAClient:
         self._entities: set[str] | None = None
         self._fetched = 0.0
 
+    async def _auth(self, ws: aiohttp.ClientWebSocketResponse) -> None:
+        """WebSocket API handshake (auth_required -> auth -> auth_ok)."""
+        hello = await ws.receive_json(timeout=10)
+        if hello.get("type") != "auth_required":
+            raise HAError(f"unexpected handshake: {hello.get('type')}")
+        await ws.send_json({"type": "auth", "access_token": self._token})
+        auth = await ws.receive_json(timeout=10)
+        if auth.get("type") != "auth_ok":
+            raise HAError(f"authentication failed: {auth.get('message', auth.get('type'))}")
+
     async def _call(self, payload: dict) -> object:
         """Open a socket, authenticate, run one command, close."""
         if not self._token:
             raise HAError("no token (SUPERVISOR_TOKEN missing)")
         try:
             async with self._session.ws_connect(self._url, timeout=aiohttp.ClientWSTimeout(ws_close=5)) as ws:
-                hello = await ws.receive_json(timeout=10)
-                if hello.get("type") != "auth_required":
-                    raise HAError(f"unexpected handshake: {hello.get('type')}")
-                await ws.send_json({"type": "auth", "access_token": self._token})
-                auth = await ws.receive_json(timeout=10)
-                if auth.get("type") != "auth_ok":
-                    raise HAError(f"authentication failed: {auth.get('message', auth.get('type'))}")
+                await self._auth(ws)
                 await ws.send_json({"id": 1, **payload})
                 while True:
                     msg = await ws.receive_json(timeout=15)
@@ -71,3 +78,40 @@ class HAClient:
         self._fetched = now
         _LOGGER.debug("Fetched %s entity ids from HA", len(self._entities))
         return self._entities
+
+    async def call_service(
+        self, domain: str, service: str, entity_id: str | None = None, data: dict[str, Any] | None = None
+    ) -> None:
+        """RF6.5: real service call, same domain/service/data as the remote app."""
+        payload: dict[str, Any] = {"type": "call_service", "domain": domain, "service": service}
+        if data:
+            payload["service_data"] = data
+        if entity_id:
+            payload["target"] = {"entity_id": entity_id}
+        _LOGGER.info("HA call %s.%s %s %s", domain, service, entity_id or "", data or "")
+        await self._call(payload)
+
+    async def live(self) -> AsyncIterator[dict[str, Any]]:
+        """RF6.4: yield all states once, then every ``state_changed`` new state.
+
+        Yields ``{"type": "states", "states": [...]}`` then
+        ``{"type": "state", "entity_id", "state"}`` (state None = removed).
+        """
+        if not self._token:
+            raise HAError("no token (SUPERVISOR_TOKEN missing)")
+        try:
+            async with self._session.ws_connect(self._url, heartbeat=30) as ws:
+                await self._auth(ws)
+                await ws.send_json({"id": 1, "type": "get_states"})
+                await ws.send_json({"id": 2, "type": "subscribe_events", "event_type": "state_changed"})
+                async for msg in ws:
+                    if msg.type != aiohttp.WSMsgType.TEXT:
+                        break
+                    data = msg.json()
+                    if data.get("id") == 1 and data.get("type") == "result":
+                        yield {"type": "states", "states": data.get("result") or []}
+                    elif data.get("type") == "event":
+                        evt = data["event"]["data"]
+                        yield {"type": "state", "entity_id": evt["entity_id"], "state": evt.get("new_state")}
+        except (aiohttp.ClientError, TimeoutError, ValueError, KeyError) as err:
+            raise HAError(str(err) or type(err).__name__) from err

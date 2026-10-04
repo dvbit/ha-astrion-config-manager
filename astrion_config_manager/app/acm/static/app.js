@@ -1,4 +1,5 @@
-/* Astrion Config Manager panel (spec RF1, RF2, RF5; editor in editor.js).
+/* Astrion Config Manager panel (spec RF1, RF2, RF5; editor in editor.js,
+ * simulator in simulator.js - RF6).
  * Views: remote list / archive (RF1.4, RF5.5) and remote detail with tabs
  * Editor (RF3), History (RF2.7, RF2.11-2.13) and Sync (RF5). */
 "use strict";
@@ -162,25 +163,30 @@ function remoteDialog(remote) {
 }
 
 async function openRemote(rid) {
+  closeSim();
   S.view = "remote"; S.rid = rid; S.tab = "editor"; editor = null;
   main.replaceChildren(el("p", { class: "muted", text: t("loading") }));
   await loadRemote();
 }
 
 let editor = null;
+let sim = null;
+
+/* Stop the simulator live stream when leaving the remote/tab. */
+function closeSim() { if (sim) { sim.close(); sim = null; } }
 
 function renderRemote() {
   const r = S.remote;
   main.replaceChildren();
   main.append(el("div", { class: "row" },
-    el("button", { text: "← " + t("back"), onclick: guard(async () => { S.view = "list"; await loadList(false); }) }),
+    el("button", { text: "← " + t("back"), onclick: guard(async () => { closeSim(); S.view = "list"; await loadList(false); }) }),
     el("h2", { text: r.name }), statusBadge(r.id), el("span", { class: "muted", text: `${t("head")}: v${r.head}` }),
     el("span", { class: "spacer" }),
     el("button", { text: "↶ " + t("undo"), disabled: !r.can_undo, onclick: guard(async () => applyResult(await api("POST", `api/remotes/${S.rid}/undo`, { head: r.head }))) }),
     el("button", { text: "↷ " + t("redo"), disabled: !r.can_redo, onclick: guard(async () => applyResult(await api("POST", `api/remotes/${S.rid}/redo`, { head: r.head }))) })));
   if (S.drift[r.id] === "drift" && !S.ignored.has(r.id)) main.append(driftBanner());
-  main.append(el("div", { class: "tabs" }, ...["editor", "history", "sync"].map((tab) =>
-    el("button", { class: S.tab === tab ? "active" : "", text: t("tab_" + tab), onclick: () => { S.tab = tab; render(); } }))));
+  main.append(el("div", { class: "tabs" }, ...["editor", "simulator", "history", "sync"].map((tab) =>
+    el("button", { class: S.tab === tab ? "active" : "", text: t("tab_" + tab), onclick: () => { if (tab !== "simulator") closeSim(); S.tab = tab; render(); } }))));
   const body = el("div", {});
   main.append(body);
   if (S.tab === "editor") {
@@ -189,6 +195,11 @@ function renderRemote() {
     }
     editor.root = body;
     editor.setDoc(S.doc, S.validation);
+  } else if (S.tab === "simulator") {
+    // RF6.1: the simulator follows the head and is refreshed on every version.
+    if (!sim) sim = new Simulator({ rid: S.rid, remote: S.remote, doc: S.doc });
+    sim.root = body;
+    sim.setDoc(S.doc, S.remote);
   } else if (S.tab === "history") {
     renderHistory(body);
   } else {

@@ -114,13 +114,14 @@ Home Assistant add-on with an Ingress panel that manages the configurations (`da
 10. Removing a remote: it disappears from the list and appears in "Archived" with its whole history.
 11. Assign the name "A" to version 3 with the head at 8, make further edits, restore "A": the state matches version 3 and a new `restore` version is created. Assigning the name created no version. A second name "a" on the same remote is refused.
 
-## Implementation notes (v1.0.0)
+## Implementation notes
 
 Decisions taken during requirement consolidation, not part of the original text:
 
 - Delivered as a Home Assistant app (add-on) repository, not HACS.
 - UI in five languages (EN, IT, FR, ES, DE), extending RNF3.
 - Reference schema at development time: upstream release 1.1.9-beta.
-- Phased delivery: v1.0 covers RF1–RF5; RF6 (simulator, Harmony, IR via Broadlink) is planned for v2.0.
-- Harmony actions will be routed to the single Hub IP of RF1.1; the per-action `hub` field is ignored by the simulator.
-- IR codes will be converted to Broadlink `b64:` packets (fixed 38 kHz carrier); `extender` targets are routed through the same entity.
+- Phased delivery: v1.0 covered RF1–RF5; v2.0 adds RF6 (simulator, Harmony, IR via Broadlink).
+- RF6.3 fidelity: layout, colours (ThemeConfig) and controls follow the app; icons are simplified.
+- Harmony actions are routed to the single Hub IP of RF1.1; the per-action `hub` field is ignored by the simulator.
+- IR codes are converted to Broadlink `b64:` packets (fixed 38 kHz carrier); `extender` targets are routed through the same entity.

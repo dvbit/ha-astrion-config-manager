@@ -26,6 +26,9 @@ Open **Astrion** in the sidebar (admins only).
 4. **Sync**: push sends the head after validation and verifies it by re-reading.
    Changes made on the device are reported (drift) and never applied automatically.
 
+5. **Simulator**: live preview of the head; taps and HA100 keys are executed
+   for real (HA, Harmony Hub at the remote's Hub IP, IR via its `remote.*` entity).
+
 Data lives in the app's `/data` volume and is included in Home Assistant backups.
 History is never deleted: remotes are archived, not removed.
 

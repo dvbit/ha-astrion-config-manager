@@ -20,9 +20,7 @@ import re
 from pathlib import Path
 from typing import Any
 
-SCHEMA: dict[str, Any] = json.loads(
-    (Path(__file__).parent / "static" / "card_schema.json").read_text("utf-8")
-)
+SCHEMA: dict[str, Any] = json.loads((Path(__file__).parent / "static" / "card_schema.json").read_text("utf-8"))
 
 # HardwareKey enum of input/HardwareKeys.kt (HA100 physical buttons).
 HARDWARE_KEYS = {
@@ -187,11 +185,7 @@ def _ir_devices(ctx: _Ctx, items: Any, path: str) -> None:
             ctx.err(dp, "ir_source_missing")
         target = dev.get("target")
         if target is not None and target != "local":
-            ok = (
-                isinstance(target, dict)
-                and isinstance(target.get("extender"), str)
-                and target["extender"].strip()
-            )
+            ok = isinstance(target, dict) and isinstance(target.get("extender"), str) and target["extender"].strip()
             if not ok:
                 ctx.err(f"{dp}/target", "ir_target_invalid")
 

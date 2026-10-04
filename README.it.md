@@ -10,8 +10,7 @@ sulle entità HA, push/pull con rilevamento della deriva.
 
 🇬🇧 [English version](README.md) · 📄 Specifica: [Italiano](SPEC.md) · [English](SPEC.en.md)
 
-> v1.x = fase 1 della specifica (RF1–RF5). Il simulatore visivo con
-> esecuzione reale Harmony / Broadlink (RF6) è previsto nella v2.0.
+> La v2.0 implementa l'intera specifica (RF1–RF6), simulatore incluso.
 
 ## Installazione
 
@@ -32,6 +31,7 @@ Schema seguito: release upstream **1.1.9-beta**.
 | Editor | Form per pagine, card (21 tipi, campi ricavati dai renderer upstream), hotkey, dispositivi IR, Attività, tema; JSON grezzo per tutto. Card e campi sconosciuti restano intatti. |
 | Validazione | Struttura + esistenza in HA di ogni entità citata. Push bloccato in caso di errori. |
 | Sync | Pull, push con verifica tramite rilettura, deriva via SHA-256 canonico. La deriva è solo segnalata. |
+| Simulatore | La testa resa alla risoluzione del telecomando con stati HA live; tocchi e tasti HA100 eseguono **realmente** su HA, Hub Harmony ed emettitore IR Broadlink. |
 | Lingue | Inglese, italiano, francese, spagnolo, tedesco (segue la lingua di HA). |
 
 ## Esempi d'uso
@@ -74,6 +74,25 @@ versione** (`sync-import`), **Sovrascrivi con la testa** (push) o **Ignora**.
 
 `light.vecchia_lampada` non esiste più in HA → *Entità inesistente in Home
 Assistant* sul campo; **Invia** resta disabilitato finché non si corregge.
+
+### 7. Simulatore
+
+Apri la scheda **Simulatore**. Lo schermo mostra la testa con gli stati live.
+Tocca una luce → `light.toggle` viene eseguito su HA e la card si aggiorna. Una
+scena con `"activity": "guarda_tv"` esegue l'Attività composta (accensioni,
+ingressi, ritardi) e passa alla sua pagina. Scorri di lato per le pagine, in
+alto per la pagina collegata; tieni premuto un tasto HA100 per l'hotkey lungo.
+
+I campi opzionali del telecomando abilitano le altre azioni:
+
+| Campo | Esempio | Abilita |
+| --- | --- | --- |
+| IP Hub Harmony | `192.168.2.30` | `harmonyCommand`, `activityId`, card Apple TV |
+| Entità emettitore IR | `remote.broadlink_salotto` | `irDevice` + `irCommand` (codici inline o ir-database) |
+
+Senza questi campi i pulsanti appaiono disabilitati con il motivo. I codici IR
+sono convertiti in pacchetti Broadlink `b64:`; la portante è fissata dal
+dispositivo Broadlink (~38 kHz).
 
 ## Dati e backup
 

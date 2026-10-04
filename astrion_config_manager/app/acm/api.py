@@ -19,9 +19,11 @@ import aiohttp
 from aiohttp import web
 
 from . import copying
+from .actions import Executor
 from .canonical import canonical_hash
 from .device import DeviceClient, DeviceError
 from .ha import HAClient, HAError
+from .harmony import HarmonyRegistry
 from .store import T_SYNC_IMPORT, Store, StoreError, clean_fields
 from .validate import HARDWARE_KEYS, validate
 
@@ -37,6 +39,8 @@ K_HA = web.AppKey("ha", HAClient)
 K_HTTP = web.AppKey("http", aiohttp.ClientSession)
 K_LOCKS = web.AppKey("locks", defaultdict)
 K_DEVICE = web.AppKey("device_factory", object)
+K_EXEC = web.AppKey("executor", Executor)
+K_HARMONY = web.AppKey("harmony", HarmonyRegistry)
 K_HA_OK = web.AppKey("ha_ok", dict)  # mutable holder: app state is frozen after start
 
 # Patch operations listed per version in the history view (RF2.7).
@@ -154,9 +158,7 @@ async def _drift(app: web.Application, meta: dict[str, Any]) -> dict[str, Any]:
     try:
         pulled = await _device(app, meta).pull()
     except DeviceError as err:
-        status = {"file_missing": DRIFT_MISSING, "invalid_json": DRIFT_INVALID}.get(
-            err.code, DRIFT_UNREACHABLE
-        )
+        status = {"file_missing": DRIFT_MISSING, "invalid_json": DRIFT_INVALID}.get(err.code, DRIFT_UNREACHABLE)
         _LOGGER.info("Drift check '%s': %s (%s)", meta["name"], status, err.detail or err.code)
         return {"status": status, "pulled": None}
     status = DRIFT_IN_SYNC if pulled.hash == meta.get("baseline") else DRIFT_DRIFT
@@ -312,9 +314,7 @@ async def restore(request: web.Request) -> web.Response:
     rid = request.match_info["rid"]
     data = await _body(request)
     async with request.app[K_LOCKS][rid]:
-        ver = request.app[K_STORE].restore(
-            rid, _int(data.get("head")), _int(data.get("version")), _user(request)
-        )
+        ver = request.app[K_STORE].restore(rid, _int(data.get("head")), _int(data.get("version")), _user(request))
     return await _after_version(request, rid, ver)
 
 
@@ -440,6 +440,58 @@ async def push(request: web.Request) -> web.Response:
 
 
 # --------------------------------------------------------------------------
+# Handlers - simulator (RF6)
+# --------------------------------------------------------------------------
+
+
+async def sim_live(request: web.Request) -> web.WebSocketResponse:
+    """RF6.4: forward HA states (snapshot + state_changed) to the simulator."""
+    ws = web.WebSocketResponse(heartbeat=30)
+    await ws.prepare(request)
+    _LOGGER.debug("Simulator live stream opened")
+
+    async def pump() -> None:
+        try:
+            async for item in request.app[K_HA].live():
+                await ws.send_json(item)
+        except HAError as err:
+            _LOGGER.warning("Simulator live stream: %s", err)
+            await ws.send_json({"type": "error", "error": "ha_unavailable", "detail": str(err)})
+        except ConnectionResetError:
+            pass
+
+    task = asyncio.create_task(pump())
+    try:
+        async for _msg in ws:  # the client sends nothing; wait for close
+            pass
+    finally:
+        task.cancel()
+        _LOGGER.debug("Simulator live stream closed")
+    return ws
+
+
+async def sim_action(request: web.Request) -> web.Response:
+    """RF6.5-RF6.9: execute the steps of one tap / key press for real."""
+    rid = request.match_info["rid"]
+    data = await _body(request)
+    steps = data.get("steps")
+    if not isinstance(steps, list) or not steps:
+        raise StoreError("bad_request")
+    store = request.app[K_STORE]
+    meta = store.remote_info(rid)
+    # RF6.1: always the head, never a historical version.
+    result = await request.app[K_EXEC].run(meta, store.head_state(rid), steps)
+    return web.json_response(result)
+
+
+async def sim_active(request: web.Request) -> web.Response:
+    """Composed Activities currently active per room (simulator runtime)."""
+    rid = request.match_info["rid"]
+    request.app[K_STORE].remote_info(rid)
+    return web.json_response(request.app[K_EXEC].active.get(rid, {}))
+
+
+# --------------------------------------------------------------------------
 # Application factory
 # --------------------------------------------------------------------------
 
@@ -455,7 +507,10 @@ def create_app(data_dir: Path, device_factory=DeviceClient) -> web.Application:
     async def _ctx(app: web.Application):
         app[K_HTTP] = aiohttp.ClientSession()
         app[K_HA] = HAClient(app[K_HTTP])
+        app[K_HARMONY] = HarmonyRegistry(app[K_HTTP])
+        app[K_EXEC] = Executor(app[K_HA], app[K_HARMONY], app[K_DEVICE], app[K_HTTP])
         yield
+        await app[K_HARMONY].close()
         await app[K_HTTP].close()
 
     app.cleanup_ctx.append(_ctx)
@@ -483,4 +538,7 @@ def create_app(data_dir: Path, device_factory=DeviceClient) -> web.Application:
     r.add_get("/api/remotes/{rid}/drift", drift_one)
     r.add_post("/api/remotes/{rid}/pull", pull)
     r.add_post("/api/remotes/{rid}/push", push)
+    r.add_get("/api/remotes/{rid}/sim/live", sim_live)
+    r.add_post("/api/remotes/{rid}/sim/action", sim_action)
+    r.add_get("/api/remotes/{rid}/sim/active", sim_active)
     return app

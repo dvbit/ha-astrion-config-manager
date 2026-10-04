@@ -71,6 +71,22 @@ class DeviceClient:
             raise DeviceError("invalid_json", str(err)) from err
         return Pulled(content, canonical_hash(content))
 
+    async def ir_category(self, category: str) -> Any:
+        """Download ``/ir-database/<category>.json`` (curated Pronto codes, RF6.8)."""
+        from urllib.parse import quote
+
+        url = f"{self._base}/ir-database/{quote(category)}.json"
+        _LOGGER.debug("GET %s", url)
+        try:
+            async with self._session.get(url, timeout=TIMEOUT) as resp:
+                if resp.status != 200:
+                    raise DeviceError("http_error", f"HTTP {resp.status}")
+                return json.loads((await resp.read()).decode("utf-8"))
+        except (aiohttp.ClientError, TimeoutError) as err:
+            raise DeviceError("unreachable", str(err) or type(err).__name__) from err
+        except (UnicodeDecodeError, json.JSONDecodeError) as err:
+            raise DeviceError("invalid_json", str(err)) from err
+
     async def upload(self, content: Any) -> None:
         """Upload ``content`` the same way the device's own form does (RF5.4)."""
         url = f"{self._base}/dashboard.json"

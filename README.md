@@ -10,8 +10,7 @@ validation against your HA entities, push/pull with drift detection.
 
 🇮🇹 [Versione italiana](README.it.md) · 📄 Specification: [English](SPEC.en.md) · [Italiano](SPEC.md)
 
-> v1.x = phase 1 of the specification (RF1–RF5). The visual simulator with
-> real Harmony / Broadlink execution (RF6) is planned for v2.0.
+> v2.0 implements the whole specification (RF1–RF6), simulator included.
 
 ## Installation
 
@@ -32,6 +31,7 @@ Schema followed: upstream release **1.1.9-beta**.
 | Editor | Forms for pages, cards (21 types, fields extracted from upstream renderers), hotkeys, IR devices, Activities, theme; raw JSON for everything. Unknown cards/fields survive untouched. |
 | Validation | Structure + every referenced entity must exist in HA. Push is blocked on errors. |
 | Sync | Pull, push with re-read verification, drift detection by canonical SHA-256. Drift is reported, never auto-applied. |
+| Simulator | The head rendered at the remote's resolution with live HA states; taps and HA100 keys run **for real** on HA, the Harmony Hub and the Broadlink IR emitter. |
 | Languages | English, Italian, French, Spanish, German (follows your HA language). |
 
 ## Usage examples
@@ -73,6 +73,25 @@ Someone edited the remote from its own web builder. The list shows
 
 `light.old_lamp` no longer exists in HA → *Entity not found in Home
 Assistant* shown on the field; **Push** stays disabled until fixed.
+
+### 7. Simulator
+
+Open the **Simulator** tab. The screen shows the head with live states. Tap a
+light tile → `light.toggle` runs on HA and the tile updates. A scene tile with
+`"activity": "watch_tv"` runs the composed Activity (power on, inputs, delays)
+and jumps to its page. Swipe sideways for pages, up for the linked page; hold an
+HA100 key for its long-press hotkey.
+
+Optional fields of the remote enable the other actions:
+
+| Field | Example | Enables |
+| --- | --- | --- |
+| Harmony Hub IP | `192.168.2.30` | `harmonyCommand`, `activityId`, Apple TV card |
+| IR emitter entity | `remote.broadlink_salotto` | `irDevice` + `irCommand` (inline or ir-database codes) |
+
+Without them those buttons are shown disabled with the reason. IR codes are
+converted to Broadlink `b64:` packets; the carrier frequency is fixed by the
+Broadlink device (~38 kHz).
 
 ## Data and backups
 

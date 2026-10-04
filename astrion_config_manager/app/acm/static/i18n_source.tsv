@@ -149,3 +149,33 @@ v_activity_source_invalid	Source must be ir, harmony or ha	Source deve essere ir
 v_root_invalid	Root must be an object or an array	La radice deve essere oggetto o array	La racine doit être un objet ou un tableau	La raíz debe ser objeto o array	Wurzel muss Objekt oder Array sein
 v_pages_empty	At least one page is required	Serve almeno una pagina	Au moins une page est requise	Se necesita al menos una página	Mindestens eine Seite erforderlich
 v_entity_missing	Entity not found in Home Assistant: {entity}	Entità inesistente in Home Assistant: {entity}	Entité introuvable dans Home Assistant : {entity}	Entidad inexistente en Home Assistant: {entity}	Entität in Home Assistant nicht gefunden: {entity}
+tab_simulator	Simulator	Simulatore	Simulateur	Simulador	Simulator
+sim_real	Real execution: Home Assistant, Harmony Hub, IR	Esecuzione reale: Home Assistant, Hub Harmony, IR	Exécution réelle : Home Assistant, Hub Harmony, IR	Ejecución real: Home Assistant, Hub Harmony, IR	Echte Ausführung: Home Assistant, Harmony Hub, IR
+sim_live_ok	Live	Live	En direct	En vivo	Live
+sim_live_err	HA live state unavailable	Stato live HA non disponibile	État en direct HA indisponible	Estado en vivo de HA no disponible	HA-Live-Status nicht verfügbar
+sim_no_harmony	Disabled: no Harmony Hub IP on this remote	Disabilitato: nessun IP Hub Harmony per questo telecomando	Désactivé : aucune IP de Hub Harmony	Desactivado: sin IP de Hub Harmony	Deaktiviert: keine Harmony-Hub-IP
+sim_no_ir	Disabled: no IR emitter entity on this remote	Disabilitato: nessuna entità emettitore IR per questo telecomando	Désactivé : aucune entité émetteur IR	Desactivado: sin entidad emisor IR	Deaktiviert: keine IR-Sender-Entität
+sim_page_missing	Page not found	Pagina non trovata	Page introuvable	Página no encontrada	Seite nicht gefunden
+sim_no_hotkey	no action configured	nessuna azione configurata	aucune action configurée	ninguna acción configurada	keine Aktion konfiguriert
+sim_no_activity	No active Activity in that room	Nessuna Attività attiva in quella stanza	Aucune activité active dans cette pièce	Ninguna actividad activa en esa sala	Keine aktive Aktivität in diesem Raum
+sim_settings	Settings	Impostazioni	Paramètres	Ajustes	Einstellungen
+sim_not_simulable	cannot be simulated	non simulabile	non simulable	no simulable	nicht simulierbar
+sim_on	On	Acceso	Allumé	Encendido	An
+sim_off	Off	Spento	Éteint	Apagado	Aus
+sim_current	Current	Attuale	Actuelle	Actual	Aktuell
+sim_plex	Plex library browsing is not simulated	La navigazione della libreria Plex non è simulata	La navigation Plex n'est pas simulée	La navegación de Plex no se simula	Plex-Bibliothek wird nicht simuliert
+sim_keys	HA100 physical keys	Tasti fisici HA100	Touches physiques HA100	Teclas físicas HA100	HA100-Tasten
+sim_keys_hint	Click = press, hold = long press	Clic = pressione, tieni premuto = pressione lunga	Clic = appui, maintenir = appui long	Clic = pulsación, mantener = pulsación larga	Klick = Drücken, halten = langes Drücken
+sim_linked	Linked page	Pagina collegata	Page liée	Página vinculada	Verknüpfte Seite
+sim_err_ha_error	Home Assistant error	Errore Home Assistant	Erreur Home Assistant	Error de Home Assistant	Home-Assistant-Fehler
+sim_err_harmony_error	Harmony Hub error	Errore Hub Harmony	Erreur Hub Harmony	Error del Hub Harmony	Harmony-Hub-Fehler
+sim_err_harmony_not_configured	No Harmony Hub IP configured	Nessun IP Hub Harmony configurato	Aucune IP de Hub Harmony	Sin IP de Hub Harmony	Keine Harmony-Hub-IP
+sim_err_ir_not_configured	No IR emitter entity configured	Nessuna entità emettitore IR configurata	Aucune entité émetteur IR	Sin entidad emisor IR	Keine IR-Sender-Entität
+sim_err_ir_device_unknown	Unknown IR device	Dispositivo IR sconosciuto	Appareil IR inconnu	Dispositivo IR desconocido	Unbekanntes IR-Gerät
+sim_err_ir_command_not_found	IR command not found	Comando IR non trovato	Commande IR introuvable	Comando IR no encontrado	IR-Befehl nicht gefunden
+sim_err_ir_bad_pronto	Unsupported Pronto code	Codice Pronto non supportato	Code Pronto non pris en charge	Código Pronto no compatible	Nicht unterstützter Pronto-Code
+sim_err_ir_db_unavailable	IR database not readable from the remote	IR database non leggibile dal telecomando	IR database illisible sur la télécommande	IR database no legible en el mando	IR-Datenbank auf Fernbedienung nicht lesbar
+sim_err_activity_unknown	Unknown Activity	Attività sconosciuta	Activité inconnue	Actividad desconocida	Unbekannte Aktivität
+sim_err_activity_partial	Activity started with errors	Attività avviata con errori	Activité lancée avec erreurs	Actividad iniciada con errores	Aktivität mit Fehlern gestartet
+sim_err_service_invalid	Invalid service	Servizio non valido	Service invalide	Servicio no válido	Ungültiger Dienst
+sim_err_step_unknown	Unknown action	Azione sconosciuta	Action inconnue	Acción desconocida	Unbekannte Aktion

@@ -314,9 +314,7 @@ async def test_rf33_copy_pages(env):
             {
                 "name": "Sub",
                 "linkedPage": "Home",
-                "cards": [
-                    {"type": "button_grid", "options": {"buttons": [{"irDevice": "tv", "irCommand": "on"}]}}
-                ],
+                "cards": [{"type": "button_grid", "options": {"buttons": [{"irDevice": "tv", "irCommand": "on"}]}}],
             }
         ),
     )
