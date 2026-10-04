@@ -1,0 +1,4 @@
+# Home Assistant app (add-on) repository - developers.home-assistant.io/docs/apps/repository
+name: dvbit Astrion apps
+url: https://github.com/dvbit/ha-astrion-config-manager
+maintainer: dvbit

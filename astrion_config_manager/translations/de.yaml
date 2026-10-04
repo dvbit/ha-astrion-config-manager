@@ -1,0 +1,4 @@
+configuration:
+  log_level:
+    name: Protokollstufe
+    description: "Ausführlichkeit des App-Protokolls."

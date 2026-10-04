@@ -1,0 +1,25 @@
+<!doctype html>
+<!-- Astrion Config Manager - Ingress panel (spec RNF1).
+     Vanilla JS, no build step. All URLs are relative to the Ingress prefix. -->
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Astrion Config Manager</title>
+  <link rel="stylesheet" href="static/style.css">
+</head>
+<body>
+  <header class="bar">
+    <img class="logo" src="static/icon.png" alt="" width="28" height="28">
+    <h1 id="title"></h1>
+    <span class="spacer"></span>
+    <span id="user" class="muted"></span>
+  </header>
+  <main id="main"></main>
+  <div id="toast" class="toast" hidden></div>
+  <datalist id="entity-list"></datalist>
+  <script src="static/i18n.js"></script>
+  <script src="static/editor.js"></script>
+  <script src="static/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,58 @@
+/* Astrion Config Manager panel styles. Light/dark follow the OS setting. */
+:root {
+  --bg: #f5f6f8; --card: #ffffff; --fg: #1d2129; --muted: #6b7280;
+  --line: #d9dde3; --accent: #03a9f4; --err: #d32f2f; --ok: #2e7d32; --warn: #ef6c00;
+  color-scheme: light dark;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #111418; --card: #1c2026; --fg: #e6e8eb; --muted: #9aa3ad; --line: #30363d; }
+}
+* { box-sizing: border-box; }
+body { margin: 0; font: 14px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--fg); }
+.bar { display: flex; align-items: center; gap: 8px; padding: 10px 16px; background: var(--card); border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 5; }
+.bar h1 { font-size: 17px; margin: 0; }
+.logo { display: block; }
+.spacer { flex: 1; }
+.muted { color: var(--muted); }
+main { padding: 16px; max-width: 1200px; margin: 0 auto; }
+h2 { font-size: 16px; margin: 18px 0 8px; }
+h3 { font-size: 14px; margin: 14px 0 6px; }
+button { font: inherit; padding: 6px 12px; border-radius: 6px; border: 1px solid var(--line); background: var(--card); color: var(--fg); cursor: pointer; }
+button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+button.danger { color: var(--err); }
+button.icon { padding: 2px 8px; }
+button:disabled { opacity: .45; cursor: default; }
+input, select, textarea { font: inherit; padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--fg); width: 100%; }
+input[type=checkbox] { width: auto; }
+textarea { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12px; min-height: 90px; }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 12px; margin-bottom: 12px; }
+.row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
+.field label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 2px; }
+.field.invalid input, .field.invalid textarea, .field.invalid select { border-color: var(--err); }
+.field .msg { color: var(--err); font-size: 12px; }
+.badge { display: inline-block; font-size: 11px; padding: 1px 8px; border-radius: 10px; border: 1px solid var(--line); }
+.badge.in_sync { color: var(--ok); border-color: var(--ok); }
+.badge.drift, .badge.invalid, .badge.missing { color: var(--warn); border-color: var(--warn); }
+.badge.unreachable { color: var(--err); border-color: var(--err); }
+.badge.name { background: var(--accent); color: #fff; border-color: var(--accent); }
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); margin: 12px 0; }
+.tabs button { border: none; border-bottom: 2px solid transparent; border-radius: 0; background: none; }
+.tabs button.active { border-bottom-color: var(--accent); color: var(--accent); }
+.layout { display: grid; grid-template-columns: 260px 1fr; gap: 12px; align-items: start; }
+@media (max-width: 760px) { .layout { grid-template-columns: 1fr; } }
+.tree button.item { display: block; width: 100%; text-align: left; border: none; border-radius: 6px; margin: 1px 0; background: none; }
+.tree button.item.sel { background: var(--accent); color: #fff; }
+.tree .sub { padding-left: 14px; }
+.list-item { display: flex; gap: 8px; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+.list-item:last-child { border-bottom: none; }
+.issues { border-left: 3px solid var(--err); }
+.issues.ok { border-left-color: var(--ok); }
+.issues li { cursor: pointer; }
+.banner { border-left: 3px solid var(--warn); }
+.ops { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12px; color: var(--muted); }
+pre { white-space: pre-wrap; word-break: break-all; font-size: 12px; max-height: 300px; overflow: auto; background: var(--bg); padding: 8px; border-radius: 6px; }
+.toast { position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); background: var(--fg); color: var(--bg); padding: 8px 16px; border-radius: 8px; z-index: 10; max-width: 90vw; }
+.toast.err { background: var(--err); color: #fff; }
+dialog { border: 1px solid var(--line); border-radius: 10px; background: var(--card); color: var(--fg); max-width: 520px; width: 92vw; }
+dialog::backdrop { background: rgba(0,0,0,.4); }

@@ -1,0 +1,24 @@
+# Astrion Config Manager - Home Assistant app (add-on) configuration.
+# Keys per developers.home-assistant.io/docs/apps/configuration
+name: Astrion Config Manager
+version: "1.0.0"
+slug: astrion_config_manager
+description: Versioned editor and sync for Astrion HA100 remote dashboards
+url: https://github.com/dvbit/ha-astrion-config-manager
+arch:
+  - aarch64
+  - amd64
+# The base image ships s6-overlay v3: init must be false.
+init: false
+# Spec RNF1: Ingress panel only, admin users only.
+ingress: true
+ingress_port: 8099
+panel_icon: mdi:remote-tv
+panel_title: Astrion
+panel_admin: true
+# Spec section 3: HA WebSocket via the Supervisor proxy (SUPERVISOR_TOKEN).
+homeassistant_api: true
+options:
+  log_level: info
+schema:
+  log_level: list(trace|debug|info|warning|error)

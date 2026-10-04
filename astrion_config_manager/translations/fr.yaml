@@ -1,0 +1,4 @@
+configuration:
+  log_level:
+    name: Niveau de journalisation
+    description: "Niveau de détail du journal de l'app."

@@ -1,0 +1,426 @@
+{
+ "apple_tv_remote": {
+  "fields": {
+   "deviceId": {
+    "kind": "string"
+   },
+   "hub": {
+    "kind": "string"
+   }
+  }
+ },
+ "button_grid": {
+  "fields": {
+   "buttons": {
+    "kind": "json"
+   },
+   "columns": {
+    "default": 3,
+    "kind": "int"
+   },
+   "iconPosition": {
+    "kind": "string"
+   }
+  }
+ },
+ "camera": {
+  "fields": {
+   "aspect": {
+    "kind": "json"
+   },
+   "entity_id": {
+    "kind": "string"
+   },
+   "fit": {
+    "kind": "string"
+   },
+   "mode": {
+    "kind": "string"
+   },
+   "name": {
+    "kind": "string"
+   },
+   "snapshot_interval": {
+    "kind": "int"
+   }
+  }
+ },
+ "climate": {
+  "fields": {
+   "entity_id": {
+    "kind": "string"
+   },
+   "fan_mode_style": {
+    "kind": "string"
+   },
+   "hvac_mode_style": {
+    "kind": "string"
+   },
+   "name": {
+    "kind": "string"
+   },
+   "show_captions": {
+    "kind": "json"
+   },
+   "step": {
+    "kind": "json"
+   },
+   "swing_mode_style": {
+    "kind": "string"
+   }
+  }
+ },
+ "clock_weather": {
+  "fields": {
+   "calendar_entity": {
+    "kind": "string"
+   },
+   "entity_id": {
+    "kind": "string"
+   },
+   "forecast_rows": {
+    "default": 4,
+    "kind": "int"
+   },
+   "time_format": {
+    "default": 12,
+    "kind": "int"
+   }
+  }
+ },
+ "cover": {
+  "fields": {
+   "entity_id": {
+    "kind": "string"
+   },
+   "layout": {
+    "kind": "string"
+   },
+   "name": {
+    "kind": "string"
+   },
+   "show_buttons_control": {
+    "kind": "bool"
+   },
+   "show_position_control": {
+    "default": false,
+    "kind": "bool"
+   },
+   "show_tilt_position_control": {
+    "default": false,
+    "kind": "bool"
+   }
+  }
+ },
+ "fan": {
+  "fields": {
+   "entity_id": {
+    "kind": "string"
+   },
+   "name": {
+    "kind": "string"
+   },
+   "show_captions": {
+    "kind": "json"
+   },
+   "step": {
+    "kind": "json"
+   },
+   "style": {
+    "kind": "string"
+   }
+  }
+ },
+ "light": {
+  "fields": {
+   "collapsible_controls": {
+    "default": false,
+    "kind": "bool"
+   },
+   "entity_id": {
+    "kind": "string"
+   },
+   "layout": {
+    "kind": "string"
+   },
+   "name": {
+    "kind": "string"
+   },
+   "show_brightness": {
+    "default": true,
+    "kind": "bool"
+   },
+   "show_brightness_control": {
+    "kind": "bool"
+   },
+   "show_color_control": {
+    "default": false,
+    "kind": "bool"
+   },
+   "show_color_temp_control": {
+    "default": false,
+    "kind": "bool"
+   },
+   "use_light_color": {
+    "default": false,
+    "kind": "bool"
+   }
+  }
+ },
+ "media_player": {
+  "fields": {
+   "artwork_fit": {
+    "kind": "string"
+   },
+   "artwork_ratio": {
+    "kind": "string"
+   },
+   "entity_id": {
+    "kind": "string"
+   },
+   "media_controls": {
+    "kind": "string"
+   },
+   "name": {
+    "kind": "string"
+   },
+   "show_volume_level": {
+    "default": false,
+    "kind": "bool"
+   },
+   "top_buttons": {
+    "kind": "json"
+   },
+   "use_media_info": {
+    "default": true,
+    "kind": "bool"
+   },
+   "variant": {
+    "kind": "string"
+   },
+   "volume_controls": {
+    "kind": "string"
+   }
+  }
+ },
+ "monitor": {
+  "fields": {
+   "entities": {
+    "kind": "json"
+   },
+   "title": {
+    "kind": "string"
+   }
+  }
+ },
+ "picture_elements": {
+  "fields": {
+   "aspect": {
+    "kind": "json"
+   },
+   "elements": {
+    "kind": "json"
+   },
+   "image": {
+    "kind": "string"
+   },
+   "radar": {
+    "kind": "json"
+   },
+   "vacuum": {
+    "kind": "json"
+   }
+  }
+ },
+ "plex": {
+  "fields": {
+   "host": {
+    "kind": "string"
+   },
+   "items_per_row": {
+    "kind": "int"
+   },
+   "media_entity": {
+    "kind": "string"
+   },
+   "play_content_type": {
+    "kind": "string"
+   },
+   "play_entity": {
+    "kind": "string"
+   },
+   "show_on_deck": {
+    "kind": "bool"
+   },
+   "show_recently_added_movies": {
+    "kind": "bool"
+   },
+   "show_recently_added_shows": {
+    "kind": "bool"
+   },
+   "source": {
+    "kind": "string"
+   },
+   "token": {
+    "kind": "string"
+   }
+  }
+ },
+ "row": {
+  "fields": {
+   "cards": {
+    "kind": "json"
+   }
+  }
+ },
+ "scene_grid": {
+  "fields": {
+   "columns": {
+    "default": 2,
+    "kind": "int"
+   },
+   "iconPosition": {
+    "kind": "string"
+   },
+   "icon_fill": {
+    "kind": "json"
+   },
+   "layout": {
+    "kind": "string"
+   },
+   "scenes": {
+    "kind": "json"
+   },
+   "show_labels": {
+    "kind": "json"
+   },
+   "tile_height": {
+    "kind": "int"
+   }
+  }
+ },
+ "select": {
+  "fields": {
+   "entity_id": {
+    "kind": "string"
+   },
+   "icon_color": {
+    "kind": "string"
+   },
+   "layout": {
+    "kind": "string"
+   },
+   "name": {
+    "kind": "string"
+   }
+  }
+ },
+ "source_select": {
+  "fields": {
+   "entity_id": {
+    "kind": "string"
+   },
+   "name": {
+    "kind": "string"
+   }
+  }
+ },
+ "speaker_group": {
+  "fields": {
+   "master": {
+    "kind": "string"
+   },
+   "name": {
+    "kind": "string"
+   },
+   "speakers": {
+    "kind": "json"
+   }
+  }
+ },
+ "switch": {
+  "fields": {
+   "entity_id": {
+    "kind": "string"
+   },
+   "icon": {
+    "kind": "string"
+   },
+   "name": {
+    "kind": "string"
+   },
+   "on_color": {
+    "kind": "json"
+   }
+  }
+ },
+ "title": {
+  "fields": {
+   "alignment": {
+    "kind": "string"
+   },
+   "color": {
+    "kind": "string"
+   },
+   "divider": {
+    "kind": "bool"
+   },
+   "icon": {
+    "kind": "string"
+   },
+   "subtitle": {
+    "kind": "string"
+   },
+   "title": {
+    "kind": "string"
+   }
+  }
+ },
+ "tv_remote": {
+  "fields": {
+   "apps": {
+    "kind": "json"
+   },
+   "commands": {
+    "kind": "json"
+   },
+   "media_entity": {
+    "kind": "string"
+   },
+   "mute_entity": {
+    "kind": "string"
+   },
+   "name": {
+    "kind": "string"
+   },
+   "remote_entity": {
+    "kind": "string"
+   }
+  }
+ },
+ "vacuum": {
+  "fields": {
+   "entity_id": {
+    "kind": "json"
+   },
+   "map_height": {
+    "kind": "json"
+   },
+   "map_image": {
+    "kind": "json"
+   },
+   "map_rotation": {
+    "kind": "json"
+   },
+   "name": {
+    "kind": "json"
+   },
+   "room_clean_action": {
+    "kind": "json"
+   },
+   "rooms": {
+    "kind": "json"
+   }
+  }
+ }
+}

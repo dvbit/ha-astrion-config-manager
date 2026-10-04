@@ -1,0 +1,15 @@
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+pythonpath = ["astrion_config_manager/app"]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 110
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "SIM", "D"]
+ignore = ["D203", "D213", "D105", "D107"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["D"]

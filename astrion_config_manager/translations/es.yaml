@@ -1,0 +1,4 @@
+configuration:
+  log_level:
+    name: Nivel de registro
+    description: "Nivel de detalle del registro de la app."

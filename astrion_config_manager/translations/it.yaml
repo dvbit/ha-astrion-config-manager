@@ -1,0 +1,4 @@
+configuration:
+  log_level:
+    name: Livello di log
+    description: "Dettaglio del log dell'app."

@@ -1,0 +1,151 @@
+key	en	it	fr	es	de
+app_title	Astrion Config Manager	Astrion Config Manager	Astrion Config Manager	Astrion Config Manager	Astrion Config Manager
+remotes	Remotes	Telecomandi	Télécommandes	Mandos	Fernbedienungen
+archived	Archived	Archiviati	Archivés	Archivados	Archiviert
+add_remote	Add remote	Aggiungi telecomando	Ajouter une télécommande	Añadir mando	Fernbedienung hinzufügen
+name	Name	Nome	Nom	Nombre	Name
+host	Host / IP	Host / IP	Hôte / IP	Host / IP	Host / IP
+port	Port	Porta	Port	Puerto	Port
+width	Screen width (px)	Larghezza schermo (px)	Largeur écran (px)	Ancho de pantalla (px)	Bildschirmbreite (px)
+height	Screen height (px)	Altezza schermo (px)	Hauteur écran (px)	Alto de pantalla (px)	Bildschirmhöhe (px)
+orientation	Orientation	Orientamento	Orientation	Orientación	Ausrichtung
+portrait	Portrait	Verticale	Portrait	Vertical	Hochformat
+landscape	Landscape	Orizzontale	Paysage	Horizontal	Querformat
+harmony_ip	Harmony Hub IP	IP Hub Harmony	IP du Hub Harmony	IP del Hub Harmony	Harmony-Hub-IP
+ir_entity	IR emitter entity (remote.*)	Entità emettitore IR (remote.*)	Entité émetteur IR (remote.*)	Entidad emisor IR (remote.*)	IR-Sender-Entität (remote.*)
+optional	optional	opzionale	facultatif	opcional	optional
+choose	— choose —	— scegli —	— choisir —	— elegir —	— wählen —
+save	Save	Salva	Enregistrer	Guardar	Speichern
+cancel	Cancel	Annulla	Annuler	Cancelar	Abbrechen
+register	Register (initial pull)	Registra (pull iniziale)	Enregistrer (pull initial)	Registrar (pull inicial)	Registrieren (erster Pull)
+edit	Edit	Modifica	Modifier	Editar	Bearbeiten
+archive	Archive	Archivia	Archiver	Archivar	Archivieren
+unarchive	Restore from archive	Ripristina dall'archivio	Restaurer depuis l'archive	Restaurar del archivo	Aus Archiv wiederherstellen
+open	Open	Apri	Ouvrir	Abrir	Öffnen
+back	Back	Indietro	Retour	Atrás	Zurück
+head	Head	Testa	Tête	Cabeza	Kopf
+last_push	Last pushed version	Ultima versione inviata	Dernière version envoyée	Última versión enviada	Zuletzt gesendete Version
+never	never	mai	jamais	nunca	nie
+status	Device status	Stato dispositivo	État de l'appareil	Estado del dispositivo	Gerätestatus
+st_in_sync	In sync	Allineato	Synchronisé	Sincronizado	Synchron
+st_drift	Changed on device	Modificato sul dispositivo	Modifié sur l'appareil	Modificado en el dispositivo	Auf Gerät geändert
+st_unreachable	Unreachable	Non raggiungibile	Injoignable	Inalcanzable	Nicht erreichbar
+st_missing	File missing	File assente	Fichier absent	Archivo ausente	Datei fehlt
+st_invalid	Invalid file on device	File non valido sul dispositivo	Fichier invalide sur l'appareil	Archivo no válido en el dispositivo	Ungültige Datei auf Gerät
+st_unknown	Checking…	Verifica…	Vérification…	Comprobando…	Prüfe…
+check_drift	Check device	Verifica dispositivo	Vérifier l'appareil	Comprobar dispositivo	Gerät prüfen
+pull	Pull	Pull	Pull	Pull	Pull
+push	Push to remote	Invia al telecomando	Envoyer à la télécommande	Enviar al mando	An Fernbedienung senden
+import_version	Import as version	Importa come versione	Importer comme version	Importar como versión	Als Version importieren
+overwrite	Overwrite with head	Sovrascrivi con la testa	Écraser avec la tête	Sobrescribir con la cabeza	Mit Kopf überschreiben
+ignore	Ignore	Ignora	Ignorer	Ignorar	Ignorieren
+drift_banner	The file on the device differs from the last pull/push.	Il file sul dispositivo è diverso dall'ultimo pull/push.	Le fichier sur l'appareil diffère du dernier pull/push.	El archivo del dispositivo difiere del último pull/push.	Die Datei auf dem Gerät weicht vom letzten Pull/Push ab.
+tab_editor	Editor	Editor	Éditeur	Editor	Editor
+tab_history	History	Storico	Historique	Historial	Verlauf
+tab_sync	Sync	Sincronizzazione	Synchronisation	Sincronización	Synchronisierung
+undo	Undo	Annulla ultima	Annuler la dernière	Deshacer	Rückgängig
+redo	Redo	Ripeti	Rétablir	Rehacer	Wiederholen
+pages	Pages	Pagine	Pages	Páginas	Seiten
+page	Page	Pagina	Page	Página	Seite
+cards	Cards	Card	Cartes	Tarjetas	Karten
+add_page	Add page	Aggiungi pagina	Ajouter une page	Añadir página	Seite hinzufügen
+add_card	Add card	Aggiungi card	Ajouter une carte	Añadir tarjeta	Karte hinzufügen
+add	Add	Aggiungi	Ajouter	Añadir	Hinzufügen
+duplicate	Duplicate	Duplica	Dupliquer	Duplicar	Duplizieren
+delete	Remove	Rimuovi	Supprimer	Quitar	Entfernen
+move_up	Move up	Sposta su	Monter	Subir	Nach oben
+move_down	Move down	Sposta giù	Descendre	Bajar	Nach unten
+copy_to	Copy to remote…	Copia su telecomando…	Copier vers télécommande…	Copiar a mando…	Auf Fernbedienung kopieren…
+destination	Destination remote	Telecomando di destinazione	Télécommande de destination	Mando de destino	Ziel-Fernbedienung
+dest_page	Destination page	Pagina di destinazione	Page de destination	Página de destino	Zielseite
+copy	Copy	Copia	Copier	Copiar	Kopieren
+copied	Copied: new version on destination	Copiato: nuova versione sulla destinazione	Copié : nouvelle version sur la destination	Copiado: nueva versión en el destino	Kopiert: neue Version am Ziel
+hotkeys	Hotkeys	Hotkey	Raccourcis	Teclas rápidas	Hotkeys
+long_hotkeys	Long-press hotkeys	Hotkey pressione lunga	Raccourcis appui long	Teclas pulsación larga	Hotkeys (lang drücken)
+ir_devices	IR devices	Dispositivi IR	Appareils IR	Dispositivos IR	IR-Geräte
+activities	Activities	Attività	Activités	Actividades	Aktivitäten
+theme	Theme	Tema	Thème	Tema	Design
+start_page	Start page	Pagina iniziale	Page de démarrage	Página inicial	Startseite
+global	Global	Globale	Global	Global	Global
+raw_json	Raw JSON	JSON grezzo	JSON brut	JSON sin formato	Roh-JSON
+apply	Apply	Applica	Appliquer	Aplicar	Anwenden
+unknown_fields	Other fields (JSON)	Altri campi (JSON)	Autres champs (JSON)	Otros campos (JSON)	Weitere Felder (JSON)
+unknown_card	Unknown card type: edit as raw JSON	Tipo di card sconosciuto: modifica come JSON grezzo	Type de carte inconnu : modifier en JSON brut	Tipo de tarjeta desconocido: editar como JSON	Unbekannter Kartentyp: als Roh-JSON bearbeiten
+invalid_json	Invalid JSON	JSON non valido	JSON invalide	JSON no válido	Ungültiges JSON
+issues	Validation	Validazione	Validation	Validación	Validierung
+no_issues	No errors	Nessun errore	Aucune erreur	Sin errores	Keine Fehler
+entities_unchecked	Home Assistant unreachable: entities not verified	Home Assistant non raggiungibile: entità non verificate	Home Assistant injoignable : entités non vérifiées	Home Assistant inalcanzable: entidades sin verificar	Home Assistant nicht erreichbar: Entitäten ungeprüft
+versions	Versions	Versioni	Versions	Versiones	Versionen
+named_versions	Named versions	Versioni con nome	Versions nommées	Versiones con nombre	Benannte Versionen
+only_named	Only named versions	Solo versioni con nome	Seulement les versions nommées	Solo versiones con nombre	Nur benannte Versionen
+restore	Restore	Ripristina	Restaurer	Restaurar	Wiederherstellen
+set_name	Name…	Nome…	Nommer…	Nombre…	Benennen…
+remove_name	Remove name	Rimuovi nome	Retirer le nom	Quitar nombre	Name entfernen
+name_prompt	Version name (empty to remove)	Nome versione (vuoto per rimuovere)	Nom de la version (vide pour retirer)	Nombre de la versión (vacío para quitar)	Versionsname (leer zum Entfernen)
+delta	Changes	Modifiche	Modifications	Cambios	Änderungen
+ops_more	more changes	altre modifiche	autres modifications	cambios más	weitere Änderungen
+by	by	di	par	por	von
+type_import	import	import	import	import	Import
+type_edit	edit	modifica	modification	edición	Bearbeitung
+type_undo	undo	undo	annulation	deshacer	Rückgängig
+type_redo	redo	redo	rétablissement	rehacer	Wiederholen
+type_restore	restore	ripristino	restauration	restauración	Wiederherstellung
+type_sync-import	sync-import	sync-import	sync-import	sync-import	Sync-Import
+confirm_archive	Archive this remote? History is kept.	Archiviare il telecomando? La storia resta.	Archiver cette télécommande ? L'historique est conservé.	¿Archivar este mando? El historial se conserva.	Fernbedienung archivieren? Verlauf bleibt erhalten.
+confirm_restore	Restore version	Ripristinare la versione	Restaurer la version	¿Restaurar la versión	Version wiederherstellen
+confirm_delete	Remove this element?	Rimuovere l'elemento?	Supprimer cet élément ?	¿Quitar este elemento?	Element entfernen?
+push_ok	Pushed and verified	Inviato e verificato	Envoyé et vérifié	Enviado y verificado	Gesendet und geprüft
+push_ok_drift	Pushed: device changes overwritten	Inviato: modifiche del dispositivo sovrascritte	Envoyé : modifications de l'appareil écrasées	Enviado: cambios del dispositivo sobrescritos	Gesendet: Geräteänderungen überschrieben
+pull_none	Device file equals head: no version	File del dispositivo uguale alla testa: nessuna versione	Fichier identique à la tête : aucune version	Archivo igual a la cabeza: sin versión	Gerätedatei gleich Kopf: keine Version
+saved_version	Version created	Versione creata	Version créée	Versión creada	Version erstellt
+realigned	Another change arrived first: view realigned	Un'altra modifica è arrivata prima: vista riallineata	Une autre modification est arrivée avant : vue réalignée	Otro cambio llegó antes: vista realineada	Eine andere Änderung kam zuerst: Ansicht aktualisiert
+loading	Loading…	Caricamento…	Chargement…	Cargando…	Lädt…
+empty_list	Nothing here yet	Ancora nulla qui	Rien pour l'instant	Nada todavía	Noch nichts vorhanden
+inline_codes	Inline codes (JSON)	Codici inline (JSON)	Codes inline (JSON)	Códigos inline (JSON)	Inline-Codes (JSON)
+db_ref	IR database reference	Riferimento IR database	Référence IR database	Referencia IR database	IR-Datenbank-Referenz
+target	Target	Destinazione	Cible	Destino	Ziel
+local	local	locale	local	local	lokal
+extender	extender	extender	extender	extender	Extender
+none	none	nessuno	aucun	ninguno	keine
+version	Version	Versione	Version	Versión	Version
+items	elements	elementi	éléments	elementos	Elemente
+unknown_type	not in schema	non nello schema	hors schéma	fuera del esquema	nicht im Schema
+err_name_required	Name is required	Il nome è obbligatorio	Le nom est obligatoire	El nombre es obligatorio	Name ist erforderlich
+err_host_required	Host is required	L'host è obbligatorio	L'hôte est obligatoire	El host es obligatorio	Host ist erforderlich
+err_port_invalid	Invalid port	Porta non valida	Port invalide	Puerto no válido	Ungültiger Port
+err_width_required	Width is required	La larghezza è obbligatoria	La largeur est obligatoire	El ancho es obligatorio	Breite ist erforderlich
+err_width_invalid	Invalid width	Larghezza non valida	Largeur invalide	Ancho no válido	Ungültige Breite
+err_height_required	Height is required	L'altezza è obbligatoria	La hauteur est obligatoire	El alto es obligatorio	Höhe ist erforderlich
+err_height_invalid	Invalid height	Altezza non valida	Hauteur invalide	Alto no válido	Ungültige Höhe
+err_orientation_required	Orientation is required	L'orientamento è obbligatorio	L'orientation est obligatoire	La orientación es obligatoria	Ausrichtung ist erforderlich
+err_orientation_invalid	Invalid orientation	Orientamento non valido	Orientation invalide	Orientación no válida	Ungültige Ausrichtung
+err_ir_entity_invalid	The IR entity must be remote.*	L'entità IR deve essere remote.*	L'entité IR doit être remote.*	La entidad IR debe ser remote.*	IR-Entität muss remote.* sein
+err_name_taken	Name already used by another remote	Nome già usato da un altro telecomando	Nom déjà utilisé	Nombre ya en uso	Name bereits vergeben
+err_version_name_taken	Name already used by another version	Nome già usato da un'altra versione	Nom déjà utilisé par une autre version	Nombre ya usado por otra versión	Name bereits von anderer Version verwendet
+err_unreachable	Device unreachable	Dispositivo non raggiungibile	Appareil injoignable	Dispositivo inalcanzable	Gerät nicht erreichbar
+err_file_missing	dashboard.json not present on the device	dashboard.json assente sul dispositivo	dashboard.json absent de l'appareil	dashboard.json ausente en el dispositivo	dashboard.json fehlt auf dem Gerät
+err_invalid_json	The device file is not valid JSON	Il file del dispositivo non è JSON valido	Le fichier de l'appareil n'est pas du JSON valide	El archivo del dispositivo no es JSON válido	Gerätedatei ist kein gültiges JSON
+err_http_error	Unexpected device response	Risposta inattesa dal dispositivo	Réponse inattendue de l'appareil	Respuesta inesperada del dispositivo	Unerwartete Geräteantwort
+err_push_blocked	Push blocked: fix the errors first	Push bloccato: correggi prima gli errori	Envoi bloqué : corrigez d'abord les erreurs	Envío bloqueado: corrige primero los errores	Senden blockiert: zuerst Fehler beheben
+err_ha_unavailable	Push blocked: entities cannot be verified	Push bloccato: entità non verificabili	Envoi bloqué : entités non vérifiables	Envío bloqueado: entidades no verificables	Senden blockiert: Entitäten nicht prüfbar
+err_push_verify_failed	Push failed: the re-read file differs	Push fallito: il file riletto è diverso	Envoi échoué : le fichier relu diffère	Envío fallido: el archivo releído difiere	Senden fehlgeschlagen: gelesene Datei weicht ab
+err_nothing_to_undo	Nothing to undo	Niente da annullare	Rien à annuler	Nada que deshacer	Nichts rückgängig zu machen
+err_nothing_to_redo	Nothing to redo	Niente da ripetere	Rien à rétablir	Nada que rehacer	Nichts zu wiederholen
+err_remote_not_found	Remote not found	Telecomando non trovato	Télécommande introuvable	Mando no encontrado	Fernbedienung nicht gefunden
+err_version_not_found	Version not found	Versione non trovata	Version introuvable	Versión no encontrada	Version nicht gefunden
+err_bad_request	Invalid request	Richiesta non valida	Requête invalide	Solicitud no válida	Ungültige Anfrage
+err_internal	Internal error (see add-on log)	Errore interno (vedi log dell'add-on)	Erreur interne (voir journal)	Error interno (ver registro)	Interner Fehler (siehe Log)
+err_copy_invalid_selection	Invalid selection	Selezione non valida	Sélection invalide	Selección no válida	Ungültige Auswahl
+err_copy_invalid_document	Document has no pages array	Il documento non ha l'array pages	Le document n'a pas de tableau pages	El documento no tiene array pages	Dokument hat kein pages-Array
+err_head_changed	Head changed meanwhile	La testa è cambiata nel frattempo	La tête a changé entre-temps	La cabeza cambió mientras tanto	Kopf hat sich inzwischen geändert
+v_required	Required field missing: {field}	Campo obbligatorio mancante: {field}	Champ obligatoire manquant : {field}	Falta campo obligatorio: {field}	Pflichtfeld fehlt: {field}
+v_type_mismatch	Wrong type, expected {expected}	Tipo errato, atteso {expected}	Type incorrect, attendu {expected}	Tipo incorrecto, se esperaba {expected}	Falscher Typ, erwartet {expected}
+v_hotkey_unknown	Unknown key {key}	Tasto sconosciuto {key}	Touche inconnue {key}	Tecla desconocida {key}	Unbekannte Taste {key}
+v_ir_commands_empty	IR commands map is empty	Mappa comandi IR vuota	Table des commandes IR vide	Mapa de comandos IR vacío	IR-Befehlsliste leer
+v_ir_source_missing	Needs commands or category+brand+model	Servono commands oppure category+brand+model	Il faut commands ou category+brand+model	Se necesita commands o category+brand+model	Benötigt commands oder category+brand+model
+v_ir_target_invalid	Target must be local or {"extender": id}	Target deve essere local o {"extender": id}	La cible doit être local ou {"extender": id}	El destino debe ser local o {"extender": id}	Ziel muss local oder {"extender": id} sein
+v_ir_pattern_invalid	Pattern must be a non-empty integer list	Pattern deve essere una lista di interi non vuota	Le motif doit être une liste d'entiers non vide	El patrón debe ser una lista de enteros no vacía	Muster muss eine nicht leere Ganzzahlliste sein
+v_activity_source_invalid	Source must be ir, harmony or ha	Source deve essere ir, harmony o ha	La source doit être ir, harmony ou ha	La fuente debe ser ir, harmony o ha	Quelle muss ir, harmony oder ha sein
+v_root_invalid	Root must be an object or an array	La radice deve essere oggetto o array	La racine doit être un objet ou un tableau	La raíz debe ser objeto o array	Wurzel muss Objekt oder Array sein
+v_pages_empty	At least one page is required	Serve almeno una pagina	Au moins une page est requise	Se necesita al menos una página	Mindestens eine Seite erforderlich
+v_entity_missing	Entity not found in Home Assistant: {entity}	Entità inesistente in Home Assistant: {entity}	Entité introuvable dans Home Assistant : {entity}	Entidad inexistente en Home Assistant: {entity}	Entität in Home Assistant nicht gefunden: {entity}
