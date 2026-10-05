@@ -98,3 +98,14 @@ dialog::backdrop { background: rgba(0,0,0,.4); }
 .sim-key { min-width: 54px; padding: 8px 4px; margin: 2px; }
 .sim-nav button { flex: 1; }
 .sim-real.nav-only { border-left-color: var(--accent); }
+
+/* ---------- Icons (RF7) ---------- */
+.icon-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; margin: 10px 0; max-height: 60vh; overflow: auto; }
+.icon-cell { display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 11px; word-break: break-all; text-align: center; padding: 6px; border: 1px solid var(--line); border-radius: 8px; background: var(--card); }
+img.big, span.big { width: 48px; height: 48px; object-fit: contain; }
+img.thumb, span.thumb { width: 28px; height: 28px; object-fit: contain; flex: none; }
+.icon-row input { flex: 1; }
+.missing { display: inline-flex; align-items: center; justify-content: center; color: var(--err); border: 1px dashed var(--err); border-radius: 6px; }
+img.sim-ico-img { width: 36px; height: 36px; object-fit: contain; }
+/* Long pages scroll: cards must keep their height instead of shrinking. */
+.sim-page > *, .sim-popup > * { flex: none; }

@@ -7,7 +7,10 @@ elements are rewritten:
 * page names  -> keys ``page``, ``linkedPage``, ``parent``, ``*_page``
   (scene_grid tiles, title card, page links, hotkeys);
 * IR devices  -> key ``irDevice``; referenced devices are copied along, or
-  reused when the destination already has an identical one.
+  reused when the destination already has an identical one;
+* HA catalog  -> ``haDevices`` entries whose ``entityId`` is used by the copied
+  elements are added to the destination unless an entry for that entity
+  already exists (RF7.6); id collisions get a numeric suffix.
 """
 
 from __future__ import annotations
@@ -93,6 +96,33 @@ def _bring_ir_devices(src: dict, dst: dict, elements: Any) -> dict[str, str]:
     return renames
 
 
+def _bring_ha_devices(src: dict, dst: dict, elements: Any) -> None:
+    """RF7.6: copy catalog entries for the entities used by ``elements``."""
+    used: set[str] = set()
+
+    def grab(obj: dict) -> None:
+        for val in obj.values():
+            for item in val if isinstance(val, list) else [val]:
+                if isinstance(item, str):
+                    used.add(item)
+
+    _walk(elements, grab)
+    src_list = [d for d in src.get("haDevices", []) if isinstance(d, dict) and d.get("entityId") in used]
+    if not src_list:
+        return
+    dst_list = dst.setdefault("haDevices", [])
+    have = {d.get("entityId") for d in dst_list if isinstance(d, dict)}
+    ids = {d.get("id") for d in dst_list if isinstance(d, dict)}
+    for dev in src_list:
+        if dev["entityId"] in have:
+            continue
+        new = copy.deepcopy(dev)
+        new["id"] = _unique(str(dev.get("id") or "ha_device"), ids, "_")
+        ids.add(new["id"])
+        have.add(new["entityId"])
+        dst_list.append(new)
+
+
 def _pages(doc: Any) -> list:
     if not isinstance(doc, dict) or not isinstance(doc.get("pages"), list):
         raise CopyError("copy_invalid_document")
@@ -119,6 +149,7 @@ def copy_pages(src: Any, indices: list[int], dst: Any) -> Any:
         page["name"] = new
         page_map[old] = new
     ir_map = _bring_ir_devices(src, out, chosen)
+    _bring_ha_devices(src, out, chosen)
     _rewrite(chosen, page_map, ir_map)
     dst_pages.extend(chosen)
     return out
@@ -136,6 +167,7 @@ def copy_cards(src: Any, src_page: int, indices: list[int], dst: Any, dst_page: 
     if not chosen:
         raise CopyError("copy_invalid_selection")
     ir_map = _bring_ir_devices(src, out, chosen)
+    _bring_ha_devices(src, out, chosen)
     _rewrite(chosen, {}, ir_map)
     target.setdefault("cards", []).extend(chosen)
     return out

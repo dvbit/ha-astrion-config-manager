@@ -12,7 +12,59 @@ const S = {
   rid: null, tab: "editor", remote: null, doc: null, validation: null,
   onlyNamed: false,
   schema: {}, hwKeys: [],
+  entities: [],        // HA entity ids (autocomplete, catalog form)
 };
+
+/* Icon <img>: library first, then the remote's own copy (RF7). */
+function iconImg(rid, name, cls) {
+  const img = el("img", { class: cls || "", alt: name, title: name, src: `api/icons/${encodeURIComponent(name)}` });
+  img.onerror = () => {
+    if (rid && !img.dataset.fallback) { img.dataset.fallback = "1"; img.src = `api/remotes/${rid}/icons/${encodeURIComponent(name)}`; }
+    else img.replaceWith(el("span", { class: (cls || "") + " missing", text: "?", title: name }));
+  };
+  return img;
+}
+
+/* Upload one or more files to the library (RF7.1). */
+async function uploadIcons(files) {
+  const form = new FormData();
+  for (const f of files) form.append("file", f, f.name);
+  const resp = await fetch("api/icons", { method: "POST", body: form });
+  const data = await resp.json();
+  if (!resp.ok) throw Object.assign(new Error(data.error), { data });
+  toast(`${t("icons_added")}: ${data.added.join(", ")}`);
+  return data.added;
+}
+
+/* Icon picker: library + icons already on the remote (RF7.4). */
+async function openIconPicker(rid, onPick) {
+  const dlg = el("dialog", {});
+  const grid = el("div", { class: "icon-grid" });
+  const fill = async () => {
+    const lst = rid ? await api("GET", `api/remotes/${rid}/icons`) : { library: (await api("GET", "api/icons")).map((i) => i.name), device: [] };
+    const lib = new Set(lst.library);
+    const all = [...new Set([...lst.library, ...(lst.device || [])])].sort();
+    grid.replaceChildren(...(all.length ? all.map((n) => el("button", { class: "icon-cell", onclick: () => { dlg.close(); dlg.remove(); onPick(n); } },
+      iconImg(rid, n, "big"), el("span", { text: n }), el("span", { class: "muted", text: lib.has(n) ? t("in_library") : t("on_remote_only") })))
+      : [el("p", { class: "muted", text: t("empty_list") })]));
+  };
+  const file = el("input", { type: "file", accept: "image/png,image/jpeg,image/webp", multiple: true });
+  file.onchange = guard(async () => { await uploadIcons(file.files); await fill(); });
+  dlg.append(el("h2", { text: t("choose_icon") }), el("div", { class: "row" }, file), grid,
+    el("div", { class: "row" }, el("span", { class: "spacer" }), el("button", { text: t("cancel"), onclick: () => { dlg.close(); dlg.remove(); } })));
+  document.body.append(dlg);
+  dlg.showModal();
+  await guard(fill)();
+}
+
+/* Entity autocomplete + catalog names (RF7.5). */
+function refreshEntityList() {
+  const cat = (S.doc && Array.isArray(S.doc.haDevices)) ? S.doc.haDevices : [];
+  const named = new Map(cat.filter((d) => d && d.entityId).map((d) => [d.entityId, d.name]));
+  document.getElementById("entity-list").replaceChildren(
+    ...[...named].map(([e, n]) => el("option", { value: e, label: `★ ${n}` })),
+    ...S.entities.filter((e) => !named.has(e)).map((e) => el("option", { value: e })));
+}
 const main = document.getElementById("main");
 
 /* ---------- API ---------- */
@@ -77,6 +129,7 @@ function applyResult(data) {
   S.remote = data.remote;
   S.doc = data.state;
   S.validation = data.validation;
+  refreshEntityList();
   render();
 }
 
@@ -101,12 +154,35 @@ function statusBadge(id) {
   return el("span", { class: `badge ${st}`, text: t("st_" + st) });
 }
 
+/* RF7.1/RF7.2: shared icon library. */
+async function renderIcons() {
+  const box = el("div", { class: "card" }, el("p", { class: "muted", text: t("icons_hint") }));
+  const file = el("input", { type: "file", accept: "image/png,image/jpeg,image/webp", multiple: true });
+  file.onchange = guard(async () => { await uploadIcons(file.files); render(); });
+  box.append(el("div", { class: "row" }, file));
+  const grid = el("div", { class: "icon-grid" });
+  box.append(grid);
+  main.append(box);
+  const lib = await api("GET", "api/icons");
+  if (!lib.length) grid.append(el("p", { class: "muted", text: t("empty_list") }));
+  for (const i of lib) {
+    grid.append(el("div", { class: "icon-cell" }, iconImg(null, i.name, "big"), el("span", { text: i.name }),
+      el("span", { class: "muted", text: `${Math.ceil(i.size / 1024)} kB` }),
+      el("button", { class: "icon danger", text: t("delete"), onclick: guard(async () => {
+        if (!confirm(`${t("confirm_icon_delete")} ${i.name}?`)) return;
+        await api("DELETE", `api/icons/${encodeURIComponent(i.name)}`); render();
+      }) })));
+  }
+}
+
 function renderList() {
   const archived = S.view === "archive";
   main.replaceChildren();
   main.append(el("div", { class: "tabs" },
-    el("button", { class: archived ? "" : "active", text: t("remotes"), onclick: guard(async () => { S.view = "list"; await loadList(false); }) }),
-    el("button", { class: archived ? "active" : "", text: t("archived"), onclick: guard(async () => { S.view = "archive"; await loadList(true); }) })));
+    el("button", { class: S.view === "list" ? "active" : "", text: t("remotes"), onclick: guard(async () => { S.view = "list"; await loadList(false); }) }),
+    el("button", { class: archived ? "active" : "", text: t("archived"), onclick: guard(async () => { S.view = "archive"; await loadList(true); }) }),
+    el("button", { class: S.view === "icons" ? "active" : "", text: t("icons"), onclick: () => { S.view = "icons"; render(); } })));
+  if (S.view === "icons") return renderIcons();
   if (!S.remotes.length) main.append(el("p", { class: "muted", text: t("empty_list") }));
   for (const r of S.remotes) {
     const info = el("div", {},
@@ -191,7 +267,8 @@ function renderRemote() {
   main.append(body);
   if (S.tab === "editor") {
     if (!editor) {
-      editor = new Editor({ schema: S.schema, hwKeys: S.hwKeys, commit, copy: copyDialog });
+      editor = new Editor({ schema: S.schema, hwKeys: S.hwKeys, commit, copy: copyDialog, rid: S.rid,
+        entities: () => S.entities, pickIcon: (cb) => openIconPicker(S.rid, cb) });
     }
     editor.root = body;
     editor.setDoc(S.doc, S.validation);
@@ -227,7 +304,8 @@ async function doPush() {
   S.drift[S.rid] = "in_sync";
   S.remote = res.remote;
   render();
-  toast(res.drift_overwritten ? t("push_ok_drift") : t("push_ok"));
+  toast((res.drift_overwritten ? t("push_ok_drift") : t("push_ok"))
+    + (res.icons_uploaded && res.icons_uploaded.length ? ` · ${t("icons_uploaded")}: ${res.icons_uploaded.join(", ")}` : ""));
 }
 
 /* RF5.4 / RF5.5 */
@@ -247,6 +325,21 @@ function renderSync(body) {
       el("button", { text: "⬇ " + t("pull"), onclick: guard(doPull) }),
       el("button", { class: "primary", text: "⬆ " + t("push"), disabled: !v.push_allowed, onclick: guard(doPush) })),
     v.issues.length ? el("p", { class: "msg", text: `${t("err_push_blocked")} (${v.issues.length})` }) : null));
+  // RF7.3: icons stored on this remote; import them into the shared library
+  const iconBox = el("div", { class: "card" }, el("h3", { text: t("icons_on_remote") }), el("p", { class: "muted", text: t("loading") }));
+  body.append(iconBox);
+  api("GET", `api/remotes/${S.rid}/icons`).then((lst) => {
+    const lib = new Set(lst.library);
+    iconBox.replaceChildren(el("h3", { text: t("icons_on_remote") }));
+    if (lst.device === null) { iconBox.append(el("p", { class: "muted", text: t("st_unreachable") })); return; }
+    const missing = lst.device.filter((n) => !lib.has(n));
+    iconBox.append(el("p", { class: "muted", text: `${lst.device.length} · ${t("not_in_library")}: ${missing.length}` }),
+      el("div", { class: "icon-grid" }, ...lst.device.map((n) => el("div", { class: "icon-cell" }, iconImg(S.rid, n, "big"), el("span", { text: n })))),
+      el("button", { text: t("import_icons"), disabled: !missing.length, onclick: guard(async () => {
+        const r = await api("POST", `api/remotes/${S.rid}/icons/import`);
+        toast(`${t("icons_added")}: ${r.imported.length}`); render();
+      }) }));
+  }).catch(handleError);
 }
 
 /* RF2.7 history, RF2.11-RF2.13 names, RF2.6 restore. */
@@ -339,7 +432,7 @@ async function copyDialog(kind, payload) {
     document.documentElement.lang = LANG;
     await loadList(false);
     // Entity autocomplete for the editor (best effort).
-    const ents = await api("GET", "api/entities");
-    document.getElementById("entity-list").replaceChildren(...ents.map((e) => el("option", { value: e })));
+    S.entities = await api("GET", "api/entities");
+    refreshEntityList();
   } catch (e) { await handleError(e); }
 })();

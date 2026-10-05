@@ -1,9 +1,9 @@
-# Requirement — Astrion Config Manager (HA add-on) v1.3
+# Requirement — Astrion Config Manager (HA add-on) v1.4
 
 > English translation of [SPEC.md](SPEC.md). The Italian document is the
 > reference; in case of discrepancy the Italian text prevails.
 
-Status: approved by the requester. v1.3: added RF6.12 (navigation-only mode). Supersedes v1.0: Harmony and IR are now in scope; named versions added (RF2.11–RF2.13). Original document language: Italian.
+Status: approved by the requester. v1.3: added RF6.12 (navigation-only mode). v1.4: added RF7 (icons and entity catalog). Supersedes v1.0: Harmony and IR are now in scope; named versions added (RF2.11–RF2.13). Original document language: Italian.
 
 ## 1. Purpose
 
@@ -92,6 +92,15 @@ Home Assistant add-on with an Ingress panel that manages the configurations (`da
 - RF6.10 The simulator shows a permanent indicator "Real execution: Home Assistant, Harmony Hub, IR".
 - RF6.12 "Navigation only" switch: when on, actions (HA, Harmony, IR) are not executed, only listed; navigation, linked pages, popups and composed Activities (updated locally) are still simulated. The RF6.10 indicator shows the mode. Default: off.
 - RF6.11 The simulator reproduces the behaviour the app has on the remote (conditional visibility of pages and cards, linked pages, overlays, popups, response to physical buttons), not just command sending. The editor is for designing the configuration; testing happens only in the simulator.
+
+### RF7 — Icons and entity catalog
+
+- RF7.1 Shared icon library in the add-on (PNG, JPEG, WebP, max 2 MB), included in HA backups. File names are normalised with the same rule as the remote.
+- RF7.2 Deleting an icon removes it from the library only: the remote offers no deletion and keeps its copy.
+- RF7.3 On push, icons used by the head and missing on the remote are uploaded from the library before the file. Icons present on a remote can be imported into the library.
+- RF7.4 Every icon field of the editor has a thumbnail and a picker (library + remote icons); JSON editors can insert an icon path. The simulator shows the real icons. An icon missing from both the library and the remote is an error that blocks push.
+- RF7.5 Form for the `haDevices` catalog (name, type, HA entity filtered by type). Catalog entries are offered in the editor's entity fields. A catalog entity that does not exist in HA blocks push.
+- RF7.6 Copying pages/cards between remotes also copies the catalog entries of the entities they use.
 
 ## 6. Non-functional requirements
 

@@ -31,6 +31,8 @@ Schema seguito: release upstream **1.1.9-beta**.
 | Editor | Form per pagine, card (21 tipi, campi ricavati dai renderer upstream), hotkey, dispositivi IR, Attività, tema; JSON grezzo per tutto. Card e campi sconosciuti restano intatti. |
 | Validazione | Struttura + esistenza in HA di ogni entità citata. Push bloccato in caso di errori. |
 | Sync | Pull, push con verifica tramite rilettura, deriva via SHA-256 canonico. La deriva è solo segnalata. |
+| Icone | Libreria condivisa (nei backup), selettore con anteprime, caricamento automatico delle icone mancanti al push, importazione da un telecomando. |
+| Catalogo entità | Form per `haDevices` (entità con nome usate dal web builder del telecomando), validato su HA. |
 | Simulatore | La testa resa alla risoluzione del telecomando con stati HA live; tocchi e tasti HA100 eseguono **realmente** su HA, Hub Harmony ed emettitore IR Broadlink. |
 | Lingue | Inglese, italiano, francese, spagnolo, tedesco (segue la lingua di HA). |
 
@@ -95,6 +97,22 @@ I campi opzionali del telecomando abilitano le altre azioni:
 Senza questi campi i pulsanti appaiono disabilitati con il motivo. I codici IR
 sono convertiti in pacchetti Broadlink `b64:`; la portante è fissata dal
 dispositivo Broadlink (~38 kHz).
+
+### 8. Icone e catalogo entità
+
+Scheda **Icone** → carica `disco.png`. In una `button_grid` metti il cursore
+dentro `"icon": ""` di un pulsante e premi **🖼 Inserisci icona** → `disco.png`:
+
+```json
+{ "name": "Disco", "icon": "/sdcard/astrion/icons/disco.png", "service": "scene.turn_on", "entity_id": "scene.disco" }
+```
+
+Al **push** l'add-on carica `disco.png` sul telecomando se manca. Hai già icone
+su un telecomando? **Sincronizzazione → Importa nella libreria**.
+
+**Editor → Dispositivi HA (catalogo)** → aggiungi `TV Salotto`, tipo *Media
+Player*, entità `media_player.tv`. La voce finisce in `haDevices` ed è proposta
+con ★ in tutti i campi entità.
 
 ## Dati e backup
 

@@ -182,3 +182,24 @@ sim_err_step_unknown	Unknown action	Azione sconosciuta	Action inconnue	Acción d
 sim_nav_only	Navigation only	Solo navigazione	Navigation seule	Solo navegación	Nur Navigation
 sim_nav_banner	Navigation only: actions are not executed	Solo navigazione: le azioni non vengono eseguite	Navigation seule : les actions ne sont pas exécutées	Solo navegación: las acciones no se ejecutan	Nur Navigation: Aktionen werden nicht ausgeführt
 sim_skipped	Not executed: {list}	Non eseguito: {list}	Non exécuté : {list}	No ejecutado: {list}	Nicht ausgeführt: {list}
+icons	Icons	Icone	Icônes	Iconos	Symbole
+icons_hint	Shared icon library (PNG, JPEG, WebP, max 2 MB). Icons used by a remote are uploaded to it automatically on push.	Libreria icone condivisa (PNG, JPEG, WebP, max 2 MB). Le icone usate da un telecomando vengono caricate su di esso automaticamente al push.	Bibliothèque d'icônes partagée (PNG, JPEG, WebP, 2 Mo max). Les icônes utilisées sont envoyées automatiquement à la télécommande lors du push.	Biblioteca de iconos compartida (PNG, JPEG, WebP, máx. 2 MB). Los iconos usados se suben al mando automáticamente al enviar.	Gemeinsame Symbolbibliothek (PNG, JPEG, WebP, max. 2 MB). Verwendete Symbole werden beim Senden automatisch auf die Fernbedienung geladen.
+icons_added	Icons added	Icone aggiunte	Icônes ajoutées	Iconos añadidos	Symbole hinzugefügt
+icons_uploaded	icons uploaded	icone caricate	icônes envoyées	iconos subidos	Symbole hochgeladen
+icons_on_remote	Icons on this remote	Icone su questo telecomando	Icônes sur cette télécommande	Iconos en este mando	Symbole auf dieser Fernbedienung
+not_in_library	not in library	non in libreria	hors bibliothèque	fuera de la biblioteca	nicht in Bibliothek
+import_icons	Import into library	Importa nella libreria	Importer dans la bibliothèque	Importar a la biblioteca	In Bibliothek importieren
+in_library	library	libreria	bibliothèque	biblioteca	Bibliothek
+on_remote_only	only on remote	solo sul telecomando	seulement sur la télécommande	solo en el mando	nur auf Fernbedienung
+choose_icon	Choose icon	Scegli icona	Choisir une icône	Elegir icono	Symbol wählen
+insert_icon	Insert icon	Inserisci icona	Insérer une icône	Insertar icono	Symbol einfügen
+confirm_icon_delete	Remove from the library (copies on remotes stay)	Rimuovere dalla libreria (le copie sui telecomandi restano)	Retirer de la bibliothèque (les copies sur les télécommandes restent)	Quitar de la biblioteca (las copias en los mandos se mantienen)	Aus Bibliothek entfernen (Kopien auf Fernbedienungen bleiben)
+ha_devices	HA devices (catalog)	Dispositivi HA (catalogo)	Appareils HA (catalogue)	Dispositivos HA (catálogo)	HA-Geräte (Katalog)
+ha_devices_hint	Named entities offered by the remote's web builder pickers; also suggested in this editor's entity fields (★).	Entità con nome proposte dai selettori del web builder del telecomando; suggerite anche nei campi entità di questo editor (★).	Entités nommées proposées par le web builder de la télécommande ; aussi suggérées dans les champs entité de cet éditeur (★).	Entidades con nombre ofrecidas por el web builder del mando; también sugeridas en los campos de entidad de este editor (★).	Benannte Entitäten für die Auswahllisten des Web-Builders; auch in den Entitätsfeldern dieses Editors vorgeschlagen (★).
+err_icon_name_invalid	Invalid icon file name	Nome file icona non valido	Nom de fichier d'icône invalide	Nombre de archivo de icono no válido	Ungültiger Symbol-Dateiname
+err_icon_too_large	Icon larger than 2 MB	Icona più grande di 2 MB	Icône de plus de 2 Mo	Icono mayor de 2 MB	Symbol größer als 2 MB
+err_icon_format_invalid	Not a PNG, JPEG or WebP image	Non è un'immagine PNG, JPEG o WebP	Pas une image PNG, JPEG ou WebP	No es una imagen PNG, JPEG o WebP	Kein PNG-, JPEG- oder WebP-Bild
+err_icon_not_found	Icon not found	Icona non trovata	Icône introuvable	Icono no encontrado	Symbol nicht gefunden
+v_icon_missing	Icon not in library nor on the remote: {icon}	Icona assente in libreria e sul telecomando: {icon}	Icône absente de la bibliothèque et de la télécommande : {icon}	Icono ausente en la biblioteca y en el mando: {icon}	Symbol weder in Bibliothek noch auf Fernbedienung: {icon}
+v_ha_device_domain	Entity does not match type {domain}	L'entità non corrisponde al tipo {domain}	L'entité ne correspond pas au type {domain}	La entidad no corresponde al tipo {domain}	Entität passt nicht zum Typ {domain}
+v_duplicate_id	Duplicate id {id}	Id duplicato {id}	Id en double {id}	Id duplicado {id}	Doppelte ID {id}

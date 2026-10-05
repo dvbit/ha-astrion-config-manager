@@ -43,7 +43,10 @@ const HW_LABEL = { POWER: "⏻", HOME: "⌂", MAIN: "☰", VOLUME_UP: "🔊+", V
   YELLOW_BUTTON: "🟡", BLUE_BUTTON: "🔵" };
 const LONG_PRESS_MS = 600;
 
-function iconFor(icon, entityId) {
+/* allowImg: custom icon paths (RF7) become "IMG:<name>", rendered by tile(). */
+function iconFor(icon, entityId, allowImg) {
+  const custom = iconName(icon);
+  if (custom && allowImg) return "IMG:" + custom;
   const s = String(icon || "").toLowerCase();
   if (s && !s.startsWith("mdi:") && [...s].length <= 2) return icon; // emoji given as icon
   for (const [re, e] of ICONS) if (s && re.test(s)) return e;
@@ -359,7 +362,7 @@ class Simulator {
     if (this.overlay === "activities") {
       for (const a of this.doc.activities || []) {
         const on = this.active[a.room] === a.id;
-        body.append(this.tile(iconFor(a.icon), a.name || a.id, a.room, on,
+        body.append(this.tile(iconFor(a.icon, null, true), a.name || a.id, a.room, on,
           on ? [{ kind: "activity_stop", room: a.room }] : [{ kind: "activity", id: a.id }],
           () => { this.overlay = null; if (!on && a.page) this.goto(a.page); }));
       }
@@ -372,7 +375,8 @@ class Simulator {
     const why = steps ? this.blocked(steps) : null;
     const t0 = el("button", { class: "sim-tile" + (active ? " active" : "") + (why ? " blocked" : ""), title: why || null,
       onclick: () => (steps || nav) && this.run(steps || [], nav) },
-    el("span", { class: "sim-ico", text: icon }), el("span", { class: "sim-lbl", text: label || "" }),
+    icon && icon.startsWith && icon.startsWith("IMG:") ? iconImg(this.rid, icon.slice(4), "sim-ico-img") : el("span", { class: "sim-ico", text: icon }),
+    el("span", { class: "sim-lbl", text: label || "" }),
     sub != null && sub !== "" ? el("span", { class: "sim-sub", text: sub }) : null, why ? el("span", { class: "sim-why", text: "⛔ " + why }) : null);
     if (extra) t0.append(extra);
     return t0;
@@ -423,7 +427,7 @@ class Simulator {
   }
   card_switch(o) {
     const id = o.entity_id;
-    return this.tile(iconFor(o.icon, id), this.name(o, id), this.isOn(id) ? t("sim_on") : t("sim_off"), this.isOn(id),
+    return this.tile(iconFor(o.icon, id, true), this.name(o, id), this.isOn(id) ? t("sim_on") : t("sim_off"), this.isOn(id),
       [{ kind: "service", service: `${String(id).split(".")[0]}.toggle`, entity_id: id }]);
   }
   card_fan(o) {
@@ -488,7 +492,7 @@ class Simulator {
     const cols = o.columns || 3;
     return el("div", { class: "sim-grid", style: `grid-template-columns:repeat(${cols},1fr)` }, ...(o.buttons || []).map((b) => {
       const act = b.state_entity && [].concat(b.state_value || []).includes(this.state(b.state_entity));
-      return this.tile(iconFor(b.icon, b.entity_id), b.name, null, act, this.stepsOf(b, false), this.navOf(b, false));
+      return this.tile(iconFor(b.icon, b.entity_id, true), b.name, null, act, this.stepsOf(b, false), this.navOf(b, false));
     }));
   }
   card_scene_grid(o) {
@@ -496,7 +500,7 @@ class Simulator {
     return el("div", { class: "sim-grid", style: `grid-template-columns:repeat(${cols},1fr)` }, ...(o.scenes || []).map((sc) => {
       const act = (sc.activity && Object.values(this.active).includes(sc.activity))
         || (sc.state_entity && [].concat(sc.state_value || []).includes(this.state(sc.state_entity)));
-      const tl = this.tile(iconFor(sc.icon, sc.entity_id), o.show_labels === false ? "" : sc.name, null, act, this.stepsOf(sc, true), this.navOf(sc, true));
+      const tl = this.tile(iconFor(sc.icon, sc.entity_id, true), o.show_labels === false ? "" : sc.name, null, act, this.stepsOf(sc, true), this.navOf(sc, true));
       if (sc.color) tl.style.background = sc.color;
       return tl;
     }));

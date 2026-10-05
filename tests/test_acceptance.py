@@ -35,6 +35,7 @@ BASE_DOC = {
         }
     ],
 }
+PNG = b"\x89PNG\r\n\x1a\n" + b"\x00" * 16
 ENTITIES = {"light.salotto", "media_player.tv", "light.cucina"}
 
 
@@ -44,6 +45,7 @@ class FakeDevice:
     def __init__(self, doc):
         self.text = json.dumps(doc) if doc is not None else None
         self.uploads = 0
+        self.icons = {"onboard.png": PNG}
 
     def app(self):
         async def get(_):
@@ -57,7 +59,23 @@ class FakeDevice:
             self.uploads += 1
             raise web.HTTPFound("/")
 
+        async def icons_list(_):
+            return web.json_response(sorted(self.icons))
+
+        async def icon_post(request):
+            data = await request.post()
+            self.icons[data["file"].filename] = data["file"].file.read()
+            raise web.HTTPFound("/")
+
+        async def icon_get(request):
+            if request.match_info["n"] not in self.icons:
+                return web.Response(status=404)
+            return web.Response(body=self.icons[request.match_info["n"]], content_type="image/png")
+
         app = web.Application()
+        app.router.add_get("/icons-list", icons_list)
+        app.router.add_post("/icons", icon_post)
+        app.router.add_get("/icons/{n}", icon_get)
         app.router.add_get("/dashboard.json", get)
         app.router.add_post("/dashboard.json", post)
 
@@ -338,3 +356,88 @@ async def test_ingress_only(aiohttp_client, tmp_path, monkeypatch):
     client = await aiohttp_client(create_app(tmp_path))
     assert (await client.get("/api/remotes")).status == 403
     assert api_mod.INGRESS_IP == "172.30.32.2"
+
+
+# ---------------------------------------------------------------- RF7
+
+
+async def test_rf7_icon_library_and_push_upload(env):
+    rid = (await register(env, "a", "R"))["id"]
+    form = __import__("aiohttp").FormData()
+    form.add_field("file", PNG, filename="my disco.png", content_type="image/png")
+    resp = await env.post("/api/icons", data=form)
+    assert (await resp.json())["added"] == ["my_disco.png"]  # upstream sanitize()
+    bad = __import__("aiohttp").FormData()
+    bad.add_field("file", b"not an image", filename="x.png")
+    assert (await (await env.post("/api/icons", data=bad)).json())["error"] == "icon_format_invalid"
+
+    def use(path):
+        def fn(d):
+            d["pages"][0]["cards"].append(
+                {"type": "button_grid", "options": {"buttons": [{"name": "D", "icon": path}]}}
+            )
+
+        return fn
+
+    # icon only in library -> valid; push uploads it to the remote
+    r = await edit(env, rid, use("/sdcard/astrion/icons/my_disco.png"))
+    assert r["validation"]["issues"] == []
+    resp = await env.post(f"/api/remotes/{rid}/push", json={"head": 2})
+    body = await resp.json()
+    assert resp.status == 200 and body["icons_uploaded"] == ["my_disco.png"]
+    assert "my_disco.png" in env.devices["a"].icons
+    # icon only on the remote -> valid; icon nowhere -> error blocks push
+    r = await edit(env, rid, use("/sdcard/astrion/icons/onboard.png"))
+    assert r["validation"]["issues"] == []
+    r = await edit(env, rid, use("/sdcard/astrion/icons/ghost.png"))
+    assert [i["code"] for i in r["validation"]["issues"]] == ["icon_missing"]
+    resp = await env.post(f"/api/remotes/{rid}/push", json={"head": 4})
+    assert resp.status == 422
+    # delete from library only; import from remote
+    assert (await env.delete("/api/icons/my_disco.png")).status == 200
+    res = await (await env.post(f"/api/remotes/{rid}/icons/import")).json()
+    assert sorted(res["imported"]) == ["my_disco.png", "onboard.png"]
+    lst = await (await env.get(f"/api/remotes/{rid}/icons")).json()
+    assert "onboard.png" in lst["device"] and "onboard.png" in lst["library"]
+
+
+async def test_rf7_ha_device_catalog(env):
+    rid = (await register(env, "a", "R"))["id"]
+    cat = [{"id": "luce", "domain": "light", "entityId": "light.salotto", "name": "Luce"}]
+    r = await edit(env, rid, lambda d: d.update(haDevices=cat))
+    assert r["validation"]["issues"] == []
+    bad = [
+        {"id": "x", "domain": "light", "entityId": "switch.a", "name": "X"},
+        {"id": "x", "domain": "select", "entityId": "input_select.ghost", "name": "Y"},
+    ]
+    r = await edit(env, rid, lambda d: d.update(haDevices=bad))
+    codes = sorted(i["code"] for i in r["validation"]["issues"])
+    assert codes == ["duplicate_id", "entity_missing", "entity_missing", "ha_device_domain"]
+
+
+async def test_rf7_copy_brings_catalog(env):
+    a = (await register(env, "a", "A"))["id"]
+    b = (await register(env, "b", "B"))["id"]
+    await edit(
+        env,
+        a,
+        lambda d: d.update(
+            haDevices=[
+                {"id": "luce", "domain": "light", "entityId": "light.salotto", "name": "Luce"},
+                {"id": "unused", "domain": "light", "entityId": "light.cucina", "name": "Cucina"},
+            ]
+        ),
+    )
+    await edit(
+        env,
+        b,
+        lambda d: d.update(haDevices=[{"id": "luce", "domain": "light", "entityId": "light.cucina", "name": "Altro"}]),
+    )
+    resp = await env.post(
+        "/api/copy", json={"src": a, "dst": b, "kind": "cards", "src_page": 0, "cards": [0], "dst_page": 0, "head": 2}
+    )
+    body = await resp.json()
+    assert [(d["id"], d["entityId"]) for d in body["state"]["haDevices"]] == [
+        ("luce", "light.cucina"),
+        ("luce_2", "light.salotto"),
+    ]

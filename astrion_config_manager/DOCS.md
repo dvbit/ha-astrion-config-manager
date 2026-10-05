@@ -29,6 +29,8 @@ Open **Astrion** in the sidebar (admins only).
 5. **Simulator**: live preview of the head; taps and HA100 keys are executed
    for real (HA, Harmony Hub at the remote's Hub IP, IR via its `remote.*` entity).
 
+6. **Icons**: shared library; missing icons are uploaded to a remote on push.
+
 Data lives in the app's `/data` volume and is included in Home Assistant backups.
 History is never deleted: remotes are archived, not removed.
 

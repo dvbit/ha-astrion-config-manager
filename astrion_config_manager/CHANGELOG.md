@@ -1,5 +1,18 @@
 # Changelog
 
+## 2.2.0 - 2026-10-05
+
+Spec v1.4, new RF7 (the remote's home-page utilities).
+
+- Shared icon library (Icons tab): upload PNG/JPEG/WebP, delete from library,
+  import the icons already stored on a remote.
+- Push uploads the icons used by the head that the remote does not have.
+- Icon fields: thumbnail + picker; JSON editors: "Insert icon" at the cursor.
+- Missing icons (neither in library nor on the remote) block push.
+- `haDevices` entity catalog form; catalog names suggested (★) in entity fields;
+  catalog entities validated against HA; copied with pages/cards.
+- Simulator shows custom icons; fix: cards no longer shrink on long pages.
+
 ## 2.1.0 - 2026-10-05
 
 - Simulator: scroll position of long pages is kept across live state updates

@@ -8,6 +8,9 @@
  * - RF2.3  every committed field (change event = blur or Enter) and every
  *          structural operation produces exactly one commit.
  * - RF4.4  validation issues (JSON pointers) are shown inline.
+ * - RF7.4  icon fields get a thumbnail + picker (library and remote icons);
+ *          JSON sub-editors can insert an icon path at the cursor.
+ * - RF7.5  form for the haDevices entity catalog.
  */
 "use strict";
 
@@ -45,6 +48,13 @@ const HOTKEY_FIELDS = [
   ["irDevice", "irdev"], ["irCommand", "text"], ["track", "bool"],
 ];
 const IR_FIELDS = [["id", "text"], ["name", "text"]];
+/* haDevices catalog types (remote's devices.html "Add device" form). */
+const HA_DEVICE_DOMAINS = { light: ["light"], switch: ["switch"], cover: ["cover"], climate: ["climate"],
+  media_player: ["media_player"], camera: ["camera"], fan: ["fan"], vacuum: ["vacuum"], weather: ["weather"],
+  select: ["select", "input_select"] };
+const ICON_PREFIX = "/sdcard/astrion/icons/";
+/* Icon file name from a card value, or null (same rule as backend icons.icon_ref). */
+const iconName = (v) => { const m = typeof v === "string" && v.match(/(?:^|\/)astrion\/icons\/([A-Za-z0-9._-]+)$/); return m ? m[1] : null; };
 const ACTIVITY_FIELDS = [
   ["id", "text"], ["name", "text"], ["room", "text"], ["icon", "text"], ["page", "page"],
   ["volumeDeviceId", "text"], ["volumeUpCommand", "text"], ["volumeDownCommand", "text"],
@@ -137,8 +147,20 @@ class Editor {
           list: kind === "entity" || /entit|entity_id|master/.test(key) ? "entity-list" : null,
           placeholder: opts && opts.default !== undefined ? String(opts.default) : "" });
         input.onchange = () => set(input.value === "" ? undefined : input.value);
+        if (key === "icon" || key.endsWith("_icon")) {
+          // RF7.4: thumbnail + picker for custom icons
+          const row = el("div", { class: "row icon-row" }, this.thumb(val), input,
+            el("button", { class: "icon", text: "🖼", title: t("choose_icon"), onclick: () => this.pickIcon((name) => set(ICON_PREFIX + name)) }));
+          return this.wrap(key, row, path);
+        }
     }
     return this.wrap(key, input, path);
+  }
+
+  /* Thumbnail of a custom icon value (empty when not an icon path). */
+  thumb(val) {
+    const name = iconName(val);
+    return name ? iconImg(this.rid, name, "thumb") : el("span", { class: "thumb" });
   }
 
   /* JSON sub-editor: commits only when the text parses (RF4.1 invalid JSON). */
@@ -146,6 +168,18 @@ class Editor {
     const ta = el("textarea", { rows: 4 });
     ta.value = has && val !== undefined ? JSON.stringify(val, null, 2) : "";
     const box = this.wrap(label, ta, path);
+    // RF7.4: insert an icon path at the cursor (buttons/scenes/elements arrays)
+    // mousedown is cancelled so the textarea keeps focus (no premature commit);
+    // the edited text is committed as one version once the icon is chosen.
+    const ins = el("button", { class: "icon", text: "🖼 " + t("insert_icon"), onclick: () => {
+      const at = ta.selectionStart || 0, end = ta.selectionEnd || at;
+      this.pickIcon((name) => {
+        const text = ta.value.slice(0, at) + ICON_PREFIX + name + ta.value.slice(end);
+        try { set(JSON.parse(text)); } catch (e) { ta.value = text; ta.focus(); } // invalid JSON: leave it to the user
+      });
+    } });
+    ins.addEventListener("mousedown", (e) => e.preventDefault());
+    box.querySelector("label").append(" ", ins);
     ta.onchange = () => {
       if (ta.value.trim() === "") return set(undefined);
       try { set(JSON.parse(ta.value)); } catch (e) {
@@ -245,7 +279,7 @@ class Editor {
     if (m) this.sel = m[2] !== undefined ? { kind: "card", p: +m[1], c: +m[2] } : { kind: "page", p: +m[1] };
     else {
       const g = path.split("/")[1];
-      this.sel = ["hotkeys", "longHotkeys", "irDevices", "activities", "theme"].includes(g) ? { kind: "global", g } : { kind: "raw" };
+      this.sel = ["hotkeys", "longHotkeys", "irDevices", "haDevices", "activities", "theme"].includes(g) ? { kind: "global", g } : { kind: "raw" };
     }
     this.render();
     const target = this.root.querySelector(`[data-path="${CSS.escape(path)}"]`);
@@ -274,7 +308,7 @@ class Editor {
         onclick: () => this.change((d) => d.pages.push({ name: `${t("page")} ${d.pages.length + 1}`, cards: [] })) }));
       tree.append(el("h3", { text: t("global") }));
       for (const [g, label] of [["hotkeys", "hotkeys"], ["longHotkeys", "long_hotkeys"], ["irDevices", "ir_devices"],
-        ["activities", "activities"], ["theme", "theme"]]) {
+        ["haDevices", "ha_devices"], ["activities", "activities"], ["theme", "theme"]]) {
         tree.append(item(t(label), { kind: "global", g }, s.kind === "global" && s.g === g, this.issuesAt("/" + g).length));
       }
     }
@@ -395,6 +429,13 @@ class Editor {
         (d) => `${d.id || "?"} ${d.name ? "— " + d.name : ""}`,
         (dev, ip, get) => this.irForm(dev, ip, get),
         () => ({ id: `ir_${(this.doc.irDevices || []).length + 1}`, commands: { power: { freq: 38000, pattern: [9000, 4500] } } })));
+    } else if (g === "haDevices") {
+      // RF7.5: named entity catalog, used by the remote's web builder pickers
+      panel.append(el("h2", { text: t("ha_devices") }), el("p", { class: "muted", text: t("ha_devices_hint") }),
+        this.listEditor(this.doc.haDevices || [], "/haDevices", arr("haDevices"),
+          (d) => `${d.name || "?"} — ${d.entityId || ""}`,
+          (dev, ip, get) => this.haDeviceForm(dev, ip, get),
+          () => ({ id: `ha_device_${(this.doc.haDevices || []).length + 1}`, domain: "light", entityId: "", name: "" })));
     } else if (g === "activities") {
       panel.append(el("h2", { text: t("activities") }), this.listEditor(this.doc.activities || [], "/activities", arr("activities"),
         (a) => `${a.name || a.id || "?"} (${a.room || ""})`,
@@ -405,6 +446,24 @@ class Editor {
         this.jsonField(t("theme"), this.doc.theme || {}, "/theme", (v) => this.change((d) => { if (v === undefined) delete d.theme; else d.theme = v; })));
     }
     return panel;
+  }
+
+  /* RF7.5: catalog entry; the entity list is filtered by the chosen type. */
+  haDeviceForm(dev, ip, get) {
+    const own = new Set(["id", "name", "domain", "entityId"]);
+    const box = this.form(dev, [["name", "text"], ["id", "text"], ["domain", "select", Object.keys(HA_DEVICE_DOMAINS)]], ip, get, own);
+    const doms = HA_DEVICE_DOMAINS[dev.domain] || [];
+    const ents = (this.entities() || []).filter((e) => doms.includes(e.split(".")[0]));
+    const sel = el("select", {}, el("option", { value: "", text: t("choose") }),
+      ...ents.map((e) => el("option", { value: e, text: e, selected: e === dev.entityId })));
+    if (dev.entityId && !ents.includes(dev.entityId)) sel.append(el("option", { value: dev.entityId, text: `${dev.entityId} ⚠`, selected: true }));
+    sel.onchange = () => this.change((d) => {
+      const o = get(d);
+      o.entityId = sel.value;
+      if (!o.name) o.name = sel.value; // same convenience as the remote's form
+    });
+    box.querySelector(".grid").append(this.wrap("entityId", sel, `${ip}/entityId`));
+    return box;
   }
 
   /* IR device: inline codes or ir-database reference (DashboardLoader.parseIrDevice). */

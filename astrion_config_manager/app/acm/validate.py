@@ -9,6 +9,8 @@ renderer under ``cards/impl/`` (extracted to ``static/card_schema.json``).
 * RF4.2 every entity id referenced in *known* fields must exist in HA;
   unknown cards are preserved untouched (RF3.2) and not inspected.
 * RF4.3 Harmony/IR: structure only, no check against the Hub or emitter.
+* RF7.5 ``haDevices`` catalog (structure + entity existence).
+* RF7.4 every icon path must exist in the add-on library or on the remote.
 
 Each issue is ``{"path": <JSON pointer>, "code": <i18n key>, "params": {}}``.
 """
@@ -19,6 +21,8 @@ import json
 import re
 from pathlib import Path
 from typing import Any
+
+from .icons import collect_refs
 
 SCHEMA: dict[str, Any] = json.loads((Path(__file__).parent / "static" / "card_schema.json").read_text("utf-8"))
 
@@ -65,6 +69,21 @@ ENTITY_KEYS = {
 _ENTITY_RE = re.compile(r"^[a-z_]+\.[a-z0-9_]+$")
 
 ACTIVITY_SOURCES = {"ir", "harmony", "ha"}
+
+# Catalog types of the remote's "Add device" form (docs/devices.html) and the
+# entity domains each accepts ("select" covers input_select too).
+HA_DEVICE_DOMAINS = {
+    "light": {"light"},
+    "switch": {"switch"},
+    "cover": {"cover"},
+    "climate": {"climate"},
+    "media_player": {"media_player"},
+    "camera": {"camera"},
+    "fan": {"fan"},
+    "vacuum": {"vacuum"},
+    "weather": {"weather"},
+    "select": {"select", "input_select"},
+}
 
 _KIND_CHECK = {
     "string": lambda v: isinstance(v, str),
@@ -231,6 +250,33 @@ def _activities(ctx: _Ctx, items: Any, path: str) -> None:
                 ctx.err(f"{dpp}/delayAfterMs", "type_mismatch", expected="int")
 
 
+def _ha_devices(ctx: _Ctx, items: Any, path: str) -> None:
+    """RF7.5: entity catalog ``[{id, domain, entityId, name}]`` (devices-page.js)."""
+    if not isinstance(items, list):
+        ctx.err(path, "type_mismatch", expected="array")
+        return
+    seen: set[str] = set()
+    for idx, dev in enumerate(items):
+        dp = f"{path}/{idx}"
+        if not isinstance(dev, dict):
+            ctx.err(dp, "type_mismatch", expected="object")
+            continue
+        for key in ("id", "domain", "entityId", "name"):
+            if not isinstance(dev.get(key), str) or not dev[key].strip():
+                ctx.err(f"{dp}/{key}", "required", field=key)
+        dom, ent = dev.get("domain"), dev.get("entityId")
+        if isinstance(dom, str) and dom not in HA_DEVICE_DOMAINS:
+            ctx.err(f"{dp}/domain", "ha_device_domain", domain=dom)
+        elif isinstance(dom, str) and isinstance(ent, str) and ent.split(".")[0] not in HA_DEVICE_DOMAINS[dom]:
+            ctx.err(f"{dp}/entityId", "ha_device_domain", domain=dom)
+        if isinstance(dev.get("id"), str):
+            if dev["id"] in seen:
+                ctx.err(f"{dp}/id", "duplicate_id", id=dev["id"])
+            seen.add(dev["id"])
+        if isinstance(ent, str) and ent:
+            ctx.entity(f"{dp}/entityId", ent)
+
+
 def structural(doc: Any) -> _Ctx:
     """RF4.1 structural validation; also collects entity references."""
     ctx = _Ctx()
@@ -272,13 +318,18 @@ def structural(doc: Any) -> _Ctx:
         _ir_devices(ctx, doc["irDevices"], "/irDevices")
     if "activities" in doc:
         _activities(ctx, doc["activities"], "/activities")
+    if "haDevices" in doc:
+        _ha_devices(ctx, doc["haDevices"], "/haDevices")
     if "theme" in doc and not isinstance(doc["theme"], dict):
         ctx.err("/theme", "type_mismatch", expected="object")
     return ctx
 
 
-def validate(doc: Any, known_entities: set[str] | None) -> dict[str, Any]:
+def validate(doc: Any, known_entities: set[str] | None, known_icons: set[str] | None = None) -> dict[str, Any]:
     """Full validation; ``known_entities`` None means HA is unreachable.
+
+    ``known_icons`` = library + remote icon names; None = remote list unknown
+    (unreachable), in which case icon paths are not reported (RF7.4).
 
     Returns ``{"issues": [...], "entities_checked": bool, "push_allowed": bool}``.
     RF4.5: push is allowed only with no issue and a successful entity check.
@@ -290,6 +341,11 @@ def validate(doc: Any, known_entities: set[str] | None) -> dict[str, Any]:
             if ent not in known_entities:
                 for path in paths:
                     issues.append({"path": path, "code": "entity_missing", "params": {"entity": ent}})
+    if known_icons is not None:
+        for name, paths in sorted(collect_refs(doc).items()):
+            if name not in known_icons:
+                for path in paths:
+                    issues.append({"path": path, "code": "icon_missing", "params": {"icon": name}})
     return {
         "issues": issues,
         "entities_checked": known_entities is not None,

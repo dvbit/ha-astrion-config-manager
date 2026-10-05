@@ -31,6 +31,8 @@ Schema followed: upstream release **1.1.9-beta**.
 | Editor | Forms for pages, cards (21 types, fields extracted from upstream renderers), hotkeys, IR devices, Activities, theme; raw JSON for everything. Unknown cards/fields survive untouched. |
 | Validation | Structure + every referenced entity must exist in HA. Push is blocked on errors. |
 | Sync | Pull, push with re-read verification, drift detection by canonical SHA-256. Drift is reported, never auto-applied. |
+| Icons | Shared library (backed up), picker with thumbnails, automatic upload of missing icons on push, import from a remote. |
+| Entity catalog | Form for `haDevices` (named entities used by the remote's web builder), validated against HA. |
 | Simulator | The head rendered at the remote's resolution with live HA states; taps and HA100 keys run **for real** on HA, the Harmony Hub and the Broadlink IR emitter. |
 | Languages | English, Italian, French, Spanish, German (follows your HA language). |
 
@@ -94,6 +96,22 @@ Without them those buttons are shown disabled with the reason. IR codes are
 converted to Broadlink `b64:` packets; the carrier frequency is fixed by the
 Broadlink device (~38 kHz).
 
+### 8. Icons and entity catalog
+
+**Icons** tab → upload `disco.png`. In a `button_grid`, put the cursor inside
+`"icon": ""` of a button and press **🖼 Insert icon** → `disco.png`:
+
+```json
+{ "name": "Disco", "icon": "/sdcard/astrion/icons/disco.png", "service": "scene.turn_on", "entity_id": "scene.disco" }
+```
+
+On **Push** the add-on uploads `disco.png` to the remote if it is missing there.
+Already have icons on a remote? **Sync → Import into library**.
+
+**Editor → HA devices (catalog)** → add `Salon TV`, type *Media Player*,
+entity `media_player.tv`. The entry is stored in `haDevices` and shown with ★
+in every entity field.
+
 ## Data and backups
 
 Everything lives in the app's `/data` volume (included in HA backups):
@@ -103,6 +121,7 @@ Everything lives in the app's `/data` volume (included in HA backups):
 /data/remotes/<id>/versions/*.json    one file per version (JSON Patch)
 /data/remotes/<id>/snapshots/*.json.gz full state at v1 and every 50
 /data/remotes/<id>/names.json         version names
+/data/icons/                          shared icon library
 ```
 
 Writes are atomic (temp file + fsync + rename): a version exists entirely or not at all.

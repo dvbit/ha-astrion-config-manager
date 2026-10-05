@@ -1,7 +1,7 @@
 # Astrion Config Manager - Home Assistant app (add-on) configuration.
 # Keys per developers.home-assistant.io/docs/apps/configuration
 name: Astrion Config Manager
-version: "2.1.0"
+version: "2.2.0"
 slug: astrion_config_manager
 description: Versioned editor, sync and live simulator for Astrion HA100 remote dashboards
 url: https://github.com/dvbit/ha-astrion-config-manager

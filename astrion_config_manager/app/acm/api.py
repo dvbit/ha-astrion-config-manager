@@ -14,6 +14,7 @@ import time
 from collections import defaultdict
 from pathlib import Path
 from typing import Any
+from urllib.parse import unquote
 
 import aiohttp
 from aiohttp import web
@@ -24,6 +25,7 @@ from .canonical import canonical_hash
 from .device import DeviceClient, DeviceError
 from .ha import HAClient, HAError
 from .harmony import HarmonyRegistry
+from .icons import IconLibrary, collect_refs, sanitize
 from .store import T_SYNC_IMPORT, Store, StoreError, clean_fields
 from .validate import HARDWARE_KEYS, validate
 
@@ -41,6 +43,8 @@ K_LOCKS = web.AppKey("locks", defaultdict)
 K_DEVICE = web.AppKey("device_factory", object)
 K_EXEC = web.AppKey("executor", Executor)
 K_HARMONY = web.AppKey("harmony", HarmonyRegistry)
+K_ICONS = web.AppKey("icons", IconLibrary)
+K_DEV_ICONS = web.AppKey("device_icons", dict)  # rid -> (monotonic, set of names)
 K_HA_OK = web.AppKey("ha_ok", dict)  # mutable holder: app state is frozen after start
 
 # Patch operations listed per version in the history view (RF2.7).
@@ -141,8 +145,33 @@ async def _known_entities(app: web.Application) -> set[str] | None:
     return known
 
 
-async def _validation(app: web.Application, doc: Any) -> dict[str, Any]:
-    return validate(doc, await _known_entities(app))
+# Remote icon lists are cached briefly: validation runs on every edit (RF4.4).
+DEVICE_ICONS_TTL = 30.0
+
+
+async def _device_icons(app: web.Application, meta: dict[str, Any], force: bool = False) -> set[str]:
+    """Icon names on the remote (RF7.3); raises DeviceError if unreachable."""
+    cached = app[K_DEV_ICONS].get(meta["id"])
+    if not force and cached and time.monotonic() - cached[0] < DEVICE_ICONS_TTL:
+        return cached[1]
+    names = await _device(app, meta).icons_list()
+    app[K_DEV_ICONS][meta["id"]] = (time.monotonic(), names)
+    return names
+
+
+async def _known_icons(app: web.Application, meta: dict[str, Any] | None) -> set[str] | None:
+    """Library + remote icons; None when the remote list is unknown (RF7.4)."""
+    if meta is None:
+        return None
+    try:
+        return app[K_ICONS].names() | await _device_icons(app, meta)
+    except DeviceError as err:
+        _LOGGER.debug("Icon list of '%s' unavailable: %s", meta["name"], err)
+        return None
+
+
+async def _validation(app: web.Application, doc: Any, meta: dict[str, Any] | None = None) -> dict[str, Any]:
+    return validate(doc, await _known_entities(app), await _known_icons(app, meta))
 
 
 def _summary(ver: dict[str, Any]) -> dict[str, Any]:
@@ -239,7 +268,7 @@ async def get_state(request: web.Request) -> web.Response:
     state = hist.state(vid)
     body: dict[str, Any] = {"remote": store.remote_info(rid), "version": vid, "state": state}
     if vid == hist.head:
-        body["validation"] = await _validation(request.app, state)
+        body["validation"] = await _validation(request.app, state, body["remote"])
     return web.json_response(body)
 
 
@@ -275,7 +304,7 @@ async def _after_version(request: web.Request, rid: str, ver: dict | None) -> we
             "version": _summary(ver) if ver else None,
             "remote": store.remote_info(rid),
             "state": state,
-            "validation": await _validation(request.app, state),
+            "validation": await _validation(request.app, state, store.remote_info(rid)),
         }
     )
 
@@ -331,7 +360,8 @@ async def set_name(request: web.Request) -> web.Response:
 async def validate_state(request: web.Request) -> web.Response:
     """RF4.4: validate an arbitrary (unsaved) state for inline errors."""
     data = await _body(request)
-    return web.json_response(await _validation(request.app, data.get("state")))
+    meta = request.app[K_STORE].remote_info(str(data["rid"])) if data.get("rid") else None
+    return web.json_response(await _validation(request.app, data.get("state"), meta))
 
 
 async def copy_elements(request: web.Request) -> web.Response:
@@ -409,8 +439,10 @@ async def push(request: web.Request) -> web.Response:
             raise StoreError("head_changed", 409, head=hist.head)
         meta = store.remote_info(rid)
         head_state = hist.state(hist.head)
-        # 1. validation (RF4.5)
-        check = await _validation(request.app, head_state)
+        # 0. fresh icon list of the remote (RF7.3/RF7.4); unreachable blocks
+        device_icons = await _device_icons(request.app, meta, force=True)
+        # 1. validation (RF4.5, icons included)
+        check = validate(head_state, await _known_entities(request.app), request.app[K_ICONS].names() | device_icons)
         if not check["push_allowed"]:
             _LOGGER.warning("Push '%s' blocked: %s issue(s)", meta["name"], len(check["issues"]))
             code = "push_blocked" if check["entities_checked"] else "ha_unavailable"
@@ -419,8 +451,16 @@ async def push(request: web.Request) -> web.Response:
         drift = await _drift(request.app, meta)
         if drift["status"] == DRIFT_UNREACHABLE:
             raise DeviceError("unreachable")
-        # 3. upload
+        # 3. upload missing icons from the library (RF7.3), then the file
         device = _device(request.app, meta)
+        uploaded = []
+        for name in sorted(set(collect_refs(head_state)) - device_icons):
+            data, ctype = request.app[K_ICONS].read(name)
+            await device.icon_upload(name, data, ctype)
+            uploaded.append(name)
+        if uploaded:
+            request.app[K_DEV_ICONS].pop(rid, None)
+            _LOGGER.info("Push '%s': %s icon(s) uploaded: %s", meta["name"], len(uploaded), ", ".join(uploaded))
         await device.upload(head_state)
         # 4. re-read and verify
         expected = canonical_hash(head_state)
@@ -434,9 +474,80 @@ async def push(request: web.Request) -> web.Response:
         {
             "ok": True,
             "drift_overwritten": drift["status"] == DRIFT_DRIFT,
+            "icons_uploaded": uploaded,
             "remote": store.remote_info(rid),
         }
     )
+
+
+# --------------------------------------------------------------------------
+# Handlers - icons (RF7.1-RF7.3)
+# --------------------------------------------------------------------------
+
+
+async def icons_list(request: web.Request) -> web.Response:
+    """Library content."""
+    return web.json_response(request.app[K_ICONS].list())
+
+
+async def icon_upload(request: web.Request) -> web.Response:
+    """RF7.1: add one or more images (multipart field ``file``) to the library."""
+    reader = await request.multipart()
+    added = []
+    async for part in reader:
+        if part.name == "file" and part.filename:
+            # Some clients percent-encode the filename in Content-Disposition.
+            name = unquote(part.filename)
+            added.append(request.app[K_ICONS].add(name, await part.read(decode=False)))
+    if not added:
+        raise StoreError("bad_request")
+    return web.json_response({"added": added}, status=201)
+
+
+async def icon_get(request: web.Request) -> web.Response:
+    """Serve a library icon (editor thumbnails, simulator)."""
+    data, ctype = request.app[K_ICONS].read(request.match_info["name"])
+    return web.Response(body=data, content_type=ctype, headers={"Cache-Control": "no-cache"})
+
+
+async def icon_delete(request: web.Request) -> web.Response:
+    """RF7.2: delete from the library only."""
+    request.app[K_ICONS].delete(request.match_info["name"])
+    return web.json_response({"ok": True})
+
+
+async def remote_icons(request: web.Request) -> web.Response:
+    """Icons on one remote (None when unreachable) and in the library."""
+    meta = request.app[K_STORE].remote_info(request.match_info["rid"])
+    try:
+        device = sorted(await _device_icons(request.app, meta, force=True))
+    except DeviceError as err:
+        _LOGGER.info("Icon list of '%s' unavailable: %s", meta["name"], err.code)
+        device = None
+    return web.json_response({"device": device, "library": sorted(request.app[K_ICONS].names())})
+
+
+async def remote_icon_get(request: web.Request) -> web.Response:
+    """Proxy an icon stored only on the remote (thumbnails, simulator)."""
+    meta = request.app[K_STORE].remote_info(request.match_info["rid"])
+    data, ctype = await _device(request.app, meta).icon_get(sanitize(request.match_info["name"]))
+    return web.Response(body=data, content_type=ctype or "application/octet-stream")
+
+
+async def remote_icons_import(request: web.Request) -> web.Response:
+    """Copy the remote's icons that are missing from the library into it."""
+    meta = request.app[K_STORE].remote_info(request.match_info["rid"])
+    device = _device(request.app, meta)
+    missing = sorted(await _device_icons(request.app, meta, force=True) - request.app[K_ICONS].names())
+    imported, skipped = [], []
+    for name in missing:
+        data, _ = await device.icon_get(name)
+        try:
+            imported.append(request.app[K_ICONS].add(name, data))
+        except StoreError as err:
+            skipped.append({"name": name, "error": err.code})
+    _LOGGER.info("Imported %s icon(s) from '%s' (%s skipped)", len(imported), meta["name"], len(skipped))
+    return web.json_response({"imported": imported, "skipped": skipped})
 
 
 # --------------------------------------------------------------------------
@@ -503,6 +614,8 @@ def create_app(data_dir: Path, device_factory=DeviceClient) -> web.Application:
     app[K_LOCKS] = defaultdict(asyncio.Lock)
     app[K_DEVICE] = device_factory
     app[K_HA_OK] = {"ok": True}
+    app[K_ICONS] = IconLibrary(data_dir)
+    app[K_DEV_ICONS] = {}
 
     async def _ctx(app: web.Application):
         app[K_HTTP] = aiohttp.ClientSession()
@@ -519,6 +632,13 @@ def create_app(data_dir: Path, device_factory=DeviceClient) -> web.Application:
     r.add_static("/static", STATIC)
     r.add_get("/api/meta", meta_info)
     r.add_get("/api/entities", entities)
+    r.add_get("/api/icons", icons_list)
+    r.add_post("/api/icons", icon_upload)
+    r.add_get("/api/icons/{name}", icon_get)
+    r.add_delete("/api/icons/{name}", icon_delete)
+    r.add_get("/api/remotes/{rid}/icons", remote_icons)
+    r.add_get("/api/remotes/{rid}/icons/{name}", remote_icon_get)
+    r.add_post("/api/remotes/{rid}/icons/import", remote_icons_import)
     r.add_get("/api/remotes", list_remotes)
     r.add_post("/api/remotes", create_remote)
     r.add_get("/api/drift", drift_all)

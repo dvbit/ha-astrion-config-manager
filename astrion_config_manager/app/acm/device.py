@@ -7,7 +7,10 @@ browser on ``http://<host>:<port>``, as implemented upstream in
 * ``GET  /dashboard.json`` -> 200 with the file, 404 "No dashboard.json yet"
 * ``POST /dashboard.json`` -> multipart form, field ``file``; the device
   answers with a redirect to its home page (not followed here).
-* ``GET  /ir-database/<category>.json`` -> curated IR codes (used by v2).
+* ``GET  /ir-database/<category>.json`` -> curated IR codes (RF6.8);
+* ``GET  /icons-list`` -> JSON array of icon file names (RF7);
+* ``POST /icons`` multipart field ``file`` -> store icon (redirect on success);
+* ``GET  /icons/<name>`` -> icon bytes.
 """
 
 from __future__ import annotations
@@ -86,6 +89,45 @@ class DeviceClient:
             raise DeviceError("unreachable", str(err) or type(err).__name__) from err
         except (UnicodeDecodeError, json.JSONDecodeError) as err:
             raise DeviceError("invalid_json", str(err)) from err
+
+    async def icons_list(self) -> set[str]:
+        """Names of the icons stored on the remote (RF7.3)."""
+        url = f"{self._base}/icons-list"
+        try:
+            async with self._session.get(url, timeout=TIMEOUT) as resp:
+                if resp.status != 200:
+                    raise DeviceError("http_error", f"HTTP {resp.status}")
+                return {str(n) for n in json.loads((await resp.read()).decode("utf-8"))}
+        except (aiohttp.ClientError, TimeoutError) as err:
+            raise DeviceError("unreachable", str(err) or type(err).__name__) from err
+        except (UnicodeDecodeError, json.JSONDecodeError) as err:
+            raise DeviceError("invalid_json", str(err)) from err
+
+    async def icon_get(self, name: str) -> tuple[bytes, str]:
+        """Download one icon from the remote."""
+        from urllib.parse import quote
+
+        try:
+            async with self._session.get(f"{self._base}/icons/{quote(name)}", timeout=TIMEOUT) as resp:
+                if resp.status != 200:
+                    raise DeviceError("http_error", f"HTTP {resp.status}")
+                return await resp.read(), resp.content_type
+        except (aiohttp.ClientError, TimeoutError) as err:
+            raise DeviceError("unreachable", str(err) or type(err).__name__) from err
+
+    async def icon_upload(self, name: str, data: bytes, content_type: str) -> None:
+        """Upload one icon like the remote's own Icons form (RF7.3)."""
+        form = aiohttp.FormData()
+        form.add_field("file", data, filename=name, content_type=content_type)
+        _LOGGER.debug("POST %s/icons (%s)", self._base, name)
+        try:
+            async with self._session.post(
+                f"{self._base}/icons", data=form, timeout=TIMEOUT, allow_redirects=False
+            ) as resp:
+                if resp.status >= 400:
+                    raise DeviceError("http_error", f"HTTP {resp.status}")
+        except (aiohttp.ClientError, TimeoutError) as err:
+            raise DeviceError("unreachable", str(err) or type(err).__name__) from err
 
     async def upload(self, content: Any) -> None:
         """Upload ``content`` the same way the device's own form does (RF5.4)."""

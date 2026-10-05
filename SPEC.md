@@ -1,6 +1,6 @@
-# Requisito — Astrion Config Manager (add-on HA) v1.3
+# Requisito — Astrion Config Manager (add-on HA) v1.4
 
-Stato: approvato dal richiedente. v1.3: aggiunto RF6.12 (modalità solo navigazione). Sostituisce la v1.0: Harmony e IR rientrano nell'ambito; aggiunte le versioni con nome (RF2.11–RF2.13). Lingua del documento: italiano. Traduzione inglese: [SPEC.en.md](SPEC.en.md).
+Stato: approvato dal richiedente. v1.3: aggiunto RF6.12 (modalità solo navigazione). v1.4: aggiunto RF7 (icone e catalogo entità). Sostituisce la v1.0: Harmony e IR rientrano nell'ambito; aggiunte le versioni con nome (RF2.11–RF2.13). Lingua del documento: italiano. Traduzione inglese: [SPEC.en.md](SPEC.en.md).
 
 ## 1. Scopo
 
@@ -89,6 +89,15 @@ Add-on di Home Assistant con pannello Ingress che gestisce le configurazioni (`d
 - RF6.10 Il simulatore espone un indicatore permanente «Esecuzione reale: Home Assistant, Hub Harmony, IR».
 - RF6.12 Interruttore «Solo navigazione»: se attivo, le azioni (HA, Harmony, IR) non vengono eseguite ma solo elencate; navigazione, pagine collegate, popup e Attività composte (aggiornate localmente) restano simulate. L'indicatore di RF6.10 segnala la modalità. Predefinito: disattivato.
 - RF6.11 Il simulatore riproduce il comportamento che l'app ha sul telecomando (visibilità condizionale di pagine e card, pagine collegate, overlay, popup, risposta ai tasti fisici), non soltanto l'invio dei comandi. L'editor serve a progettare la configurazione; la prova avviene solo nel simulatore.
+
+### RF7 — Icone e catalogo entità
+
+- RF7.1 Libreria icone condivisa nell'add-on (PNG, JPEG, WebP, max 2 MB), inclusa nei backup HA. Nomi file normalizzati con la stessa regola del telecomando.
+- RF7.2 L'eliminazione di un'icona la rimuove solo dalla libreria: il telecomando non offre cancellazione e conserva la sua copia.
+- RF7.3 Al push, le icone usate dalla testa e assenti sul telecomando vengono caricate dalla libreria prima del file. Le icone presenti su un telecomando possono essere importate nella libreria.
+- RF7.4 Ogni campo icona dell'editor ha anteprima e selettore (libreria + icone del telecomando); gli editor JSON permettono di inserire un percorso icona. Il simulatore mostra le icone reali. Un'icona assente sia in libreria sia sul telecomando è un errore che blocca il push.
+- RF7.5 Form per il catalogo `haDevices` (nome, tipo, entità HA filtrata per tipo). Le voci del catalogo sono proposte nei campi entità dell'editor. Un'entità del catalogo inesistente in HA blocca il push.
+- RF7.6 La copia di pagine/card tra telecomandi copia anche le voci del catalogo delle entità usate.
 
 ## 6. Requisiti non funzionali
 
