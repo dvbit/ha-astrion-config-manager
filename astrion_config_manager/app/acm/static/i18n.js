@@ -182,7 +182,10 @@ const I18N = {
   "sim_err_activity_unknown": "Unknown Activity",
   "sim_err_activity_partial": "Activity started with errors",
   "sim_err_service_invalid": "Invalid service",
-  "sim_err_step_unknown": "Unknown action"
+  "sim_err_step_unknown": "Unknown action",
+  "sim_nav_only": "Navigation only",
+  "sim_nav_banner": "Navigation only: actions are not executed",
+  "sim_skipped": "Not executed: {list}"
  },
  "it": {
   "app_title": "Astrion Config Manager",
@@ -364,7 +367,10 @@ const I18N = {
   "sim_err_activity_unknown": "Attività sconosciuta",
   "sim_err_activity_partial": "Attività avviata con errori",
   "sim_err_service_invalid": "Servizio non valido",
-  "sim_err_step_unknown": "Azione sconosciuta"
+  "sim_err_step_unknown": "Azione sconosciuta",
+  "sim_nav_only": "Solo navigazione",
+  "sim_nav_banner": "Solo navigazione: le azioni non vengono eseguite",
+  "sim_skipped": "Non eseguito: {list}"
  },
  "fr": {
   "app_title": "Astrion Config Manager",
@@ -546,7 +552,10 @@ const I18N = {
   "sim_err_activity_unknown": "Activité inconnue",
   "sim_err_activity_partial": "Activité lancée avec erreurs",
   "sim_err_service_invalid": "Service invalide",
-  "sim_err_step_unknown": "Action inconnue"
+  "sim_err_step_unknown": "Action inconnue",
+  "sim_nav_only": "Navigation seule",
+  "sim_nav_banner": "Navigation seule : les actions ne sont pas exécutées",
+  "sim_skipped": "Non exécuté : {list}"
  },
  "es": {
   "app_title": "Astrion Config Manager",
@@ -728,7 +737,10 @@ const I18N = {
   "sim_err_activity_unknown": "Actividad desconocida",
   "sim_err_activity_partial": "Actividad iniciada con errores",
   "sim_err_service_invalid": "Servicio no válido",
-  "sim_err_step_unknown": "Acción desconocida"
+  "sim_err_step_unknown": "Acción desconocida",
+  "sim_nav_only": "Solo navegación",
+  "sim_nav_banner": "Solo navegación: las acciones no se ejecutan",
+  "sim_skipped": "No ejecutado: {list}"
  },
  "de": {
   "app_title": "Astrion Config Manager",
@@ -910,7 +922,10 @@ const I18N = {
   "sim_err_activity_unknown": "Unbekannte Aktivität",
   "sim_err_activity_partial": "Aktivität mit Fehlern gestartet",
   "sim_err_service_invalid": "Ungültiger Dienst",
-  "sim_err_step_unknown": "Unbekannte Aktion"
+  "sim_err_step_unknown": "Unbekannte Aktion",
+  "sim_nav_only": "Nur Navigation",
+  "sim_nav_banner": "Nur Navigation: Aktionen werden nicht ausgeführt",
+  "sim_skipped": "Nicht ausgeführt: {list}"
  }
 };
 

@@ -81,7 +81,9 @@ Apri la scheda **Simulatore**. Lo schermo mostra la testa con gli stati live.
 Tocca una luce → `light.toggle` viene eseguito su HA e la card si aggiorna. Una
 scena con `"activity": "guarda_tv"` esegue l'Attività composta (accensioni,
 ingressi, ritardi) e passa alla sua pagina. Scorri di lato per le pagine, in
-alto per la pagina collegata; tieni premuto un tasto HA100 per l'hotkey lungo.
+alto per la pagina collegata; tieni premuto un tasto HA100 per l'hotkey lungo. Attiva **Solo navigazione**
+per provare il flusso senza agire sui dispositivi: le azioni vengono elencate,
+non eseguite.
 
 I campi opzionali del telecomando abilitano le altre azioni:
 

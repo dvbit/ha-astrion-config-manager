@@ -179,3 +179,6 @@ sim_err_activity_unknown	Unknown Activity	Attività sconosciuta	Activité inconn
 sim_err_activity_partial	Activity started with errors	Attività avviata con errori	Activité lancée avec erreurs	Actividad iniciada con errores	Aktivität mit Fehlern gestartet
 sim_err_service_invalid	Invalid service	Servizio non valido	Service invalide	Servicio no válido	Ungültiger Dienst
 sim_err_step_unknown	Unknown action	Azione sconosciuta	Action inconnue	Acción desconocida	Unbekannte Aktion
+sim_nav_only	Navigation only	Solo navigazione	Navigation seule	Solo navegación	Nur Navigation
+sim_nav_banner	Navigation only: actions are not executed	Solo navigazione: le azioni non vengono eseguite	Navigation seule : les actions ne sont pas exécutées	Solo navegación: las acciones no se ejecutan	Nur Navigation: Aktionen werden nicht ausgeführt
+sim_skipped	Not executed: {list}	Non eseguito: {list}	Non exécuté : {list}	No ejecutado: {list}	Nicht ausgeführt: {list}

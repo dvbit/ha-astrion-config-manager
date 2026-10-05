@@ -1,5 +1,15 @@
 # Changelog
 
+## 2.1.0 - 2026-10-05
+
+- Simulator: scroll position of long pages is kept across live state updates
+  (the screen was rebuilt on every HA event and jumped back to the top).
+- Simulator: swipes. Mouse drag and touch both work; vertical touch scrolling is
+  native again; swipe-up opens the linked page only when the page is scrolled to
+  the bottom; sliders no longer trigger swipes; a swipe never also taps a tile.
+- New "Navigation only" switch (spec RF6.12): actions are listed, not executed.
+- Spec updated to v1.3 (RF6.12), IT and EN.
+
 ## 2.0.0 - 2026-10-05
 
 Phase 2 of the specification (RF6): the requirement is now fully implemented.

@@ -61,7 +61,7 @@ dialog::backdrop { background: rgba(0,0,0,.4); }
 .sim-layout { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-start; }
 .sim-col { display: flex; flex-direction: column; gap: 8px; }
 .sim-wrap { position: relative; overflow: hidden; border-radius: 18px; box-shadow: 0 0 0 6px #000, 0 4px 18px rgba(0,0,0,.4); }
-.sim-screen { position: absolute; top: 0; left: 0; transform-origin: 0 0; overflow: hidden; font-size: 16px; touch-action: none; user-select: none; }
+.sim-screen { position: absolute; top: 0; left: 0; transform-origin: 0 0; overflow: hidden; font-size: 16px; touch-action: pan-y; user-select: none; }
 .sim-page { position: absolute; inset: 0; overflow-y: auto; padding: 14px 14px 30px; display: flex; flex-direction: column; gap: 10px; }
 .sim-page.in-popup { position: static; padding: 8px 0 0; }
 .sim-card, .sim-tile { background: var(--card); border-radius: 16px; padding: 12px; color: inherit; }
@@ -97,3 +97,4 @@ dialog::backdrop { background: rgba(0,0,0,.4); }
 .sim-keys { max-width: 300px; }
 .sim-key { min-width: 54px; padding: 8px 4px; margin: 2px; }
 .sim-nav button { flex: 1; }
+.sim-real.nav-only { border-left-color: var(--accent); }

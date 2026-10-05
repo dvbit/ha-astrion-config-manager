@@ -11,6 +11,7 @@
  *          hiddenUnlessActivity and parent/back are simulated here.
  * - RF6.9  HA100 physical keys panel (short and long press).
  * - RF6.10 permanent "real execution" indicator.
+ * - RF6.12 "navigation only" switch: actions are listed, not executed.
  */
 "use strict";
 
@@ -61,6 +62,10 @@ class Simulator {
     this.overlay = null;          // "activities" | "settings"
     this.autoOpened = new Set();  // openWhenEntity already fired
     this.pending = false;
+    this.dragging = false;        // no re-render while a gesture is in progress
+    this.scroll = {};             // page index -> scrollTop, kept across re-renders
+    this.navOnly = false;         // RF6.12, remembered per browser
+    try { this.navOnly = window.localStorage.getItem("acm-sim-nav-only") === "1"; } catch (e) { /* storage unavailable */ }
     this.connect();
     api("GET", `api/remotes/${this.rid}/sim/active`).then((a) => { this.active = a; this.render(); }).catch(() => {});
   }
@@ -92,9 +97,9 @@ class Simulator {
     };
   }
   schedule() {
-    if (this.pending) return;
+    if (this.pending || this.dragging) { this.pending = true; return; }
     this.pending = true;
-    requestAnimationFrame(() => { this.pending = false; this.render(); });
+    requestAnimationFrame(() => { this.pending = false; if (!this.dragging) this.render(); });
   }
 
   /* ---------- helpers ---------- */
@@ -156,6 +161,18 @@ class Simulator {
 
   /* ---------- execution (RF6.5, RF6.7, RF6.8) ---------- */
   async run(steps, nav) {
+    if (this.navOnly) {
+      // RF6.12: nothing is sent to HA/Hub/IR; the composed Activity runtime is
+      // updated locally so hiddenUnlessActivity pages still behave.
+      for (const st of steps) {
+        const act = st.kind === "activity" && (this.doc.activities || []).find((a) => a.id === st.id);
+        if (act) this.active[act.room] = act.id;
+        if (st.kind === "activity_stop") delete this.active[st.room];
+      }
+      if (steps.length) toast(t("sim_skipped", { list: steps.map((x) => this.describe(x)).join(" · ") }));
+      if (nav) nav();
+      return this.render();
+    }
     const why = this.blocked(steps);
     if (why) return toast(why, true);
     if (steps.length) {
@@ -168,6 +185,18 @@ class Simulator {
     }
     if (nav) nav();
     this.render();
+  }
+
+  /* Short human description of a step (navigation-only toast). */
+  describe(st) {
+    switch (st.kind) {
+      case "service": return `${st.service}${st.entity_id ? " " + st.entity_id : ""}`;
+      case "harmony_command": return `Harmony ${st.device}/${st.command}`;
+      case "harmony_activity": return `Harmony activity ${st.activity}`;
+      case "ir": return `IR ${st.device}/${st.command}`;
+      case "activity": return `${t("activities")}: ${st.id}`;
+      default: return st.kind;
+    }
   }
 
   /* Upstream ButtonGridCard.fire / SceneGridCard tap -> steps. */
@@ -228,6 +257,12 @@ class Simulator {
     const scale = Math.min(1, avail / w);
     const screen = el("div", { class: "sim-screen", style: `width:${w}px;height:${h}px;transform:scale(${scale});background:${th.background};color:${th.primaryText};--card:${th.cardSurface};--inset:${th.insetSurface};--ctl:${th.controlBackground};--muted:${th.mutedText};--acc:${th.accent};--amber:${th.amber};--danger:${th.danger};--ok:${th.success}` });
     const wrap = el("div", { class: "sim-wrap", style: `width:${w * scale}px;height:${h * scale}px` }, screen);
+    // Keep the scroll position of the current page/popup across re-renders
+    // (live state updates rebuild the screen).
+    const oldPage = this.root.querySelector(".sim-page:not(.in-popup)");
+    if (oldPage && oldPage.dataset.idx !== undefined) this.scroll[oldPage.dataset.idx] = oldPage.scrollTop;
+    const oldPop = this.root.querySelector(".sim-popup");
+    const popScroll = oldPop ? oldPop.scrollTop : 0;
     const page = this.pages()[this.cur];
     if (page) screen.append(this.renderPage(page, this.cur, false));
     else screen.append(el("p", { text: "dashboard.json: no pages" }));
@@ -237,12 +272,25 @@ class Simulator {
     this.gestures(screen);
     const liveBadge = el("span", { class: `badge ${this.live === "ok" ? "in_sync" : this.live === "error" ? "unreachable" : ""}`,
       text: this.live === "ok" ? t("sim_live_ok") : this.live === "error" ? t("sim_live_err") : t("st_unknown") });
+    const sw = el("input", { type: "checkbox" });
+    sw.checked = this.navOnly;
+    sw.onchange = () => {
+      this.navOnly = sw.checked;
+      try { window.localStorage.setItem("acm-sim-nav-only", this.navOnly ? "1" : "0"); } catch (e) { /* storage unavailable */ }
+      this.render();
+    };
     this.root.replaceChildren(
-      el("div", { class: "card banner row sim-real" }, el("strong", { text: "⚡ " + t("sim_real") }), el("span", { class: "spacer" }), liveBadge),
+      el("div", { class: "card banner row sim-real" + (this.navOnly ? " nav-only" : "") },
+        el("strong", { text: this.navOnly ? "🧭 " + t("sim_nav_banner") : "⚡ " + t("sim_real") }), el("span", { class: "spacer" }),
+        el("label", { class: "row" }, sw, t("sim_nav_only")), liveBadge),
       el("div", { class: "sim-layout" }, el("div", { class: "sim-col" }, wrap,
         el("div", { class: "row sim-nav" },
           el("button", { text: "◀", onclick: () => this.swipe(-1) }), el("button", { text: "▲ " + t("sim_linked"), onclick: () => this.swipeUp() }),
           el("button", { text: "▶", onclick: () => this.swipe(1) }))), this.renderKeys()));
+    const newPage = screen.querySelector(".sim-page:not(.in-popup)");
+    if (newPage) newPage.scrollTop = this.scroll[this.cur] || 0;
+    const newPop = screen.querySelector(".sim-popup");
+    if (newPop && oldPop) newPop.scrollTop = popScroll;
   }
 
   dots() {
@@ -250,19 +298,45 @@ class Simulator {
     return el("div", { class: "sim-dots" }, ...sib.map((i) => el("span", { class: i === this.cur ? "on" : "" })));
   }
 
+  /* Swipes, as on the remote: horizontal = sibling pages, up = linkedPage.
+   * Mouse drag and touch both arrive as pointer events. Vertical touch
+   * scrolling stays native (CSS touch-action: pan-y); swipe-up only counts
+   * when the page is already scrolled to the bottom, so scrolling a long
+   * page never jumps to the linked page. Sliders are excluded. */
   gestures(screen) {
-    let x0 = null, y0 = null;
-    screen.addEventListener("pointerdown", (e) => { x0 = e.clientX; y0 = e.clientY; });
-    screen.addEventListener("pointerup", (e) => {
-      if (x0 === null) return;
-      const dx = e.clientX - x0, dy = e.clientY - y0; x0 = null;
-      if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy)) this.swipe(dx < 0 ? 1 : -1);
-      else if (dy < -80 && Math.abs(dy) > Math.abs(dx)) this.swipeUp();
+    let g = null;
+    screen.addEventListener("pointerdown", (e) => {
+      if (e.target.closest("input")) return;
+      const pg = screen.querySelector(".sim-page:not(.in-popup)");
+      const atBottom = !pg || pg.scrollTop + pg.clientHeight >= pg.scrollHeight - 2;
+      g = { x: e.clientX, y: e.clientY, atBottom };
+      this.dragging = true;
     });
+    const end = (e, cancelled) => {
+      if (!g) return;
+      const dx = e.clientX - g.x, dy = e.clientY - g.y, start = g;
+      g = null; this.dragging = false;
+      let acted = false;
+      if (!cancelled && !this.popup && !this.overlay) {
+        if (Math.abs(dx) > 60 && Math.abs(dx) > 1.5 * Math.abs(dy)) { acted = true; this.swipe(dx < 0 ? 1 : -1); }
+        else if (dy < -80 && Math.abs(dy) > 1.5 * Math.abs(dx) && start.atBottom) { acted = true; this.swipeUp(); }
+      }
+      if (acted) {
+        // swallow the click that may follow this pointerup, and only that one
+        this.suppressClick = true;
+        setTimeout(() => { this.suppressClick = false; }, 60);
+      } else if (this.pending) { this.pending = false; this.render(); }
+    };
+    screen.addEventListener("pointerup", (e) => end(e, false));
+    screen.addEventListener("pointercancel", (e) => end(e, true)); // browser took over (native scroll)
+    // A swipe that ends on a tile must not also "tap" it.
+    screen.addEventListener("click", (e) => {
+      if (this.suppressClick) { this.suppressClick = false; e.stopPropagation(); e.preventDefault(); }
+    }, true);
   }
 
   renderPage(page, idx, inPopup) {
-    const box = el("div", { class: "sim-page" + (inPopup ? " in-popup" : "") });
+    const box = el("div", { class: "sim-page" + (inPopup ? " in-popup" : ""), "data-idx": idx });
     for (const card of page.cards || []) box.append(this.renderCard(card));
     return box;
   }

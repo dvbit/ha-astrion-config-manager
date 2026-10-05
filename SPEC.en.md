@@ -1,9 +1,9 @@
-# Requirement — Astrion Config Manager (HA add-on) v1.2
+# Requirement — Astrion Config Manager (HA add-on) v1.3
 
 > English translation of [SPEC.md](SPEC.md). The Italian document is the
 > reference; in case of discrepancy the Italian text prevails.
 
-Status: approved by the requester. Supersedes v1.0: Harmony and IR are now in scope; named versions added (RF2.11–RF2.13). Original document language: Italian.
+Status: approved by the requester. v1.3: added RF6.12 (navigation-only mode). Supersedes v1.0: Harmony and IR are now in scope; named versions added (RF2.11–RF2.13). Original document language: Italian.
 
 ## 1. Purpose
 
@@ -90,6 +90,7 @@ Home Assistant add-on with an Ingress panel that manages the configurations (`da
 - RF6.8 IR action: really executed through the remote's `remote.*` entity (RF1.1) with `send_command`; the add-on converts the configuration's IR codes into the format accepted by the entity. Without a configured entity the action is disabled with the reason shown; errors are shown.
 - RF6.9 Panel with the HA100's physical buttons, clickable: they execute the configured hotkey with the same rules as RF6.5–RF6.8.
 - RF6.10 The simulator shows a permanent indicator "Real execution: Home Assistant, Harmony Hub, IR".
+- RF6.12 "Navigation only" switch: when on, actions (HA, Harmony, IR) are not executed, only listed; navigation, linked pages, popups and composed Activities (updated locally) are still simulated. The RF6.10 indicator shows the mode. Default: off.
 - RF6.11 The simulator reproduces the behaviour the app has on the remote (conditional visibility of pages and cards, linked pages, overlays, popups, response to physical buttons), not just command sending. The editor is for designing the configuration; testing happens only in the simulator.
 
 ## 6. Non-functional requirements

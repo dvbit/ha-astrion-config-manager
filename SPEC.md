@@ -1,6 +1,6 @@
-# Requisito — Astrion Config Manager (add-on HA) v1.2
+# Requisito — Astrion Config Manager (add-on HA) v1.3
 
-Stato: approvato dal richiedente. Sostituisce la v1.0: Harmony e IR rientrano nell'ambito; aggiunte le versioni con nome (RF2.11–RF2.13). Lingua del documento: italiano. Traduzione inglese: [SPEC.en.md](SPEC.en.md).
+Stato: approvato dal richiedente. v1.3: aggiunto RF6.12 (modalità solo navigazione). Sostituisce la v1.0: Harmony e IR rientrano nell'ambito; aggiunte le versioni con nome (RF2.11–RF2.13). Lingua del documento: italiano. Traduzione inglese: [SPEC.en.md](SPEC.en.md).
 
 ## 1. Scopo
 
@@ -87,6 +87,7 @@ Add-on di Home Assistant con pannello Ingress che gestisce le configurazioni (`d
 - RF6.8 Azione IR: eseguita realmente tramite l'entità `remote.*` del telecomando (RF1.1) con `send_command`; l'add-on converte i codici IR della configurazione nel formato accettato dall'entità. Senza entità configurata l'azione è disabilitata con indicazione del motivo; gli errori sono mostrati.
 - RF6.9 Pannello con i tasti fisici dell'HA100, cliccabili: eseguono l'hotkey configurato con le stesse regole di RF6.5–RF6.8.
 - RF6.10 Il simulatore espone un indicatore permanente «Esecuzione reale: Home Assistant, Hub Harmony, IR».
+- RF6.12 Interruttore «Solo navigazione»: se attivo, le azioni (HA, Harmony, IR) non vengono eseguite ma solo elencate; navigazione, pagine collegate, popup e Attività composte (aggiornate localmente) restano simulate. L'indicatore di RF6.10 segnala la modalità. Predefinito: disattivato.
 - RF6.11 Il simulatore riproduce il comportamento che l'app ha sul telecomando (visibilità condizionale di pagine e card, pagine collegate, overlay, popup, risposta ai tasti fisici), non soltanto l'invio dei comandi. L'editor serve a progettare la configurazione; la prova avviene solo nel simulatore.
 
 ## 6. Requisiti non funzionali

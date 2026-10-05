@@ -80,7 +80,8 @@ Open the **Simulator** tab. The screen shows the head with live states. Tap a
 light tile → `light.toggle` runs on HA and the tile updates. A scene tile with
 `"activity": "watch_tv"` runs the composed Activity (power on, inputs, delays)
 and jumps to its page. Swipe sideways for pages, up for the linked page; hold an
-HA100 key for its long-press hotkey.
+HA100 key for its long-press hotkey. Turn on **Navigation only** to try the
+flow without touching your devices: actions are listed instead of executed.
 
 Optional fields of the remote enable the other actions:
 
