@@ -479,3 +479,21 @@ async def test_rf8_devices_config_read_without_token(env, tmp_path):
     v = r["validation"]
     assert [i["code"] for i in v["issues"]] == ["ir_extender_unknown"]
     assert [w["code"] for w in v["warnings"]] == ["hub_unknown"]
+
+
+async def test_rf35_fixed_values_and_colors_warn(env):
+    rid = (await register(env, "a", "R"))["id"]
+
+    def mutate(d):
+        title = {"title": "T", "alignment": "middle", "color": "red"}
+        d["pages"][0]["cards"].append({"type": "title", "options": title})
+        d["pages"][0]["cards"].append({"type": "camera", "options": {"entity_id": "light.salotto", "aspect": 2.35}})
+        d["theme"] = {"accent": "#FF6EA8FE", "background": "blue"}
+
+    v = (await edit(env, rid, mutate))["validation"]
+    assert v["issues"] == []  # warnings only: push not blocked
+    assert sorted(w["code"] + w["path"] for w in v["warnings"]) == [
+        "color_invalid/pages/0/cards/2/options/color",
+        "color_invalid/theme/background",
+        "value_unexpected/pages/0/cards/2/options/alignment",
+    ]

@@ -28,7 +28,7 @@ Schema followed: upstream release **1.1.9-beta**.
 | Remotes | Register many remotes (name, IP, port, screen size, orientation, Harmony IP, IR entity). Archive instead of delete. |
 | History | Every change is a version stored as a JSON Patch delta; snapshots every 50. Undo/redo are versions too. Restore any version in one step. |
 | Named versions | Label milestones ("Before TV change"), filter them, restore them. Labels never alter history. |
-| Editor | Forms for pages, cards (21 types, fields extracted from upstream renderers), hotkeys, IR devices, Activities, theme; raw JSON for everything. Unknown cards/fields survive untouched. |
+| Editor | Dropdowns for fixed values, colour palettes (cards and theme). Forms for pages, cards (21 types, fields extracted from upstream renderers), hotkeys, IR devices, Activities, theme; raw JSON for everything. Unknown cards/fields survive untouched. |
 | Validation | Structure + every referenced entity must exist in HA. Push is blocked on errors. |
 | Sync | Pull, push with re-read verification, drift detection by canonical SHA-256. Drift is reported, never auto-applied. |
 | Icons | Shared library (backed up), picker with thumbnails, automatic upload of missing icons on push, import from a remote. |

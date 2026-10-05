@@ -218,3 +218,8 @@ v_hub_unknown	Hub not on the remote ({id}): the first hub will be used	Hub non p
 sim_err_ir_extender_unknown	Unknown IR extender	Extender IR sconosciuto	Extender IR inconnu	Extender IR desconocido	Unbekannter IR-Extender
 sim_err_extender_error	IR extender error	Errore extender IR	Erreur de l'extender IR	Error del extender IR	IR-Extender-Fehler
 sim_err_ir_bad_pattern	Invalid IR pattern	Pattern IR non valido	Motif IR invalide	Patrón IR no válido	Ungültiges IR-Muster
+default_value	— default ({v}) —	— predefinito ({v}) —	— par défaut ({v}) —	— predeterminado ({v}) —	— Standard ({v}) —
+other_value	other value	altro valore	autre valeur	otro valor	anderer Wert
+insert_color	Insert colour	Inserisci colore	Insérer une couleur	Insertar color	Farbe einfügen
+v_value_unexpected	Value not supported by the remote ({value}): its default is used	Valore non supportato dal telecomando ({value}): verrà usato il predefinito	Valeur non prise en charge par la télécommande ({value}) : la valeur par défaut sera utilisée	Valor no admitido por el mando ({value}): se usará el predeterminado	Wert von der Fernbedienung nicht unterstützt ({value}): Standard wird verwendet
+v_color_invalid	Not a #RRGGBB / #AARRGGBB colour ({value}): ignored by the remote	Non è un colore #RRGGBB / #AARRGGBB ({value}): ignorato dal telecomando	Pas une couleur #RRGGBB / #AARRGGBB ({value}) : ignorée par la télécommande	No es un color #RRGGBB / #AARRGGBB ({value}): el mando lo ignora	Keine Farbe #RRGGBB / #AARRGGBB ({value}): wird ignoriert

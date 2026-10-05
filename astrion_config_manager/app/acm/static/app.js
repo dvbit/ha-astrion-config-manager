@@ -267,7 +267,7 @@ function renderRemote() {
   main.append(body);
   if (S.tab === "editor") {
     if (!editor) {
-      editor = new Editor({ schema: S.schema, hwKeys: S.hwKeys, commit, copy: copyDialog, rid: S.rid,
+      editor = new Editor({ schema: S.schema, hints: S.hints, hwKeys: S.hwKeys, commit, copy: copyDialog, rid: S.rid,
         entities: () => S.entities, remote: () => S.remote, pickIcon: (cb) => openIconPicker(S.rid, cb) });
     }
     editor.root = body;
@@ -437,8 +437,8 @@ async function copyDialog(kind, payload) {
 /* ---------- start ---------- */
 (async function start() {
   try {
-    const [meta, schema] = await Promise.all([api("GET", "api/meta"), api("GET", "static/card_schema.json")]);
-    S.schema = schema; S.hwKeys = meta.hardware_keys;
+    const [meta, schema, hints] = await Promise.all([api("GET", "api/meta"), api("GET", "static/card_schema.json"), api("GET", "static/field_hints.json")]);
+    S.schema = schema; S.hwKeys = meta.hardware_keys; S.hints = hints;
     if (meta.user) document.getElementById("user").textContent = meta.user;
     document.documentElement.lang = LANG;
     await loadList(false);

@@ -13,6 +13,9 @@
  * - RF7.5  form for the haDevices entity catalog.
  * - RF8.6  "hub" fields and IR extender targets are dropdowns of the hubs /
  *          extenders read from the remote; unknown hubs are warnings.
+ * - RF3.5  fixed-value fields are dropdowns and colour fields have a palette
+ *          (field_hints.json, from the upstream builder and renderers);
+ *          the theme is a form of colours; JSON editors can insert a colour.
  */
 "use strict";
 
@@ -136,6 +139,8 @@ class Editor {
         };
         break;
       case "select": input = sel(opts, val); break;
+      case "enum": return this.wrap(key, this.enumInput(opts, val, has, set), path);
+      case "color": return this.wrap(key, this.colorInput(val, has, set), path);
       case "page": input = sel(this.pages().map((p) => p.name).filter(Boolean), val); break;
       case "hwkey": input = sel(this.hwKeys, val); break;
       case "irdev": input = sel((this.doc.irDevices || []).map((d) => d.id).filter(Boolean), val); break;
@@ -173,6 +178,38 @@ class Editor {
     return this.wrap(key, input, path);
   }
 
+  /* RF3.5: dropdown of the documented values; "" = key absent (remote default).
+   * hint: {values, labels?, default, presets?}; presets allow any other number. */
+  enumInput(hint, val, has, set) {
+    const s = el("select", {}, el("option", { value: "", text: t("default_value", { v: hint.default }) }));
+    hint.values.forEach((v, i) => s.append(el("option", { value: JSON.stringify(v), text: hint.labels ? `${hint.labels[i]} (${v})` : String(v), selected: has && v === val })));
+    if (has && !hint.values.includes(val)) {
+      s.append(el("option", { value: JSON.stringify(val), text: `${val}${hint.presets ? "" : " ⚠"}`, selected: true }));
+    }
+    s.onchange = () => set(s.value === "" ? undefined : JSON.parse(s.value));
+    if (!hint.presets) return s;
+    // presets: a free number is also valid
+    const num = el("input", { type: "number", step: "any", value: has ? val : "", placeholder: t("other_value") });
+    num.onchange = () => set(num.value === "" ? undefined : parseFloat(num.value));
+    return el("div", { class: "row" }, s, num);
+  }
+
+  /* RF3.5: colour palette + hex text. The remote reads #RRGGBB or #AARRGGBB
+   * (ui/Theme.kt parseHexColor): the palette edits RGB and keeps any alpha. */
+  colorInput(val, has, set) {
+    const hex = typeof val === "string" ? val.replace(/^#/, "") : "";
+    const rgb = /^[0-9a-f]{8}$/i.test(hex) ? hex.slice(2) : (/^[0-9a-f]{6}$/i.test(hex) ? hex : "000000");
+    const pick = el("input", { type: "color", value: "#" + rgb.toLowerCase(), class: "swatch" });
+    const txt = el("input", { type: "text", value: has && val != null ? String(val) : "", placeholder: "#RRGGBB / #AARRGGBB", class: "hex" });
+    pick.onchange = () => {
+      const alpha = /^[0-9a-f]{8}$/i.test(hex) ? hex.slice(0, 2) : "";
+      set("#" + (alpha + pick.value.slice(1)).toUpperCase());
+    };
+    txt.onchange = () => set(txt.value.trim() === "" ? undefined : txt.value.trim());
+    const clear = el("button", { class: "icon", text: "✕", title: t("delete"), onclick: () => set(undefined), disabled: !has });
+    return el("div", { class: "row color-row" }, pick, txt, clear);
+  }
+
   /* Thumbnail of a custom icon value (empty when not an icon path). */
   thumb(val) {
     const name = iconName(val);
@@ -195,7 +232,18 @@ class Editor {
       });
     } });
     ins.addEventListener("mousedown", (e) => e.preventDefault());
-    box.querySelector("label").append(" ", ins);
+    // RF3.5: insert a colour (e.g. scene "color" / "active_color") at the cursor
+    const palette = el("input", { type: "color", class: "hidden-color" });
+    let at = 0, end = 0;
+    const col = el("button", { class: "icon", text: "🎨 " + t("insert_color"), onclick: () => {
+      at = ta.selectionStart || 0; end = ta.selectionEnd || at; palette.click();
+    } });
+    col.addEventListener("mousedown", (e) => e.preventDefault());
+    palette.onchange = () => {
+      const text = ta.value.slice(0, at) + palette.value.toUpperCase() + ta.value.slice(end);
+      try { set(JSON.parse(text)); } catch (e) { ta.value = text; ta.focus(); }
+    };
+    box.querySelector("label").append(" ", ins, " ", col, palette);
     ta.onchange = () => {
       if (ta.value.trim() === "") return set(undefined);
       try { set(JSON.parse(ta.value)); } catch (e) {
@@ -405,7 +453,11 @@ class Editor {
     }
     const opts = card.options || {};
     const kindMap = { string: "text", bool: "bool", int: "int", string_list: "lines", json: "json" };
-    const specs = Object.entries(spec.fields).map(([k, f]) => [k, kindMap[f.kind], f]);
+    const hints = this.hints || { enums: {}, colors: {} };
+    const enums = hints.enums[card.type] || {};
+    const colors = new Set(hints.colors[card.type] || []);
+    const specs = Object.entries(spec.fields).map(([k, f]) => enums[k] ? [k, "enum", enums[k]]
+      : colors.has(k) ? [k, "color", f] : [k, kindMap[f.kind], f]);
     panel.append(this.form(opts, specs, `${path}/options`, (d) => {
       const c = d.pages[pi].cards[ci];
       c.options = c.options || {};
@@ -461,8 +513,11 @@ class Editor {
         (a, ip, get) => this.form(a, ACTIVITY_FIELDS, ip, get),
         () => ({ id: `activity_${(this.doc.activities || []).length + 1}`, room: "room", devices: [{ deviceId: "", source: "ir" }] })));
     } else if (g === "theme") {
+      // RF3.5: ThemeConfig colours (config/AppConfig.kt) with palettes
+      const th = this.doc.theme || {};
+      const keys = (this.hints && this.hints.theme) || [];
       panel.append(el("h2", { text: t("theme") }),
-        this.jsonField(t("theme"), this.doc.theme || {}, "/theme", (v) => this.change((d) => { if (v === undefined) delete d.theme; else d.theme = v; })));
+        this.form(th, keys.map((k) => [k, "color"]), "/theme", (d) => { if (!d.theme || typeof d.theme !== "object") d.theme = {}; return d.theme; }));
     }
     return panel;
   }

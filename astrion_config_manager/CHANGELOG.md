@@ -1,5 +1,17 @@
 # Changelog
 
+## 2.4.0 - 2026-10-05
+
+Spec v1.6, RF3.5.
+
+- Fixed-value fields are dropdowns with the values of the upstream web builder
+  (alignment, layout, style, mode, fit, variant, artwork, iconPosition,
+  time_format, ...) plus "default"; camera aspect offers presets and a free number.
+- Colour fields (title color, select icon_color, switch on_color) and the whole
+  theme get a palette + hex input; #AARRGGBB alpha is kept when picking.
+- JSON editors: "Insert colour" (e.g. scene color / active_color).
+- Out-of-list values and malformed colours are non-blocking warnings.
+
 ## 2.3.0 - 2026-10-05
 
 Spec v1.5, new RF8: multiple Harmony hubs and IR targets, as on the remote.

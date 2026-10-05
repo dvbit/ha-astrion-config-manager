@@ -28,7 +28,7 @@ Schema seguito: release upstream **1.1.9-beta**.
 | Telecomandi | Più telecomandi (nome, IP, porta, risoluzione, orientamento, IP Harmony, entità IR). Archiviazione al posto della cancellazione. |
 | Storico | Ogni modifica è una versione salvata come delta JSON Patch; snapshot ogni 50. Anche undo/redo sono versioni. Ripristino di qualsiasi versione in un passo. |
 | Versioni con nome | Etichette per le tappe ("Prima del cambio TV"), filtro, ripristino. I nomi non alterano la storia. |
-| Editor | Form per pagine, card (21 tipi, campi ricavati dai renderer upstream), hotkey, dispositivi IR, Attività, tema; JSON grezzo per tutto. Card e campi sconosciuti restano intatti. |
+| Editor | Menu per i valori fissi, tavolozze colore (card e tema). Form per pagine, card (21 tipi, campi ricavati dai renderer upstream), hotkey, dispositivi IR, Attività, tema; JSON grezzo per tutto. Card e campi sconosciuti restano intatti. |
 | Validazione | Struttura + esistenza in HA di ogni entità citata. Push bloccato in caso di errori. |
 | Sync | Pull, push con verifica tramite rilettura, deriva via SHA-256 canonico. La deriva è solo segnalata. |
 | Icone | Libreria condivisa (nei backup), selettore con anteprime, caricamento automatico delle icone mancanti al push, importazione da un telecomando. |

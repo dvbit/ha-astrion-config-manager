@@ -221,7 +221,12 @@ const I18N = {
   "v_hub_unknown": "Hub not on the remote ({id}): the first hub will be used",
   "sim_err_ir_extender_unknown": "Unknown IR extender",
   "sim_err_extender_error": "IR extender error",
-  "sim_err_ir_bad_pattern": "Invalid IR pattern"
+  "sim_err_ir_bad_pattern": "Invalid IR pattern",
+  "default_value": "— default ({v}) —",
+  "other_value": "other value",
+  "insert_color": "Insert colour",
+  "v_value_unexpected": "Value not supported by the remote ({value}): its default is used",
+  "v_color_invalid": "Not a #RRGGBB / #AARRGGBB colour ({value}): ignored by the remote"
  },
  "it": {
   "app_title": "Astrion Config Manager",
@@ -442,7 +447,12 @@ const I18N = {
   "v_hub_unknown": "Hub non presente sul telecomando ({id}): verrà usato il primo hub",
   "sim_err_ir_extender_unknown": "Extender IR sconosciuto",
   "sim_err_extender_error": "Errore extender IR",
-  "sim_err_ir_bad_pattern": "Pattern IR non valido"
+  "sim_err_ir_bad_pattern": "Pattern IR non valido",
+  "default_value": "— predefinito ({v}) —",
+  "other_value": "altro valore",
+  "insert_color": "Inserisci colore",
+  "v_value_unexpected": "Valore non supportato dal telecomando ({value}): verrà usato il predefinito",
+  "v_color_invalid": "Non è un colore #RRGGBB / #AARRGGBB ({value}): ignorato dal telecomando"
  },
  "fr": {
   "app_title": "Astrion Config Manager",
@@ -663,7 +673,12 @@ const I18N = {
   "v_hub_unknown": "Hub absent de la télécommande ({id}) : le premier hub sera utilisé",
   "sim_err_ir_extender_unknown": "Extender IR inconnu",
   "sim_err_extender_error": "Erreur de l'extender IR",
-  "sim_err_ir_bad_pattern": "Motif IR invalide"
+  "sim_err_ir_bad_pattern": "Motif IR invalide",
+  "default_value": "— par défaut ({v}) —",
+  "other_value": "autre valeur",
+  "insert_color": "Insérer une couleur",
+  "v_value_unexpected": "Valeur non prise en charge par la télécommande ({value}) : la valeur par défaut sera utilisée",
+  "v_color_invalid": "Pas une couleur #RRGGBB / #AARRGGBB ({value}) : ignorée par la télécommande"
  },
  "es": {
   "app_title": "Astrion Config Manager",
@@ -884,7 +899,12 @@ const I18N = {
   "v_hub_unknown": "Hub no presente en el mando ({id}): se usará el primer hub",
   "sim_err_ir_extender_unknown": "Extender IR desconocido",
   "sim_err_extender_error": "Error del extender IR",
-  "sim_err_ir_bad_pattern": "Patrón IR no válido"
+  "sim_err_ir_bad_pattern": "Patrón IR no válido",
+  "default_value": "— predeterminado ({v}) —",
+  "other_value": "otro valor",
+  "insert_color": "Insertar color",
+  "v_value_unexpected": "Valor no admitido por el mando ({value}): se usará el predeterminado",
+  "v_color_invalid": "No es un color #RRGGBB / #AARRGGBB ({value}): el mando lo ignora"
  },
  "de": {
   "app_title": "Astrion Config Manager",
@@ -1105,7 +1125,12 @@ const I18N = {
   "v_hub_unknown": "Hub nicht auf der Fernbedienung ({id}): der erste Hub wird verwendet",
   "sim_err_ir_extender_unknown": "Unbekannter IR-Extender",
   "sim_err_extender_error": "IR-Extender-Fehler",
-  "sim_err_ir_bad_pattern": "Ungültiges IR-Muster"
+  "sim_err_ir_bad_pattern": "Ungültiges IR-Muster",
+  "default_value": "— Standard ({v}) —",
+  "other_value": "anderer Wert",
+  "insert_color": "Farbe einfügen",
+  "v_value_unexpected": "Wert von der Fernbedienung nicht unterstützt ({value}): Standard wird verwendet",
+  "v_color_invalid": "Keine Farbe #RRGGBB / #AARRGGBB ({value}): wird ignoriert"
  }
 };
 

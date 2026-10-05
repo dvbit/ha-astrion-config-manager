@@ -1,9 +1,9 @@
-# Requirement — Astrion Config Manager (HA add-on) v1.5
+# Requirement — Astrion Config Manager (HA add-on) v1.6
 
 > English translation of [SPEC.md](SPEC.md). The Italian document is the
 > reference; in case of discrepancy the Italian text prevails.
 
-Status: approved by the requester. v1.3: added RF6.12 (navigation-only mode). v1.4: added RF7 (icons and entity catalog). v1.5: added RF8 (multiple Harmony hubs and IR targets). Supersedes v1.0: Harmony and IR are now in scope; named versions added (RF2.11–RF2.13). Original document language: Italian.
+Status: approved by the requester. v1.3: added RF6.12 (navigation-only mode). v1.4: added RF7 (icons and entity catalog). v1.5: added RF8 (multiple Harmony hubs and IR targets). v1.6: added RF3.5 (dropdowns and palettes). Supersedes v1.0: Harmony and IR are now in scope; named versions added (RF2.11–RF2.13). Original document language: Italian.
 
 ## 1. Purpose
 
@@ -60,6 +60,7 @@ Home Assistant add-on with an Ingress panel that manages the configurations (`da
 - RF3.1 Form editor for pages, cards and hotkeys, for all card types, fields and actions present in the reference schema (§3), including Harmony and IR cards and actions (IR devices and their codes included).
 - RF3.2 Lossless round-trip: unknown cards, fields and actions remain intact in the saved file and can be edited as raw JSON. Key order is not guaranteed; the content is semantically identical.
 - RF3.3 Copying pages and cards from one remote to another: creates a single version in the destination remote. Key/id collisions in the destination are resolved with a numeric suffix, updating the internal references to the copied elements.
+- RF3.5 Fixed-value fields (e.g. `alignment`) are dropdowns with the values documented by the reference implementation and a "default" option that removes the key. Colour fields (cards and theme) have a palette plus the hex value (#RRGGBB or #AARRGGBB, alpha preserved). JSON editors can insert a colour. Out-of-list values or malformed colours are warnings, not errors.
 - RF3.4 Tokens and secrets present in the JSON are stored in clear text in the history and shown unmasked (risk accepted by the requester).
 
 ### RF4 — Validation

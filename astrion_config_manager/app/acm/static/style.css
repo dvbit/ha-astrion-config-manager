@@ -113,3 +113,8 @@ img.sim-ico-img { width: 36px; height: 36px; object-fit: contain; }
 .issues.warn { border-left-color: var(--warn); }
 .field.warn input, .field.warn select, .field.warn textarea { border-color: var(--warn); }
 .msg.warn { color: var(--warn); }
+/* RF3.5 palette inputs */
+.color-row { flex-wrap: nowrap; }
+input.swatch { width: 44px; height: 34px; padding: 2px; flex: none; cursor: pointer; }
+.color-row input.hex { flex: 1; font-family: ui-monospace, Menlo, Consolas, monospace; }
+input.hidden-color { position: absolute; width: 0; height: 0; opacity: 0; border: 0; padding: 0; }

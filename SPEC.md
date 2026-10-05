@@ -1,6 +1,6 @@
-# Requisito — Astrion Config Manager (add-on HA) v1.5
+# Requisito — Astrion Config Manager (add-on HA) v1.6
 
-Stato: approvato dal richiedente. v1.3: aggiunto RF6.12 (modalità solo navigazione). v1.4: aggiunto RF7 (icone e catalogo entità). v1.5: aggiunto RF8 (più hub Harmony e destinazioni IR). Sostituisce la v1.0: Harmony e IR rientrano nell'ambito; aggiunte le versioni con nome (RF2.11–RF2.13). Lingua del documento: italiano. Traduzione inglese: [SPEC.en.md](SPEC.en.md).
+Stato: approvato dal richiedente. v1.3: aggiunto RF6.12 (modalità solo navigazione). v1.4: aggiunto RF7 (icone e catalogo entità). v1.5: aggiunto RF8 (più hub Harmony e destinazioni IR). v1.6: aggiunto RF3.5 (menu e tavolozze). Sostituisce la v1.0: Harmony e IR rientrano nell'ambito; aggiunte le versioni con nome (RF2.11–RF2.13). Lingua del documento: italiano. Traduzione inglese: [SPEC.en.md](SPEC.en.md).
 
 ## 1. Scopo
 
@@ -57,6 +57,7 @@ Add-on di Home Assistant con pannello Ingress che gestisce le configurazioni (`d
 - RF3.1 Editor a form per pagine, card e hotkey, per tutti i tipi di card, campi e azioni presenti nello schema di riferimento (§3), comprese card e azioni Harmony e IR (inclusi i dispositivi IR e i relativi codici).
 - RF3.2 Round-trip senza perdite: card, campi e azioni sconosciuti restano intatti nel file salvato e sono modificabili come JSON grezzo. L'ordine delle chiavi non è garantito; il contenuto è semanticamente identico.
 - RF3.3 Copia di pagine e card da un telecomando a un altro: crea una sola versione nel telecomando di destinazione. Le collisioni di chiavi/id nella destinazione si risolvono con suffisso numerico, aggiornando i riferimenti interni agli elementi copiati.
+- RF3.5 I campi a valori fissi (es. `alignment`) sono menu a tendina con i valori documentati dall'implementazione di riferimento e un'opzione «predefinito» che rimuove la chiave. I campi colore (card e tema) hanno una tavolozza più il valore esadecimale (#RRGGBB o #AARRGGBB, alfa preservato). Gli editor JSON permettono di inserire un colore. Valori fuori elenco o colori malformati sono avvisi, non errori.
 - RF3.4 Token e segreti presenti nel JSON sono salvati in chiaro nello storico e mostrati senza mascheratura (rischio accettato dal richiedente).
 
 ### RF4 — Validazione

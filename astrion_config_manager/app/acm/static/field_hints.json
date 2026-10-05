@@ -1,0 +1,208 @@
+{
+  "_source": "Upstream astrion-custom-dashboard 1.1.9-beta: <select> options of docs/js/cards.js (web builder) and string comparisons in app/src/main/java/com/custom/astrion/cards/impl/*.kt; colours parsed by ui/Theme.kt parseHexColor (#RRGGBB or #AARRGGBB). 'default' = behaviour when the key is absent.",
+  "enums": {
+    "title": {
+      "alignment": {
+        "values": [
+          "start",
+          "center",
+          "end",
+          "justify"
+        ],
+        "default": "start"
+      }
+    },
+    "cover": {
+      "layout": {
+        "values": [
+          "horizontal",
+          "vertical"
+        ],
+        "default": "default"
+      }
+    },
+    "light": {
+      "layout": {
+        "values": [
+          "horizontal",
+          "vertical"
+        ],
+        "default": "default"
+      }
+    },
+    "select": {
+      "layout": {
+        "values": [
+          "horizontal",
+          "vertical"
+        ],
+        "default": "default"
+      }
+    },
+    "fan": {
+      "style": {
+        "values": [
+          "auto",
+          "simple",
+          "step",
+          "full"
+        ],
+        "default": "auto"
+      }
+    },
+    "camera": {
+      "mode": {
+        "values": [
+          "stream",
+          "snapshot"
+        ],
+        "default": "stream"
+      },
+      "fit": {
+        "values": [
+          "cover",
+          "contain"
+        ],
+        "default": "cover"
+      },
+      "aspect": {
+        "values": [
+          1.7778,
+          1.3333,
+          1,
+          0.75
+        ],
+        "labels": [
+          "16:9",
+          "4:3",
+          "1:1",
+          "3:4"
+        ],
+        "default": "16:9",
+        "presets": true
+      }
+    },
+    "climate": {
+      "hvac_mode_style": {
+        "values": [
+          "icons",
+          "label"
+        ],
+        "default": "icons"
+      },
+      "fan_mode_style": {
+        "values": [
+          "label",
+          "icons"
+        ],
+        "default": "label"
+      },
+      "swing_mode_style": {
+        "values": [
+          "label",
+          "icons"
+        ],
+        "default": "label"
+      }
+    },
+    "media_player": {
+      "variant": {
+        "values": [
+          "compact",
+          "full"
+        ],
+        "default": "compact"
+      },
+      "artwork_fit": {
+        "values": [
+          "cover",
+          "contain"
+        ],
+        "default": "cover"
+      },
+      "artwork_ratio": {
+        "values": [
+          "square",
+          "portrait"
+        ],
+        "default": "square"
+      }
+    },
+    "button_grid": {
+      "iconPosition": {
+        "values": [
+          "top",
+          "bottom",
+          "left",
+          "right"
+        ],
+        "default": "top"
+      }
+    },
+    "scene_grid": {
+      "iconPosition": {
+        "values": [
+          "top",
+          "bottom",
+          "left",
+          "right"
+        ],
+        "default": "top"
+      },
+      "layout": {
+        "values": [
+          "row"
+        ],
+        "default": "grid"
+      }
+    },
+    "plex": {
+      "play_content_type": {
+        "values": [
+          "video",
+          "url"
+        ],
+        "default": "video"
+      }
+    },
+    "clock_weather": {
+      "time_format": {
+        "values": [
+          12,
+          24
+        ],
+        "default": "12"
+      }
+    }
+  },
+  "colors": {
+    "title": [
+      "color"
+    ],
+    "select": [
+      "icon_color"
+    ],
+    "switch": [
+      "on_color"
+    ]
+  },
+  "item_colors": [
+    "color",
+    "active_color"
+  ],
+  "theme": [
+    "background",
+    "cardSurface",
+    "insetSurface",
+    "controlBackground",
+    "primaryText",
+    "mutedText",
+    "iconTint",
+    "accent",
+    "accentSecondary",
+    "amber",
+    "danger",
+    "success"
+  ],
+  "_presets": "'presets': true = common choices only; any number is valid (no warning, 'other' allowed in the editor)."
+}

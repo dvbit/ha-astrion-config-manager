@@ -28,6 +28,9 @@ from typing import Any
 from .icons import collect_refs
 
 SCHEMA: dict[str, Any] = json.loads((Path(__file__).parent / "static" / "card_schema.json").read_text("utf-8"))
+# RF3.5: fixed values and colour fields (static/field_hints.json, upstream refs inside).
+HINTS: dict[str, Any] = json.loads((Path(__file__).parent / "static" / "field_hints.json").read_text("utf-8"))
+_COLOR_RE = re.compile(r"^#?([0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$")
 
 # HardwareKey enum of input/HardwareKeys.kt (HA100 physical buttons).
 HARDWARE_KEYS = {
@@ -106,9 +109,14 @@ class _Ctx:
     def __init__(self) -> None:
         self.issues: list[dict[str, Any]] = []
         self.entities: dict[str, list[str]] = {}
+        self.warnings: list[dict[str, Any]] = []
 
     def err(self, path: str, code: str, **params: Any) -> None:
         self.issues.append({"path": path, "code": code, "params": params})
+
+    def warn(self, path: str, code: str, **params: Any) -> None:
+        """Non-blocking: the remote ignores the value and uses its default."""
+        self.warnings.append({"path": path, "code": code, "params": params})
 
     def entity(self, path: str, value: Any) -> None:
         """Record entity ids found under an entity key (RF4.2)."""
@@ -153,6 +161,13 @@ def _card(ctx: _Ctx, card: Any, path: str) -> None:
     for key, fspec in spec["fields"].items():
         if key in opts and opts[key] is not None and not _KIND_CHECK[fspec["kind"]](opts[key]):
             ctx.err(_ptr_join(path, "options", key), "type_mismatch", expected=fspec["kind"])
+    # RF3.5: unexpected fixed values / malformed colours -> warnings
+    for key, hint in HINTS["enums"].get(ctype, {}).items():
+        if key in opts and not hint.get("presets") and opts[key] not in hint["values"]:
+            ctx.warn(_ptr_join(path, "options", key), "value_unexpected", value=str(opts[key]))
+    for key in HINTS["colors"].get(ctype, []):
+        if key in opts and not (isinstance(opts[key], str) and _COLOR_RE.match(opts[key])):
+            ctx.warn(_ptr_join(path, "options", key), "color_invalid", value=str(opts[key]))
     ctx.walk_entities(opts, _ptr_join(path, "options"))
     # row cards nest other cards.
     if ctype == "row" and isinstance(opts.get("cards"), list):
@@ -325,6 +340,11 @@ def structural(doc: Any) -> _Ctx:
         _ha_devices(ctx, doc["haDevices"], "/haDevices")
     if "theme" in doc and not isinstance(doc["theme"], dict):
         ctx.err("/theme", "type_mismatch", expected="object")
+    elif isinstance(doc.get("theme"), dict):
+        for key in HINTS["theme"]:
+            val = doc["theme"].get(key)
+            if val is not None and not (isinstance(val, str) and _COLOR_RE.match(val)):
+                ctx.warn(f"/theme/{key}", "color_invalid", value=str(val))
     return ctx
 
 
@@ -368,7 +388,7 @@ def validate(
             if name not in known_icons:
                 for path in paths:
                     issues.append({"path": path, "code": "icon_missing", "params": {"icon": name}})
-    warnings: list[dict[str, Any]] = []
+    warnings: list[dict[str, Any]] = list(ctx.warnings)
     if known_devices is not None and isinstance(doc, dict):
         for idx, dev in enumerate(doc.get("irDevices") or []):
             target = dev.get("target") if isinstance(dev, dict) else None
