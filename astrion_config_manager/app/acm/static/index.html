@@ -1,7 +1,7 @@
 <!doctype html>
 <!-- Astrion Config Manager - Ingress panel (spec RNF1).
      Vanilla JS, no build step. All URLs are relative to the Ingress prefix. -->
-<html>
+<html data-version="__ACM_VERSION__">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -14,6 +14,7 @@
     <h1 id="title"></h1>
     <span class="spacer"></span>
     <span id="user" class="muted"></span>
+    <span class="muted" title="Astrion Config Manager">v__ACM_VERSION__</span>
   </header>
   <main id="main"></main>
   <div id="toast" class="toast" hidden></div>

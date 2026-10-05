@@ -497,3 +497,14 @@ async def test_rf35_fixed_values_and_colors_warn(env):
         "color_invalid/theme/background",
         "value_unexpected/pages/0/cards/2/options/alignment",
     ]
+
+
+async def test_index_versioned_assets(env):
+    from acm import __version__
+
+    resp = await env.get("/")
+    html = await resp.text()
+    assert resp.headers["Cache-Control"] == "no-store"
+    assert f'static/editor.js?v={__version__}"' in html and "__ACM_VERSION__" not in html
+    resp = await env.get(f"/static/editor.js?v={__version__}")
+    assert resp.status == 200 and resp.headers["Cache-Control"] == "no-cache"

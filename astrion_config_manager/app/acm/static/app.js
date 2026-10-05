@@ -437,7 +437,7 @@ async function copyDialog(kind, payload) {
 /* ---------- start ---------- */
 (async function start() {
   try {
-    const [meta, schema, hints] = await Promise.all([api("GET", "api/meta"), api("GET", "static/card_schema.json"), api("GET", "static/field_hints.json")]);
+    const [meta, schema, hints] = await Promise.all([api("GET", "api/meta"), api("GET", `static/card_schema.json?v=${document.documentElement.dataset.version}`), api("GET", `static/field_hints.json?v=${document.documentElement.dataset.version}`)]);
     S.schema = schema; S.hwKeys = meta.hardware_keys; S.hints = hints;
     if (meta.user) document.getElementById("user").textContent = meta.user;
     document.documentElement.lang = LANG;

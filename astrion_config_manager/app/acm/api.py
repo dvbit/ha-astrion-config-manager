@@ -10,6 +10,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
+import re
 import time
 from collections import defaultdict
 from pathlib import Path
@@ -19,7 +20,7 @@ from urllib.parse import unquote
 import aiohttp
 from aiohttp import web
 
-from . import copying
+from . import __version__, copying
 from .actions import Executor
 from .canonical import canonical_hash
 from .device import DeviceClient, DeviceError
@@ -225,14 +226,31 @@ async def _drift(app: web.Application, meta: dict[str, Any]) -> dict[str, Any]:
 # --------------------------------------------------------------------------
 
 
-async def index(request: web.Request) -> web.FileResponse:
-    """Serve the panel."""
-    return web.FileResponse(STATIC / "index.html")
+async def index(request: web.Request) -> web.Response:
+    """Serve the panel with versioned asset URLs.
+
+    Browsers and the HA companion app cache static files heuristically: after
+    an add-on update they kept running the old editor.js. Every asset URL now
+    carries ``?v=<version>`` and the page itself is never cached.
+    """
+    html = (STATIC / "index.html").read_text("utf-8")
+    html = re.sub(r'(static/[\w.-]+\.(?:js|css|png))"', rf'\1?v={__version__}"', html)
+    html = html.replace("__ACM_VERSION__", __version__)
+    return web.Response(text=html, content_type="text/html", headers={"Cache-Control": "no-store"})
+
+
+@web.middleware
+async def revalidate_static(request: web.Request, handler):
+    """Make static files always revalidate with the server (no stale code)."""
+    resp = await handler(request)
+    if request.path.startswith("/static/"):
+        resp.headers["Cache-Control"] = "no-cache"
+    return resp
 
 
 async def meta_info(request: web.Request) -> web.Response:
     """Return the current user and static references for the frontend."""
-    return web.json_response({"user": _user(request), "hardware_keys": sorted(HARDWARE_KEYS)})
+    return web.json_response({"user": _user(request), "hardware_keys": sorted(HARDWARE_KEYS), "version": __version__})
 
 
 async def entities(request: web.Request) -> web.Response:
@@ -647,7 +665,7 @@ async def sim_active(request: web.Request) -> web.Response:
 
 def create_app(data_dir: Path, device_factory=DeviceClient) -> web.Application:
     """Build the aiohttp application."""
-    app = web.Application(middlewares=[ingress_only, errors], client_max_size=32 * 1024**2)
+    app = web.Application(middlewares=[ingress_only, errors, revalidate_static], client_max_size=32 * 1024**2)
     app[K_STORE] = Store(data_dir)
     app[K_LOCKS] = defaultdict(asyncio.Lock)
     app[K_DEVICE] = device_factory

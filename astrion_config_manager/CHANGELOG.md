@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.5.0 - 2026-10-05
+
+- Fix: after an update the browser / HA companion app could keep running the
+  previous editor code from cache (e.g. no dropdowns or colour palettes after
+  2.4.0). Asset URLs now carry `?v=<version>`, the page is served `no-store`
+  and static files `no-cache`.
+- The panel header shows the running version.
+
 ## 2.4.0 - 2026-10-05
 
 Spec v1.6, RF3.5.
