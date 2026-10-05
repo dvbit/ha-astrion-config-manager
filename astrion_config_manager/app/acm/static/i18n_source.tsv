@@ -11,8 +11,8 @@ height	Screen height (px)	Altezza schermo (px)	Hauteur écran (px)	Alto de panta
 orientation	Orientation	Orientamento	Orientation	Orientación	Ausrichtung
 portrait	Portrait	Verticale	Portrait	Vertical	Hochformat
 landscape	Landscape	Orizzontale	Paysage	Horizontal	Querformat
-harmony_ip	Harmony Hub IP	IP Hub Harmony	IP du Hub Harmony	IP del Hub Harmony	Harmony-Hub-IP
-ir_entity	IR emitter entity (remote.*)	Entità emettitore IR (remote.*)	Entité émetteur IR (remote.*)	Entidad emisor IR (remote.*)	IR-Sender-Entität (remote.*)
+harmony_ip	Harmony Hub IP (fallback if the remote has no hubs)	IP Hub Harmony (riserva se il telecomando non ha hub)	IP du Hub Harmony (secours si la télécommande n'a pas de hub)	IP del Hub Harmony (reserva si el mando no tiene hubs)	Harmony-Hub-IP (Ersatz, wenn die Fernbedienung keine Hubs hat)
+ir_entity	IR emitter entity for local IR (remote.*)	Entità emettitore per IR locale (remote.*)	Entité émetteur pour l'IR local (remote.*)	Entidad emisor para IR local (remote.*)	Sender-Entität für lokales IR (remote.*)
 optional	optional	opzionale	facultatif	opcional	optional
 choose	— choose —	— scegli —	— choisir —	— elegir —	— wählen —
 save	Save	Salva	Enregistrer	Guardar	Speichern
@@ -203,3 +203,18 @@ err_icon_not_found	Icon not found	Icona non trovata	Icône introuvable	Icono no 
 v_icon_missing	Icon not in library nor on the remote: {icon}	Icona assente in libreria e sul telecomando: {icon}	Icône absente de la bibliothèque et de la télécommande : {icon}	Icono ausente en la biblioteca y en el mando: {icon}	Symbol weder in Bibliothek noch auf Fernbedienung: {icon}
 v_ha_device_domain	Entity does not match type {domain}	L'entità non corrisponde al tipo {domain}	L'entité ne correspond pas au type {domain}	La entidad no corresponde al tipo {domain}	Entität passt nicht zum Typ {domain}
 v_duplicate_id	Duplicate id {id}	Id duplicato {id}	Id en double {id}	Id duplicado {id}	Doppelte ID {id}
+first_hub	— first hub —	— primo hub —	— premier hub —	— primer hub —	— erster Hub —
+warnings	Warnings	Avvisi	Avertissements	Avisos	Warnungen
+hubs_extenders	Harmony hubs and IR targets (read from the remote)	Hub Harmony e destinazioni IR (letti dal telecomando)	Hubs Harmony et cibles IR (lus sur la télécommande)	Hubs Harmony y destinos IR (leídos del mando)	Harmony-Hubs und IR-Ziele (von der Fernbedienung gelesen)
+refresh	Refresh	Aggiorna	Actualiser	Actualizar	Aktualisieren
+refreshed	Read from the remote	Letti dal telecomando	Lus sur la télécommande	Leídos del mando	Von der Fernbedienung gelesen
+read_from_remote	Read from the remote	Letti dal telecomando	Lus sur la télécommande	Leídos del mando	Von der Fernbedienung gelesen
+never_read	Not read yet: press Refresh	Non ancora letti: premi Aggiorna	Pas encore lus : appuyez sur Actualiser	Aún no leídos: pulsa Actualizar	Noch nicht gelesen: Aktualisieren drücken
+default_hub	default	predefinito	par défaut	predeterminado	Standard
+fallback_ip	Fallback IP	IP di riserva	IP de secours	IP de reserva	Ersatz-IP
+ir_targets	IR targets	Destinazioni IR	Cibles IR	Destinos IR	IR-Ziele
+v_ir_extender_unknown	Extender not configured on the remote: {id}	Extender non configurato sul telecomando: {id}	Extender non configuré sur la télécommande : {id}	Extender no configurado en el mando: {id}	Extender auf der Fernbedienung nicht konfiguriert: {id}
+v_hub_unknown	Hub not on the remote ({id}): the first hub will be used	Hub non presente sul telecomando ({id}): verrà usato il primo hub	Hub absent de la télécommande ({id}) : le premier hub sera utilisé	Hub no presente en el mando ({id}): se usará el primer hub	Hub nicht auf der Fernbedienung ({id}): der erste Hub wird verwendet
+sim_err_ir_extender_unknown	Unknown IR extender	Extender IR sconosciuto	Extender IR inconnu	Extender IR desconocido	Unbekannter IR-Extender
+sim_err_extender_error	IR extender error	Errore extender IR	Erreur de l'extender IR	Error del extender IR	IR-Extender-Fehler
+sim_err_ir_bad_pattern	Invalid IR pattern	Pattern IR non valido	Motif IR invalide	Patrón IR no válido	Ungültiges IR-Muster

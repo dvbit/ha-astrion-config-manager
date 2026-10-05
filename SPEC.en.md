@@ -1,9 +1,9 @@
-# Requirement — Astrion Config Manager (HA add-on) v1.4
+# Requirement — Astrion Config Manager (HA add-on) v1.5
 
 > English translation of [SPEC.md](SPEC.md). The Italian document is the
 > reference; in case of discrepancy the Italian text prevails.
 
-Status: approved by the requester. v1.3: added RF6.12 (navigation-only mode). v1.4: added RF7 (icons and entity catalog). Supersedes v1.0: Harmony and IR are now in scope; named versions added (RF2.11–RF2.13). Original document language: Italian.
+Status: approved by the requester. v1.3: added RF6.12 (navigation-only mode). v1.4: added RF7 (icons and entity catalog). v1.5: added RF8 (multiple Harmony hubs and IR targets). Supersedes v1.0: Harmony and IR are now in scope; named versions added (RF2.11–RF2.13). Original document language: Italian.
 
 ## 1. Purpose
 
@@ -102,6 +102,16 @@ Home Assistant add-on with an Ingress panel that manages the configurations (`da
 - RF7.5 Form for the `haDevices` catalog (name, type, HA entity filtered by type). Catalog entries are offered in the editor's entity fields. A catalog entity that does not exist in HA blocks push.
 - RF7.6 Copying pages/cards between remotes also copies the catalog entries of the entities they use.
 
+### RF8 — Multiple Harmony hubs and IR targets
+
+- RF8.1 Harmony hubs and IR extenders are read from the remote (`GET /devices-config`) at registration, on every pull and with the Refresh button. They are read-only. The HA token contained in the response is discarded and never stored.
+- RF8.2 An action's `hub` field selects the hub by `localId`; missing or unknown uses the first hub, as in the reference implementation.
+- RF8.3 The remote's Harmony Hub IP stays as a fallback when the remote has no hubs; the IR emitter entity is the `local` target, because the built-in blaster cannot be driven remotely.
+- RF8.4 An IR device with `target: {"extender": id}` is sent directly to that extender (`POST http://<host>/pronto`, Pronto body as text/plain).
+- RF8.5 Towards an extender, ir-database codes are sent as is; inline codes are converted to Pronto.
+- RF8.6 In the editor `hub` and the IR target are dropdowns. An unknown extender is an error that blocks push; an unknown hub is only a warning.
+- RF8.7 The simulator names the hub or extender used in error messages and in "Navigation only".
+
 ## 6. Non-functional requirements
 
 - RNF1 Add-on with an Ingress panel, accessible to HA administrators only.
@@ -133,5 +143,5 @@ Decisions taken during requirement consolidation, not part of the original text:
 - Reference schema at development time: upstream release 1.1.9-beta.
 - Phased delivery: v1.0 covered RF1–RF5; v2.0 adds RF6 (simulator, Harmony, IR via Broadlink).
 - RF6.3 fidelity: layout, colours (ThemeConfig) and controls follow the app; icons are simplified.
-- Harmony actions are routed to the single Hub IP of RF1.1; the per-action `hub` field is ignored by the simulator.
-- IR codes are converted to Broadlink `b64:` packets (fixed 38 kHz carrier); `extender` targets are routed through the same entity.
+- Harmony routing: superseded by RF8 (v1.5), per-action `hub` with first-hub fallback.
+- IR codes for the `local` target are converted to Broadlink `b64:` packets (fixed 38 kHz carrier); `extender` targets go to the extender (RF8.4).

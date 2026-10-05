@@ -89,8 +89,10 @@ Optional fields of the remote enable the other actions:
 
 | Field | Example | Enables |
 | --- | --- | --- |
-| Harmony Hub IP | `192.168.2.30` | `harmonyCommand`, `activityId`, Apple TV card |
-| IR emitter entity | `remote.broadlink_salotto` | `irDevice` + `irCommand` (inline or ir-database codes) |
+| Hubs read from the remote | *Hub Salotto*, *Hub Camera* | `harmonyCommand`, `activityId`, Apple TV card, routed by `hub` |
+| Harmony Hub IP (fallback) | `192.168.2.30` | same, when the remote has no hubs |
+| Extenders read from the remote | *Ext TV* | IR devices with `target: {"extender": ...}` |
+| IR emitter entity | `remote.broadlink_salotto` | IR devices with `local` target (inline or ir-database codes) |
 
 Without them those buttons are shown disabled with the reason. IR codes are
 converted to Broadlink `b64:` packets; the carrier frequency is fixed by the

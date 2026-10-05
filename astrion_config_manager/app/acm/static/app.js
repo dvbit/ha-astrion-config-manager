@@ -268,7 +268,7 @@ function renderRemote() {
   if (S.tab === "editor") {
     if (!editor) {
       editor = new Editor({ schema: S.schema, hwKeys: S.hwKeys, commit, copy: copyDialog, rid: S.rid,
-        entities: () => S.entities, pickIcon: (cb) => openIconPicker(S.rid, cb) });
+        entities: () => S.entities, remote: () => S.remote, pickIcon: (cb) => openIconPicker(S.rid, cb) });
     }
     editor.root = body;
     editor.setDoc(S.doc, S.validation);
@@ -325,6 +325,17 @@ function renderSync(body) {
       el("button", { text: "⬇ " + t("pull"), onclick: guard(doPull) }),
       el("button", { class: "primary", text: "⬆ " + t("push"), disabled: !v.push_allowed, onclick: guard(doPush) })),
     v.issues.length ? el("p", { class: "msg", text: `${t("err_push_blocked")} (${v.issues.length})` }) : null));
+  // RF8.1: hubs and extenders read from the remote (read-only)
+  const hubs = r.harmony_hubs || [], exts = r.extenders || [];
+  body.append(el("div", { class: "card" }, el("div", { class: "row" }, el("h3", { text: t("hubs_extenders") }), el("span", { class: "spacer" }),
+    el("button", { text: "⟳ " + t("refresh"), onclick: guard(async () => { S.remote = await api("POST", `api/remotes/${S.rid}/devices/refresh`); toast(t("refreshed")); render(); }) })),
+  el("p", { class: "muted", text: r.devices_read_at ? `${t("read_from_remote")}: ${new Date(r.devices_read_at * 1000).toLocaleString(LANG)}` : t("never_read") }),
+  el("strong", { text: "Harmony" }),
+  ...(hubs.length ? hubs.map((h, i) => el("div", { class: "list-item" }, el("span", { text: `${h.name || h.localId}` }), el("span", { class: "muted", text: `${h.ip}${i === 0 ? " · " + t("default_hub") : ""}` })))
+    : [el("p", { class: "muted", text: r.harmony_ip ? `${t("fallback_ip")}: ${r.harmony_ip}` : t("none") })]),
+  el("strong", { text: t("ir_targets") }),
+  el("div", { class: "list-item" }, el("span", { text: t("local") }), el("span", { class: "muted", text: r.ir_entity || t("sim_no_ir") })),
+  ...exts.map((x) => el("div", { class: "list-item" }, el("span", { text: `${t("extender")}: ${x.name || x.localId}` }), el("span", { class: "muted", text: x.host })))));
   // RF7.3: icons stored on this remote; import them into the shared library
   const iconBox = el("div", { class: "card" }, el("h3", { text: t("icons_on_remote") }), el("p", { class: "muted", text: t("loading") }));
   body.append(iconBox);

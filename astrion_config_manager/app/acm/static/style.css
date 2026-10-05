@@ -109,3 +109,7 @@ img.thumb, span.thumb { width: 28px; height: 28px; object-fit: contain; flex: no
 img.sim-ico-img { width: 36px; height: 36px; object-fit: contain; }
 /* Long pages scroll: cards must keep their height instead of shrinking. */
 .sim-page > *, .sim-popup > * { flex: none; }
+/* RF8.6 warnings (non-blocking) */
+.issues.warn { border-left-color: var(--warn); }
+.field.warn input, .field.warn select, .field.warn textarea { border-color: var(--warn); }
+.msg.warn { color: var(--warn); }

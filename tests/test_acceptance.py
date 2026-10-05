@@ -46,6 +46,7 @@ class FakeDevice:
         self.text = json.dumps(doc) if doc is not None else None
         self.uploads = 0
         self.icons = {"onboard.png": PNG}
+        self.devices_cfg = None
 
     def app(self):
         async def get(_):
@@ -72,7 +73,13 @@ class FakeDevice:
                 return web.Response(status=404)
             return web.Response(body=self.icons[request.match_info["n"]], content_type="image/png")
 
+        async def devices_config(_):
+            if self.devices_cfg is None:
+                return web.Response(status=404)
+            return web.json_response(self.devices_cfg)
+
         app = web.Application()
+        app.router.add_get("/devices-config", devices_config)
         app.router.add_get("/icons-list", icons_list)
         app.router.add_post("/icons", icon_post)
         app.router.add_get("/icons/{n}", icon_get)
@@ -441,3 +448,34 @@ async def test_rf7_copy_brings_catalog(env):
         ("luce", "light.cucina"),
         ("luce_2", "light.salotto"),
     ]
+
+
+async def test_rf8_devices_config_read_without_token(env, tmp_path):
+    secret = "SECRET-TOKEN-123"
+    cfg = {
+        "ha": {"url": "http://ha:8123", "token": secret, "webhookId": ""},
+        "harmonyHubs": [{"localId": "h1", "name": "Salotto", "ip": "10.0.0.5", "hubId": "42"}],
+        "extenders": [{"localId": "x1", "name": "Ext", "host": "10.0.0.9", "mac": "aa"}],
+    }
+    env.devices["a"].devices_cfg = cfg
+    info = await register(env, "a", "R")
+    assert info["harmony_hubs"] == [{"localId": "h1", "name": "Salotto", "ip": "10.0.0.5", "hubId": "42"}]
+    assert info["extenders"] == [{"localId": "x1", "name": "Ext", "host": "10.0.0.9"}]
+    for f in tmp_path.rglob("*"):
+        if f.is_file():
+            assert secret.encode() not in f.read_bytes(), f
+    rid = info["id"]
+    r = await edit(
+        env,
+        rid,
+        lambda d: d.update(
+            irDevices=[
+                {"id": "a", "target": {"extender": "x1"}, "commands": {"on": {"freq": 38000, "pattern": [1]}}},
+                {"id": "b", "target": {"extender": "zz"}, "commands": {"on": {"freq": 38000, "pattern": [1]}}},
+            ],
+            hotkeys=[{"key": "MAIN", "harmonyActivity": "1", "hub": "ghost"}],
+        ),
+    )
+    v = r["validation"]
+    assert [i["code"] for i in v["issues"]] == ["ir_extender_unknown"]
+    assert [w["code"] for w in v["warnings"]] == ["hub_unknown"]

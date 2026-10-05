@@ -11,6 +11,9 @@ renderer under ``cards/impl/`` (extracted to ``static/card_schema.json``).
 * RF4.3 Harmony/IR: structure only, no check against the Hub or emitter.
 * RF7.5 ``haDevices`` catalog (structure + entity existence).
 * RF7.4 every icon path must exist in the add-on library or on the remote.
+* RF8.6 IR device ``target.extender`` must be an extender of the remote
+  (error); an action ``hub`` not among the remote's hubs is only a warning,
+  because the remote falls back to its first hub.
 
 Each issue is ``{"path": <JSON pointer>, "code": <i18n key>, "params": {}}``.
 """
@@ -325,7 +328,26 @@ def structural(doc: Any) -> _Ctx:
     return ctx
 
 
-def validate(doc: Any, known_entities: set[str] | None, known_icons: set[str] | None = None) -> dict[str, Any]:
+def _hub_refs(node: Any, path: str, out: list[tuple[str, str]]) -> None:
+    """All string ``hub`` values (hotkeys, buttons, scenes, Activities, cards)."""
+    if isinstance(node, dict):
+        for key, val in node.items():
+            sub = f"{path}{_ptr(key)}"
+            if key == "hub" and isinstance(val, str) and val:
+                out.append((sub, val))
+            else:
+                _hub_refs(val, sub, out)
+    elif isinstance(node, list):
+        for idx, val in enumerate(node):
+            _hub_refs(val, f"{path}/{idx}", out)
+
+
+def validate(
+    doc: Any,
+    known_entities: set[str] | None,
+    known_icons: set[str] | None = None,
+    known_devices: dict[str, set[str]] | None = None,
+) -> dict[str, Any]:
     """Full validation; ``known_entities`` None means HA is unreachable.
 
     ``known_icons`` = library + remote icon names; None = remote list unknown
@@ -346,8 +368,24 @@ def validate(doc: Any, known_entities: set[str] | None, known_icons: set[str] | 
             if name not in known_icons:
                 for path in paths:
                     issues.append({"path": path, "code": "icon_missing", "params": {"icon": name}})
+    warnings: list[dict[str, Any]] = []
+    if known_devices is not None and isinstance(doc, dict):
+        for idx, dev in enumerate(doc.get("irDevices") or []):
+            target = dev.get("target") if isinstance(dev, dict) else None
+            ext = target.get("extender") if isinstance(target, dict) else None
+            if isinstance(ext, str) and ext.strip() and ext not in known_devices["extenders"]:
+                issues.append(
+                    {"path": f"/irDevices/{idx}/target", "code": "ir_extender_unknown", "params": {"id": ext}}
+                )
+        if known_devices["hubs"]:
+            refs: list[tuple[str, str]] = []
+            _hub_refs(doc, "", refs)
+            for path, hub in refs:
+                if hub not in known_devices["hubs"]:
+                    warnings.append({"path": path, "code": "hub_unknown", "params": {"id": hub}})
     return {
         "issues": issues,
+        "warnings": warnings,
         "entities_checked": known_entities is not None,
         "push_allowed": not issues and known_entities is not None,
     }

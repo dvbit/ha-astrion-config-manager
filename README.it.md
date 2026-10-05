@@ -91,8 +91,10 @@ I campi opzionali del telecomando abilitano le altre azioni:
 
 | Campo | Esempio | Abilita |
 | --- | --- | --- |
-| IP Hub Harmony | `192.168.2.30` | `harmonyCommand`, `activityId`, card Apple TV |
-| Entità emettitore IR | `remote.broadlink_salotto` | `irDevice` + `irCommand` (codici inline o ir-database) |
+| Hub letti dal telecomando | *Hub Salotto*, *Hub Camera* | `harmonyCommand`, `activityId`, card Apple TV, instradati da `hub` |
+| IP Hub Harmony (riserva) | `192.168.2.30` | gli stessi, se il telecomando non ha hub |
+| Extender letti dal telecomando | *Ext TV* | dispositivi IR con `target: {"extender": ...}` |
+| Entità emettitore IR | `remote.broadlink_salotto` | dispositivi IR con destinazione `local` (codici inline o ir-database) |
 
 Senza questi campi i pulsanti appaiono disabilitati con il motivo. I codici IR
 sono convertiti in pacchetti Broadlink `b64:`; la portante è fissata dal

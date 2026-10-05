@@ -403,6 +403,13 @@ class Store:
         _LOGGER.info("Remote '%s' %s", meta["name"], "archived" if archived else "restored")
         return self.remote_info(rid)
 
+    def set_devices(self, rid: str, hubs: list[dict[str, str]], extenders: list[dict[str, str]]) -> None:
+        """RF8.1: keep the hubs/extenders read from the remote (read-only copy)."""
+        meta = self._get(rid)
+        meta.update({"harmony_hubs": hubs, "extenders": extenders, "devices_read_at": time.time()})
+        _write_json(self.rdir / rid / "meta.json", meta)
+        _LOGGER.info("Remote '%s': %s hub(s), %s extender(s) read", meta["name"], len(hubs), len(extenders))
+
     def set_sync(self, rid: str, **values: Any) -> None:
         """Persist baseline / last push information (RF5)."""
         meta = self._get(rid)

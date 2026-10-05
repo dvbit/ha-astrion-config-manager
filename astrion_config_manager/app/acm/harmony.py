@@ -14,8 +14,9 @@ Same protocol as upstream ``harmony/HarmonyHubDiscovery.kt`` and
      ``press`` then, after 120 ms, ``release``; ``action`` is the JSON string
      ``{"type":"IRCommand","deviceId","command"}``.
 
-RF6.7: all Harmony actions go to the single Hub IP configured on the remote;
-the per-action ``hub`` field is ignored (decision recorded in SPEC.en.md).
+RF8.2: the per-action ``hub`` field selects the remote's hub by ``localId``;
+missing or unknown -> the first hub (upstream HarmonyHubRegistry.client).
+When the remote reports the hub id, discovery is skipped.
 """
 
 from __future__ import annotations
@@ -43,12 +44,12 @@ class HarmonyError(Exception):
 class HarmonyHub:
     """One connection to one Hub, opened lazily and reused."""
 
-    def __init__(self, session: aiohttp.ClientSession, ip: str, port: int = PORT) -> None:
-        """Bind to the Hub at ``ip``."""
+    def __init__(self, session: aiohttp.ClientSession, ip: str, port: int = PORT, hub_id: str | None = None) -> None:
+        """Bind to the Hub at ``ip`` (``hub_id`` known -> no discovery)."""
         self._session = session
         self.ip = ip
         self._port = port
-        self._hub_id: str | None = None
+        self._hub_id: str | None = hub_id or None
         self._ws: aiohttp.ClientWebSocketResponse | None = None
         self._ids = itertools.count(1)
         self._lock = asyncio.Lock()
@@ -133,10 +134,10 @@ class HarmonyRegistry:
         self._port = port
         self._hubs: dict[str, HarmonyHub] = {}
 
-    def get(self, ip: str) -> HarmonyHub:
+    def get(self, ip: str, hub_id: str | None = None) -> HarmonyHub:
         """Return (creating if needed) the hub client for ``ip``."""
         if ip not in self._hubs:
-            self._hubs[ip] = HarmonyHub(self._session, ip, self._port)
+            self._hubs[ip] = HarmonyHub(self._session, ip, self._port, hub_id)
         return self._hubs[ip]
 
     async def close(self) -> None:

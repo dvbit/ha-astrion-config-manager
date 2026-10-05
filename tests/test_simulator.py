@@ -186,3 +186,110 @@ async def test_composed_activity_switch(executor):
     assert len(ha.calls) == 1  # amp already on: no power command
     res = await ex.run(meta, DOC, [{"kind": "activity_stop", "room": "salotto"}])
     assert res["active"] == {}
+
+
+# ---------------------------------------------------------------- RF8
+
+
+def test_pattern_to_pronto_roundtrip():
+    from acm.ir import pattern_to_pronto
+
+    pronto = pattern_to_pronto(38000, [9000, 4500, 560, 560, 560])  # odd -> final gap
+    back = pronto_to_pattern(pronto)
+    assert back["freq"] == round(4145146 / round(4145146 / 38000))
+    assert len(back["pattern"]) == 6
+    assert all(abs(a - b) <= 27 for a, b in zip(back["pattern"], [9000, 4500, 560, 560, 560], strict=False))
+
+
+@pytest.fixture
+async def multi(aiohttp_server, hub, device):
+    """Second hub on 127.0.0.2 (same port) + one IR extender."""
+    received2 = []
+
+    async def root(request):
+        ws = web.WebSocketResponse()
+        await ws.prepare(request)
+        async for msg in ws:
+            received2.append(json.loads(msg.data))
+        return ws
+
+    app2 = web.Application()
+    app2.router.add_route("*", "/", root)
+    await aiohttp_server(app2, host="127.0.0.2", port=hub.port)  # second hub
+    bodies = []
+
+    async def pronto(request):
+        assert request.content_type == "text/plain"
+        bodies.append(await request.text())
+        return web.Response(text="ok")
+
+    app3 = web.Application()
+    app3.router.add_post("/pronto", pronto)
+    ext = await aiohttp_server(app3)
+    async with aiohttp.ClientSession() as http:
+        ha = FakeHA()
+        ex = Executor(ha, HarmonyRegistry(http, port=hub.port), DeviceClient, http)
+        meta = {
+            "id": "r2",
+            "name": "R",
+            "host": device.host,
+            "port": device.port,
+            "harmony_ip": None,
+            "ir_entity": None,
+            "harmony_hubs": [
+                {"localId": "h1", "name": "Salotto", "ip": hub.host, "hubId": ""},
+                {"localId": "h2", "name": "Camera", "ip": "127.0.0.2", "hubId": "999"},  # known id: no discovery
+            ],
+            "extenders": [{"localId": "x1", "name": "Ext TV", "host": f"{ext.host}:{ext.port}"}],
+        }
+        yield ex, ha, meta, hub, received2, bodies
+
+
+async def test_rf8_multiple_hubs(multi):
+    import asyncio
+
+    ex, _, meta, hub, received2, _ = multi
+    res = await ex.run(
+        meta,
+        DOC,
+        [
+            {"kind": "harmony_activity", "activity": "1", "hub": "h2"},
+            {"kind": "harmony_activity", "activity": "2", "hub": "nope"},  # unknown -> first hub
+            {"kind": "harmony_activity", "activity": "3"},  # missing -> first hub
+        ],
+    )
+    assert all(r["ok"] for r in res["results"]), res
+    await asyncio.sleep(0.1)
+    assert [m["hbus"]["params"]["activityId"] for m in received2] == ["1"]
+    assert received2[0]["hubId"] == "999"
+    assert [m["hbus"]["params"]["activityId"] for m in hub.received] == ["2", "3"]
+
+
+async def test_rf8_extender(multi):
+    from acm.ir import pattern_to_pronto
+
+    ex, ha, meta, _, _, bodies = multi
+    doc = {
+        **DOC,
+        "irDevices": [
+            {
+                "id": "amp",
+                "target": {"extender": "x1"},
+                "commands": {"on": {"freq": 38000, "pattern": [9000, 4500, 560, 560]}},
+            },
+            {"id": "tv", "target": {"extender": "x1"}, "category": "tv", "brand": "sony", "model": "kd-55"},
+            {"id": "bad", "target": {"extender": "zz"}, "commands": {"on": {"freq": 38000, "pattern": [1, 2]}}},
+            {"id": "loc", "commands": {"on": {"freq": 38000, "pattern": [1, 2]}}},
+        ],
+    }
+    res = await ex.run(
+        meta,
+        doc,
+        [
+            {"kind": "ir", "device": d, "command": c}
+            for d, c in (("amp", "on"), ("tv", "power"), ("bad", "on"), ("loc", "on"))
+        ],
+    )
+    assert [r.get("error") for r in res["results"]] == [None, None, "ir_extender_unknown", "ir_not_configured"]
+    assert bodies == [pattern_to_pronto(38000, [9000, 4500, 560, 560]), PRONTO]
+    assert ha.calls == []

@@ -59,6 +59,23 @@ def pronto_to_pattern(pronto: str) -> dict[str, Any]:
     return {"freq": carrier, "pattern": [round(w * period_us) for w in chosen]}
 
 
+def pattern_to_pronto(freq: int, pattern: list[int]) -> str:
+    """RF8.5: inline ``freq/pattern`` -> learned Pronto (0000), for extenders.
+
+    Inverse of :func:`pronto_to_pattern`; an odd-length pattern gets a final
+    gap so burst pairs are complete.
+    """
+    if not freq or not pattern:
+        raise IRError("ir_bad_pattern")
+    freq_word = round(4145146.0 / freq)
+    period_us = 1_000_000.0 / (4145146.0 / freq_word)
+    words = [max(1, round(us / period_us)) for us in pattern]
+    if len(words) % 2:
+        words.append(max(1, round(10_000 / period_us)))
+    head = [0x0000, freq_word, len(words) // 2, 0]
+    return " ".join(f"{w:04X}" for w in head + words)
+
+
 def pulses_to_broadlink(pulses: list[int], tick: float = BROADLINK_TICK_US) -> bytes:
     """Encode µs pulses as a Broadlink packet (python-broadlink ``pulses_to_data``)."""
     result = bytearray(4)
@@ -106,5 +123,5 @@ async def resolve(
                 entry = (m.get("commands") or {}).get(command)
                 if entry and entry.get("pronto"):
                     _LOGGER.debug("IR %s/%s resolved from ir-database %s", device.get("id"), command, category)
-                    return pronto_to_pattern(entry["pronto"])
+                    return {**pronto_to_pattern(entry["pronto"]), "pronto": entry["pronto"]}
     raise IRError("ir_command_not_found", f"{category}/{brand}/{model}/{command}")

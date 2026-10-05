@@ -1,5 +1,18 @@
 # Changelog
 
+## 2.3.0 - 2026-10-05
+
+Spec v1.5, new RF8: multiple Harmony hubs and IR targets, as on the remote.
+
+- Hubs and IR extenders read from the remote (`/devices-config`) at registration,
+  on pull and with Refresh; read-only; the remote's HA token is never stored.
+- Harmony: action `hub` selects the hub by localId, else the first hub; known
+  hub ids skip discovery; old single Hub IP kept as fallback.
+- IR: `local` target -> HA `remote.*` entity (Broadlink); extender targets ->
+  `POST http://<host>/pronto`; inline codes converted to Pronto.
+- Editor: hub and IR target dropdowns; unknown extender = error, unknown hub = warning.
+- Simulator: hub/extender named in errors and in Navigation only.
+
 ## 2.2.0 - 2026-10-05
 
 Spec v1.4, new RF7 (the remote's home-page utilities).

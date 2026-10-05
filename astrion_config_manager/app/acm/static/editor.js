@@ -11,6 +11,8 @@
  * - RF7.4  icon fields get a thumbnail + picker (library and remote icons);
  *          JSON sub-editors can insert an icon path at the cursor.
  * - RF7.5  form for the haDevices entity catalog.
+ * - RF8.6  "hub" fields and IR extender targets are dropdowns of the hubs /
+ *          extenders read from the remote; unknown hubs are warnings.
  */
 "use strict";
 
@@ -68,12 +70,14 @@ class Editor {
     this.sel = { kind: "page", p: 0 };
     this.doc = null;
     this.issues = [];
+    this.warnings = [];
   }
 
   /* Called by the app after every load/commit. */
   setDoc(doc, validation) {
     this.doc = doc;
     this.issues = (validation && validation.issues) || [];
+    this.warnings = (validation && validation.warnings) || [];
     this.render();
   }
 
@@ -87,6 +91,9 @@ class Editor {
   /* ---------- issues (RF4.4) ---------- */
   issuesAt(path) {
     return this.issues.filter((i) => i.path === path || i.path.startsWith(path + "/"));
+  }
+  warningsAt(path) {
+    return this.warnings.filter((i) => i.path === path || i.path.startsWith(path + "/"));
   }
   issueText(i) {
     return t("v_" + i.code, i.params);
@@ -147,6 +154,15 @@ class Editor {
           list: kind === "entity" || /entit|entity_id|master/.test(key) ? "entity-list" : null,
           placeholder: opts && opts.default !== undefined ? String(opts.default) : "" });
         input.onchange = () => set(input.value === "" ? undefined : input.value);
+        if (key === "hub") {
+          // RF8.6: hub by localId (empty = first hub, as on the remote)
+          const hubs = (this.remote().harmony_hubs || []);
+          const hs = el("select", {}, el("option", { value: "", text: t("first_hub") }),
+            ...hubs.map((h) => el("option", { value: h.localId, text: `${h.name || h.localId} (${h.ip})`, selected: h.localId === val })));
+          if (val && !hubs.some((h) => h.localId === val)) hs.append(el("option", { value: val, text: `${val} ⚠`, selected: true }));
+          hs.onchange = () => set(hs.value === "" ? undefined : hs.value);
+          return this.wrap(key, hs, path);
+        }
         if (key === "icon" || key.endsWith("_icon")) {
           // RF7.4: thumbnail + picker for custom icons
           const row = el("div", { class: "row icon-row" }, this.thumb(val), input,
@@ -195,6 +211,7 @@ class Editor {
     const box = el("div", { class: "field" + (issues.length ? " invalid" : ""), "data-path": path },
       el("label", { text: label }), input);
     for (const i of issues) box.append(el("div", { class: "msg", text: this.issueText(i) }));
+    for (const w of this.warningsAt(path)) { box.classList.add("warn"); box.append(el("div", { class: "msg warn", text: "⚠ " + this.issueText(w) })); }
     return box;
   }
 
@@ -265,12 +282,14 @@ class Editor {
   }
 
   renderIssues() {
-    if (!this.issues.length) return el("div", { class: "card issues ok", text: "✓ " + t("no_issues") });
+    const warn = this.warnings.length ? el("div", { class: "card issues warn" }, el("strong", { text: `⚠ ${t("warnings")} (${this.warnings.length})` }),
+      el("ul", {}, ...this.warnings.map((w) => el("li", { text: `${w.path} — ${this.issueText(w)}`, onclick: () => this.reveal(w.path) })))) : null;
+    if (!this.issues.length) return el("div", {}, el("div", { class: "card issues ok", text: "✓ " + t("no_issues") }), warn);
     const ul = el("ul", {});
     for (const i of this.issues) {
       ul.append(el("li", { text: `${i.path || "/"} — ${this.issueText(i)}`, onclick: () => this.reveal(i.path) }));
     }
-    return el("div", { class: "card issues" }, el("strong", { text: `${t("issues")} (${this.issues.length})` }), ul);
+    return el("div", {}, el("div", { class: "card issues" }, el("strong", { text: `${t("issues")} (${this.issues.length})` }), ul), warn);
   }
 
   /* Jump to the element an issue points to. */
@@ -483,14 +502,14 @@ class Editor {
     const grid = el("div", { class: "grid" }, this.wrap("source", mode, ip));
     if (inline) box.prepend(this.jsonField("commands", dev.commands, `${ip}/commands`, (v) => set("commands", v || {})));
     else for (const k of ["category", "brand", "model"]) grid.append(this.field(dev, k, "text", null, ip, set));
+    // RF8.6: local (remote's own blaster) or one of the remote's extenders
     const tgt = dev.target && typeof dev.target === "object" ? dev.target.extender : "";
-    const tsel = el("select", {}, el("option", { value: "local", text: t("local") }),
-      el("option", { value: "extender", text: t("extender"), selected: !!tgt }));
-    const tid = el("input", { type: "text", value: tgt || "", placeholder: "extender id", hidden: !tgt });
-    const apply = () => set("target", tsel.value === "local" ? undefined : { extender: tid.value });
-    tsel.onchange = () => { tid.hidden = tsel.value === "local"; if (tsel.value === "local") apply(); };
-    tid.onchange = apply;
-    grid.append(this.wrap(t("target"), el("div", { class: "row" }, tsel, tid), `${ip}/target`));
+    const exts = this.remote().extenders || [];
+    const tsel = el("select", {}, el("option", { value: "", text: t("local") }),
+      ...exts.map((x) => el("option", { value: x.localId, text: `${t("extender")}: ${x.name || x.localId} (${x.host})`, selected: x.localId === tgt })));
+    if (tgt && !exts.some((x) => x.localId === tgt)) tsel.append(el("option", { value: tgt, text: `${t("extender")}: ${tgt} ⚠`, selected: true }));
+    tsel.onchange = () => set("target", tsel.value === "" ? undefined : { extender: tsel.value });
+    grid.append(this.wrap(t("target"), tsel, `${ip}/target`));
     box.prepend(grid);
     return box;
   }

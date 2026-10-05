@@ -170,8 +170,30 @@ async def _known_icons(app: web.Application, meta: dict[str, Any] | None) -> set
         return None
 
 
+def _known_devices(meta: dict[str, Any] | None) -> dict[str, set[str]] | None:
+    """RF8.6: hub/extender ids read from the remote; None if never read."""
+    if not meta or not meta.get("devices_read_at"):
+        return None
+    return {
+        "hubs": {h["localId"] for h in meta.get("harmony_hubs") or []},
+        "extenders": {e["localId"] for e in meta.get("extenders") or []},
+    }
+
+
+async def _refresh_devices(app: web.Application, rid: str) -> None:
+    """RF8.1: re-read hubs/extenders from the remote (best effort)."""
+    store = app[K_STORE]
+    meta = store.remote_info(rid)
+    try:
+        cfg = await _device(app, meta).devices_config()
+    except DeviceError as err:
+        _LOGGER.warning("Cannot read hubs/extenders of '%s': %s %s", meta["name"], err.code, err.detail)
+        return
+    store.set_devices(rid, cfg["harmony_hubs"], cfg["extenders"])
+
+
 async def _validation(app: web.Application, doc: Any, meta: dict[str, Any] | None = None) -> dict[str, Any]:
-    return validate(doc, await _known_entities(app), await _known_icons(app, meta))
+    return validate(doc, await _known_entities(app), await _known_icons(app, meta), _known_devices(meta))
 
 
 def _summary(ver: dict[str, Any]) -> dict[str, Any]:
@@ -234,7 +256,8 @@ async def create_remote(request: web.Request) -> web.Response:
     store.check_unique_name(clean["name"])
     pulled = await request.app[K_DEVICE](request.app[K_HTTP], clean["host"], clean["port"]).pull()
     info = store.create_remote(clean, pulled.content, _user(request), pulled.hash)
-    return web.json_response(info, status=201)
+    await _refresh_devices(request.app, info["id"])  # RF8.1
+    return web.json_response(store.remote_info(info["id"]), status=201)
 
 
 async def update_remote(request: web.Request) -> web.Response:
@@ -424,6 +447,7 @@ async def pull(request: web.Request) -> web.Response:
         pulled = await _device(request.app, meta).pull()
         ver = store.commit(rid, _int(data.get("head")), pulled.content, _user(request), T_SYNC_IMPORT)
         store.set_sync(rid, baseline=pulled.hash)
+        await _refresh_devices(request.app, rid)  # RF8.1
     _LOGGER.info("Pull '%s': %s", meta["name"], f"v{ver['id']} created" if ver else "no changes")
     return await _after_version(request, rid, ver)
 
@@ -442,7 +466,12 @@ async def push(request: web.Request) -> web.Response:
         # 0. fresh icon list of the remote (RF7.3/RF7.4); unreachable blocks
         device_icons = await _device_icons(request.app, meta, force=True)
         # 1. validation (RF4.5, icons included)
-        check = validate(head_state, await _known_entities(request.app), request.app[K_ICONS].names() | device_icons)
+        check = validate(
+            head_state,
+            await _known_entities(request.app),
+            request.app[K_ICONS].names() | device_icons,
+            _known_devices(meta),
+        )
         if not check["push_allowed"]:
             _LOGGER.warning("Push '%s' blocked: %s issue(s)", meta["name"], len(check["issues"]))
             code = "push_blocked" if check["entities_checked"] else "ha_unavailable"
@@ -595,6 +624,15 @@ async def sim_action(request: web.Request) -> web.Response:
     return web.json_response(result)
 
 
+async def devices_refresh(request: web.Request) -> web.Response:
+    """RF8.1: Refresh button - re-read hubs/extenders from the remote."""
+    rid = request.match_info["rid"]
+    meta = request.app[K_STORE].remote_info(rid)
+    cfg = await _device(request.app, meta).devices_config()  # errors -> 502/503
+    request.app[K_STORE].set_devices(rid, cfg["harmony_hubs"], cfg["extenders"])
+    return web.json_response(request.app[K_STORE].remote_info(rid))
+
+
 async def sim_active(request: web.Request) -> web.Response:
     """Composed Activities currently active per room (simulator runtime)."""
     rid = request.match_info["rid"]
@@ -661,4 +699,5 @@ def create_app(data_dir: Path, device_factory=DeviceClient) -> web.Application:
     r.add_get("/api/remotes/{rid}/sim/live", sim_live)
     r.add_post("/api/remotes/{rid}/sim/action", sim_action)
     r.add_get("/api/remotes/{rid}/sim/active", sim_active)
+    r.add_post("/api/remotes/{rid}/devices/refresh", devices_refresh)
     return app

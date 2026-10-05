@@ -12,6 +12,8 @@
  * - RF6.9  HA100 physical keys panel (short and long press).
  * - RF6.10 permanent "real execution" indicator.
  * - RF6.12 "navigation only" switch: actions are listed, not executed.
+ * - RF8    several Harmony hubs (action "hub" = localId, else first hub) and
+ *          IR targets per device (local -> remote.* entity, or an extender).
  */
 "use strict";
 
@@ -116,10 +118,27 @@ class Simulator {
   theme() { return { ...THEME_DEFAULTS, ...((this.doc && this.doc.theme) || {}) }; }
   activeIds() { return new Set(Object.values(this.active)); }
 
-  /* Reason why a step cannot run (RF6.7/RF6.8), or null. */
+  /* RF8.2: hub chosen for a step (by localId, else the first; RF8.3 fallback IP). */
+  hubFor(localId) {
+    const hubs = (this.remote.harmony_hubs || []).filter((h) => h.ip);
+    if (hubs.length) return hubs.find((h) => h.localId === localId) || hubs[0];
+    return this.remote.harmony_ip ? { name: this.remote.harmony_ip, ip: this.remote.harmony_ip } : null;
+  }
+  /* RF8.4: IR target of a device: {kind:"local"} or {kind:"extender", ext}. */
+  irTarget(deviceId) {
+    const dev = (this.doc.irDevices || []).find((d) => d.id === deviceId);
+    const ext = dev && dev.target && typeof dev.target === "object" ? dev.target.extender : null;
+    if (!ext) return { kind: "local" };
+    return { kind: "extender", id: ext, ext: (this.remote.extenders || []).find((x) => x.localId === ext) };
+  }
+  /* Reason why a step cannot run (RF6.7/RF6.8/RF8), or null. */
   blocked(steps) {
-    if (steps.some((s) => s.kind.startsWith("harmony")) && !this.remote.harmony_ip) return t("sim_no_harmony");
-    if (steps.some((s) => s.kind === "ir") && !this.remote.ir_entity) return t("sim_no_ir");
+    if (steps.some((s) => s.kind.startsWith("harmony")) && !this.hubFor(null)) return t("sim_no_harmony");
+    for (const s of steps.filter((x) => x.kind === "ir")) {
+      const tg = this.irTarget(s.device);
+      if (tg.kind === "local" && !this.remote.ir_entity) return t("sim_no_ir");
+      if (tg.kind === "extender" && !tg.ext) return `${t("sim_err_ir_extender_unknown")}: ${tg.id}`;
+    }
     return null;
   }
 
@@ -194,9 +213,12 @@ class Simulator {
   describe(st) {
     switch (st.kind) {
       case "service": return `${st.service}${st.entity_id ? " " + st.entity_id : ""}`;
-      case "harmony_command": return `Harmony ${st.device}/${st.command}`;
-      case "harmony_activity": return `Harmony activity ${st.activity}`;
-      case "ir": return `IR ${st.device}/${st.command}`;
+      case "harmony_command": return `Harmony ${st.device}/${st.command} → ${(this.hubFor(st.hub) || {}).name || "?"}`;
+      case "harmony_activity": return `Harmony activity ${st.activity} → ${(this.hubFor(st.hub) || {}).name || "?"}`;
+      case "ir": {
+        const tg = this.irTarget(st.device);
+        return `IR ${st.device}/${st.command} → ${tg.kind === "local" ? (this.remote.ir_entity || t("local")) : ((tg.ext && tg.ext.name) || tg.id)}`;
+      }
       case "activity": return `${t("activities")}: ${st.id}`;
       default: return st.kind;
     }
@@ -207,8 +229,8 @@ class Simulator {
     const steps = [];
     if (scene && o.entity_id && !o.service) steps.push({ kind: "service", service: `${o.entity_id.split(".")[0]}.turn_on`, entity_id: o.entity_id });
     if (o.service) steps.push({ kind: "service", service: o.service, entity_id: o.entity_id || o.entityId, data: o.data });
-    if (o.harmonyDevice && o.harmonyCommand) steps.push({ kind: "harmony_command", device: o.harmonyDevice, command: o.harmonyCommand });
-    if (o.activityId) steps.push({ kind: "harmony_activity", activity: o.activityId });
+    if (o.harmonyDevice && o.harmonyCommand) steps.push({ kind: "harmony_command", device: o.harmonyDevice, command: o.harmonyCommand, hub: o.hub });
+    if (o.activityId) steps.push({ kind: "harmony_activity", activity: o.activityId, hub: o.hub });
     if (o.irDevice && o.irCommand) steps.push({ kind: "ir", device: o.irDevice, command: o.irCommand });
     if (scene && o.activity) steps.push({ kind: "activity", id: o.activity });
     return steps;
@@ -242,8 +264,8 @@ class Simulator {
     }
     if (hk.page) return this.goto(hk.page);
     const steps = [];
-    if (hk.harmonyActivity) steps.push({ kind: "harmony_activity", activity: hk.harmonyActivity });
-    else if (hk.harmonyDevice && hk.harmonyCommand) steps.push({ kind: "harmony_command", device: hk.harmonyDevice, command: hk.harmonyCommand });
+    if (hk.harmonyActivity) steps.push({ kind: "harmony_activity", activity: hk.harmonyActivity, hub: hk.hub });
+    else if (hk.harmonyDevice && hk.harmonyCommand) steps.push({ kind: "harmony_command", device: hk.harmonyDevice, command: hk.harmonyCommand, hub: hk.hub });
     else if (hk.irDevice && hk.irCommand) steps.push({ kind: "ir", device: hk.irDevice, command: hk.irCommand });
     else if (hk.service) steps.push({ kind: "service", service: hk.service, entity_id: hk.entityId, data: hk.data });
     this.run(steps);
@@ -518,7 +540,7 @@ class Simulator {
         : [{ kind: "service", service: "media_player.play_media", entity_id: media, data: { media_content_type: "app", media_content_id: a.app } }]))));
   }
   card_apple_tv_remote(o) {
-    const send = (cmd) => [{ kind: "harmony_command", device: o.deviceId, command: cmd }];
+    const send = (cmd) => [{ kind: "harmony_command", device: o.deviceId, command: cmd, hub: o.hub }];
     return this.card(" Apple TV",
       this.dpad((k) => send({ up: "DirectionUp", down: "DirectionDown", left: "DirectionLeft", right: "DirectionRight", center: "Select" }[k])),
       el("div", { class: "row" }, this.ctl("☰ Menu", send("Menu")), this.ctl("Home", send("Home")), this.ctl("▶", send("Play")), this.ctl("⏸", send("Pause"))));

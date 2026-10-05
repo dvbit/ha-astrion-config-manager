@@ -10,7 +10,11 @@ browser on ``http://<host>:<port>``, as implemented upstream in
 * ``GET  /ir-database/<category>.json`` -> curated IR codes (RF6.8);
 * ``GET  /icons-list`` -> JSON array of icon file names (RF7);
 * ``POST /icons`` multipart field ``file`` -> store icon (redirect on success);
-* ``GET  /icons/<name>`` -> icon bytes.
+* ``GET  /icons/<name>`` -> icon bytes;
+* ``GET  /devices-config`` -> remote settings: ``harmonyHubs`` [{localId, name,
+  ip, hubId}], ``extenders`` [{localId, name, host, mac}] and ``ha`` (URL and
+  token).  Only hubs and extenders are kept (RF8.1): the ``ha`` block, which
+  holds the remote's HA token, is discarded and never stored or logged.
 """
 
 from __future__ import annotations
@@ -89,6 +93,32 @@ class DeviceClient:
             raise DeviceError("unreachable", str(err) or type(err).__name__) from err
         except (UnicodeDecodeError, json.JSONDecodeError) as err:
             raise DeviceError("invalid_json", str(err)) from err
+
+    async def devices_config(self) -> dict[str, list[dict[str, str]]]:
+        """RF8.1: Harmony hubs and IR extenders configured on the remote."""
+        url = f"{self._base}/devices-config"
+        try:
+            async with self._session.get(url, timeout=TIMEOUT) as resp:
+                if resp.status != 200:
+                    raise DeviceError("http_error", f"HTTP {resp.status}")
+                raw = json.loads((await resp.read()).decode("utf-8"))
+        except (aiohttp.ClientError, TimeoutError) as err:
+            raise DeviceError("unreachable", str(err) or type(err).__name__) from err
+        except (UnicodeDecodeError, json.JSONDecodeError) as err:
+            raise DeviceError("invalid_json", str(err)) from err
+
+        def keep(items: Any, keys: tuple[str, ...]) -> list[dict[str, str]]:
+            # whitelist: nothing but the listed keys survives (no token)
+            return [
+                {k: str(i.get(k) or "") for k in keys}
+                for i in (items if isinstance(items, list) else [])
+                if isinstance(i, dict) and i.get("localId")
+            ]
+
+        return {
+            "harmony_hubs": keep(raw.get("harmonyHubs"), ("localId", "name", "ip", "hubId")),
+            "extenders": keep(raw.get("extenders"), ("localId", "name", "host")),
+        }
 
     async def icons_list(self) -> set[str]:
         """Names of the icons stored on the remote (RF7.3)."""

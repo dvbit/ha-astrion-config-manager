@@ -1,6 +1,6 @@
-# Requisito — Astrion Config Manager (add-on HA) v1.4
+# Requisito — Astrion Config Manager (add-on HA) v1.5
 
-Stato: approvato dal richiedente. v1.3: aggiunto RF6.12 (modalità solo navigazione). v1.4: aggiunto RF7 (icone e catalogo entità). Sostituisce la v1.0: Harmony e IR rientrano nell'ambito; aggiunte le versioni con nome (RF2.11–RF2.13). Lingua del documento: italiano. Traduzione inglese: [SPEC.en.md](SPEC.en.md).
+Stato: approvato dal richiedente. v1.3: aggiunto RF6.12 (modalità solo navigazione). v1.4: aggiunto RF7 (icone e catalogo entità). v1.5: aggiunto RF8 (più hub Harmony e destinazioni IR). Sostituisce la v1.0: Harmony e IR rientrano nell'ambito; aggiunte le versioni con nome (RF2.11–RF2.13). Lingua del documento: italiano. Traduzione inglese: [SPEC.en.md](SPEC.en.md).
 
 ## 1. Scopo
 
@@ -98,6 +98,16 @@ Add-on di Home Assistant con pannello Ingress che gestisce le configurazioni (`d
 - RF7.4 Ogni campo icona dell'editor ha anteprima e selettore (libreria + icone del telecomando); gli editor JSON permettono di inserire un percorso icona. Il simulatore mostra le icone reali. Un'icona assente sia in libreria sia sul telecomando è un errore che blocca il push.
 - RF7.5 Form per il catalogo `haDevices` (nome, tipo, entità HA filtrata per tipo). Le voci del catalogo sono proposte nei campi entità dell'editor. Un'entità del catalogo inesistente in HA blocca il push.
 - RF7.6 La copia di pagine/card tra telecomandi copia anche le voci del catalogo delle entità usate.
+
+### RF8 — Più hub Harmony e destinazioni IR
+
+- RF8.1 Hub Harmony ed extender IR vengono letti dal telecomando (`GET /devices-config`) alla registrazione, a ogni pull e con il pulsante Aggiorna. Sono in sola lettura. Il token HA contenuto nella risposta viene scartato e mai salvato.
+- RF8.2 Il campo `hub` di un'azione seleziona l'hub per `localId`; se assente o sconosciuto si usa il primo hub, come nell'implementazione di riferimento.
+- RF8.3 L'IP Hub Harmony del telecomando resta come riserva quando il telecomando non ha hub; l'entità emettitore IR è la destinazione `local`, perché l'emettitore integrato non è pilotabile da remoto.
+- RF8.4 Un dispositivo IR con `target: {"extender": id}` viene inviato direttamente a quell'extender (`POST http://<host>/pronto`, corpo Pronto in text/plain).
+- RF8.5 Verso un extender, i codici ir-database sono inviati così come sono; i codici inline sono convertiti in Pronto.
+- RF8.6 Nell'editor `hub` e destinazione IR sono menu a tendina. Un extender sconosciuto è un errore che blocca il push; un hub sconosciuto è solo un avviso.
+- RF8.7 Il simulatore indica nei messaggi d'errore e in «Solo navigazione» l'hub o l'extender usato.
 
 ## 6. Requisiti non funzionali
 

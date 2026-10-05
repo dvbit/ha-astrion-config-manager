@@ -6,9 +6,11 @@ renderers and ``MainActivity.runHotkey``.  Navigation (pages, popups) stays in
 the simulator (RF6.6); everything else is executed here for real:
 
 * ``{"kind": "service", "service": "d.s", "entity_id"?, "data"?}``   -> HA (RF6.5)
-* ``{"kind": "harmony_command", "device", "command"}``               -> Hub (RF6.7)
-* ``{"kind": "harmony_activity", "activity"}``                       -> Hub (RF6.7)
-* ``{"kind": "ir", "device", "command"}``                            -> remote.* (RF6.8)
+* ``{"kind": "harmony_command", "device", "command", "hub"?}``      -> Hub (RF6.7, RF8.2)
+* ``{"kind": "harmony_activity", "activity", "hub"?}``               -> Hub (RF6.7, RF8.2)
+* ``{"kind": "ir", "device", "command"}``  -> by the IR device ``target``:
+  ``local`` -> the remote's ``remote.*`` entity (RF6.8), ``{"extender": id}``
+  -> that extender over HTTP (RF8.4)
 * ``{"kind": "activity", "id"}`` composed Activity start   (ActivityDispatcher.switchActivity)
 * ``{"kind": "activity_stop", "room"}`` composed Activity stop (ActivityDispatcher.stopActivity)
 
@@ -24,9 +26,10 @@ import time
 from typing import Any
 
 from .device import DeviceClient, DeviceError
+from .extender import ExtenderError, send_pronto
 from .ha import HAClient, HAError
 from .harmony import HarmonyError, HarmonyRegistry
-from .ir import IRError, resolve, to_b64_command
+from .ir import IRError, pattern_to_pronto, resolve, to_b64_command
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -81,13 +84,13 @@ class Executor:
         if kind == "service":
             await self._service(step.get("service"), step.get("entity_id"), step.get("data"))
         elif kind == "harmony_command":
-            await self._harmony_cmd(meta, step.get("device"), step.get("command"))
+            await self._harmony_cmd(meta, step.get("device"), step.get("command"), step.get("hub"))
         elif kind == "harmony_activity":
-            hub = self._hub(meta)
+            hub, label = self._hub(meta, step.get("hub"))
             try:
                 await hub.start_activity(str(step.get("activity")))
             except HarmonyError as err:
-                raise StepError("harmony_error", str(err)) from err
+                raise StepError("harmony_error", f"{label}: {err}") from err
         elif kind == "ir":
             await self._ir(meta, doc, step.get("device"), step.get("command"))
         elif kind == "activity":
@@ -106,28 +109,42 @@ class Executor:
         except HAError as err:
             raise StepError("ha_error", str(err)) from err
 
-    def _hub(self, meta: dict[str, Any]):
-        """RF6.7: single Hub IP of the remote, otherwise disabled."""
-        if not meta.get("harmony_ip"):
-            raise StepError("harmony_not_configured")
-        return self._harmony.get(meta["harmony_ip"])
+    def _hub(self, meta: dict[str, Any], local_id: Any = None):
+        """RF8.2: hub by ``localId``, else the first; RF8.3 fallback IP; else disabled.
 
-    async def _harmony_cmd(self, meta: dict[str, Any], device: Any, command: Any) -> None:
-        hub = self._hub(meta)
+        Returns (client, label) where label names the hub for error messages.
+        """
+        hubs = [h for h in (meta.get("harmony_hubs") or []) if h.get("ip")]
+        if hubs:
+            hub = next((h for h in hubs if h.get("localId") == local_id), hubs[0])
+            return self._harmony.get(hub["ip"], hub.get("hubId")), hub.get("name") or hub["ip"]
+        if meta.get("harmony_ip"):
+            return self._harmony.get(meta["harmony_ip"]), meta["harmony_ip"]
+        raise StepError("harmony_not_configured")
+
+    async def _harmony_cmd(self, meta: dict[str, Any], device: Any, command: Any, hub_id: Any = None) -> None:
+        hub, label = self._hub(meta, hub_id)
         try:
             await hub.send_command(str(device), str(command))
         except HarmonyError as err:
-            raise StepError("harmony_error", str(err)) from err
+            raise StepError("harmony_error", f"{label}: {err}") from err
 
     async def _ir(self, meta: dict[str, Any], doc: Any, device_id: Any, command: Any) -> None:
-        """RF6.8: resolve, convert to Broadlink b64 and send via remote.*."""
-        entity = meta.get("ir_entity")
-        if not entity:
-            raise StepError("ir_not_configured")
+        """RF6.8 / RF8.4: route by the IR device target (local or extender)."""
         devices = {d.get("id"): d for d in (doc.get("irDevices") or []) if isinstance(d, dict)}
         device = devices.get(device_id)
         if device is None:
             raise StepError("ir_device_unknown", str(device_id))
+        target = device.get("target")
+        extender_id = target.get("extender") if isinstance(target, dict) else None
+        entity = meta.get("ir_entity")
+        if extender_id is None and not entity:
+            raise StepError("ir_not_configured")
+        extender = None
+        if extender_id is not None:
+            extender = next((e for e in (meta.get("extenders") or []) if e.get("localId") == extender_id), None)
+            if extender is None or not extender.get("host"):
+                raise StepError("ir_extender_unknown", str(extender_id))
 
         async def fetch(category: str) -> Any:
             key = (meta["id"], category)
@@ -143,9 +160,22 @@ class Executor:
             return data
 
         try:
-            code = to_b64_command(await resolve(device, str(command), fetch))
+            step = await resolve(device, str(command), fetch)
+            if extender is not None:
+                # RF8.5: ir-database Pronto as is; inline codes converted
+                pronto = step.get("pronto") or pattern_to_pronto(int(step.get("freq") or 38000), step["pattern"])
+            else:
+                code = to_b64_command(step)
         except IRError as err:
             raise StepError(err.code, err.detail) from err
+        if extender is not None:
+            label = extender.get("name") or extender["host"]
+            try:
+                await send_pronto(self._http, extender["host"], pronto)
+            except ExtenderError as err:
+                raise StepError("extender_error", f"{label}: {err}") from err
+            _LOGGER.info("IR %s/%s sent via extender %s", device_id, command, label)
+            return
         try:
             await self._ha.call_service("remote", "send_command", entity, {"command": code})
         except HAError as err:
@@ -171,7 +201,7 @@ class Executor:
         if source == "ir":
             await self._ir(meta, doc, dev_id, command)
         elif source == "harmony":
-            await self._harmony_cmd(meta, dev_id, command)
+            await self._harmony_cmd(meta, dev_id, command, dev.get("hub"))
         elif source == "ha":
             entity = str(dev_id)
             await self._service(f"{entity.split('.')[0]}.select_source", entity, {"source": command})
