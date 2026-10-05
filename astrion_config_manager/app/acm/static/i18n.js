@@ -226,7 +226,9 @@ const I18N = {
   "other_value": "other value",
   "insert_color": "Insert colour",
   "v_value_unexpected": "Value not supported by the remote ({value}): its default is used",
-  "v_color_invalid": "Not a #RRGGBB / #AARRGGBB colour ({value}): ignored by the remote"
+  "v_color_invalid": "Not a #RRGGBB / #AARRGGBB colour ({value}): ignored by the remote",
+  "default_short": "default",
+  "theme_hint": "Theme colours are part of dashboard.json (pulled and pushed with it). Empty fields use the remote's built-in default shown in the swatch."
  },
  "it": {
   "app_title": "Astrion Config Manager",
@@ -452,7 +454,9 @@ const I18N = {
   "other_value": "altro valore",
   "insert_color": "Inserisci colore",
   "v_value_unexpected": "Valore non supportato dal telecomando ({value}): verrà usato il predefinito",
-  "v_color_invalid": "Non è un colore #RRGGBB / #AARRGGBB ({value}): ignorato dal telecomando"
+  "v_color_invalid": "Non è un colore #RRGGBB / #AARRGGBB ({value}): ignorato dal telecomando",
+  "default_short": "predefinito",
+  "theme_hint": "I colori del tema fanno parte di dashboard.json (scaricati e inviati con esso). I campi vuoti usano il predefinito del telecomando mostrato nel campione."
  },
  "fr": {
   "app_title": "Astrion Config Manager",
@@ -678,7 +682,9 @@ const I18N = {
   "other_value": "autre valeur",
   "insert_color": "Insérer une couleur",
   "v_value_unexpected": "Valeur non prise en charge par la télécommande ({value}) : la valeur par défaut sera utilisée",
-  "v_color_invalid": "Pas une couleur #RRGGBB / #AARRGGBB ({value}) : ignorée par la télécommande"
+  "v_color_invalid": "Pas une couleur #RRGGBB / #AARRGGBB ({value}) : ignorée par la télécommande",
+  "default_short": "par défaut",
+  "theme_hint": "Les couleurs du thème font partie de dashboard.json (récupérées et envoyées avec lui). Les champs vides utilisent la valeur par défaut de la télécommande affichée dans l'échantillon."
  },
  "es": {
   "app_title": "Astrion Config Manager",
@@ -904,7 +910,9 @@ const I18N = {
   "other_value": "otro valor",
   "insert_color": "Insertar color",
   "v_value_unexpected": "Valor no admitido por el mando ({value}): se usará el predeterminado",
-  "v_color_invalid": "No es un color #RRGGBB / #AARRGGBB ({value}): el mando lo ignora"
+  "v_color_invalid": "No es un color #RRGGBB / #AARRGGBB ({value}): el mando lo ignora",
+  "default_short": "predeterminado",
+  "theme_hint": "Los colores del tema forman parte de dashboard.json (se descargan y envían con él). Los campos vacíos usan el predeterminado del mando mostrado en la muestra."
  },
  "de": {
   "app_title": "Astrion Config Manager",
@@ -1130,7 +1138,9 @@ const I18N = {
   "other_value": "anderer Wert",
   "insert_color": "Farbe einfügen",
   "v_value_unexpected": "Wert von der Fernbedienung nicht unterstützt ({value}): Standard wird verwendet",
-  "v_color_invalid": "Keine Farbe #RRGGBB / #AARRGGBB ({value}): wird ignoriert"
+  "v_color_invalid": "Keine Farbe #RRGGBB / #AARRGGBB ({value}): wird ignoriert",
+  "default_short": "Standard",
+  "theme_hint": "Designfarben sind Teil von dashboard.json (werden mit ihr geholt und gesendet). Leere Felder nutzen den im Farbfeld gezeigten Standard der Fernbedienung."
  }
 };
 

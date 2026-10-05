@@ -190,19 +190,20 @@
     "color",
     "active_color"
   ],
-  "theme": [
-    "background",
-    "cardSurface",
-    "insetSurface",
-    "controlBackground",
-    "primaryText",
-    "mutedText",
-    "iconTint",
-    "accent",
-    "accentSecondary",
-    "amber",
-    "danger",
-    "success"
-  ],
-  "_presets": "'presets': true = common choices only; any number is valid (no warning, 'other' allowed in the editor)."
+  "theme": {
+    "background": "#0E2229",
+    "cardSurface": "#1B343D",
+    "insetSurface": "#152B33",
+    "controlBackground": "#2C4C58",
+    "primaryText": "#E6F0F1",
+    "mutedText": "#93AFB6",
+    "iconTint": "#CBDCE0",
+    "accent": "#6EA8FE",
+    "accentSecondary": "#4C6EF5",
+    "amber": "#FFC24B",
+    "danger": "#E06767",
+    "success": "#4CAF50"
+  },
+  "_presets": "'presets': true = common choices only; any number is valid (no warning, 'other' allowed in the editor).",
+  "_theme": "ThemeConfig defaults (config/AppConfig.kt): used by the remote for every key absent from dashboard.json 'theme'."
 }

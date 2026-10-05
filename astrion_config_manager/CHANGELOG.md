@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.6.0 - 2026-10-05
+
+- Theme form: keys absent from `dashboard.json` now show the remote's built-in
+  default (ThemeConfig) in the swatch and as placeholder, instead of black/empty.
+  A short note explains that the theme is part of `dashboard.json`.
+
 ## 2.5.0 - 2026-10-05
 
 - Fix: after an update the browser / HA companion app could keep running the

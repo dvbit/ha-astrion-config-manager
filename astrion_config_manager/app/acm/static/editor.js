@@ -140,7 +140,7 @@ class Editor {
         break;
       case "select": input = sel(opts, val); break;
       case "enum": return this.wrap(key, this.enumInput(opts, val, has, set), path);
-      case "color": return this.wrap(key, this.colorInput(val, has, set), path);
+      case "color": return this.wrap(key, this.colorInput(val, has, set, opts && opts.default), path);
       case "page": input = sel(this.pages().map((p) => p.name).filter(Boolean), val); break;
       case "hwkey": input = sel(this.hwKeys, val); break;
       case "irdev": input = sel((this.doc.irDevices || []).map((d) => d.id).filter(Boolean), val); break;
@@ -196,11 +196,14 @@ class Editor {
 
   /* RF3.5: colour palette + hex text. The remote reads #RRGGBB or #AARRGGBB
    * (ui/Theme.kt parseHexColor): the palette edits RGB and keeps any alpha. */
-  colorInput(val, has, set) {
-    const hex = typeof val === "string" ? val.replace(/^#/, "") : "";
+  colorInput(val, has, set, dflt) {
+    // dflt: value the remote uses when the key is absent (theme defaults):
+    // shown in the swatch and as placeholder, so an unset key is not "black".
+    const hex = (typeof val === "string" ? val : (has ? "" : dflt || "")).replace(/^#/, "");
     const rgb = /^[0-9a-f]{8}$/i.test(hex) ? hex.slice(2) : (/^[0-9a-f]{6}$/i.test(hex) ? hex : "000000");
     const pick = el("input", { type: "color", value: "#" + rgb.toLowerCase(), class: "swatch" });
-    const txt = el("input", { type: "text", value: has && val != null ? String(val) : "", placeholder: "#RRGGBB / #AARRGGBB", class: "hex" });
+    const txt = el("input", { type: "text", value: has && val != null ? String(val) : "",
+      placeholder: dflt ? `${dflt} (${t("default_short")})` : "#RRGGBB / #AARRGGBB", class: "hex" });
     pick.onchange = () => {
       const alpha = /^[0-9a-f]{8}$/i.test(hex) ? hex.slice(0, 2) : "";
       set("#" + (alpha + pick.value.slice(1)).toUpperCase());
@@ -515,9 +518,9 @@ class Editor {
     } else if (g === "theme") {
       // RF3.5: ThemeConfig colours (config/AppConfig.kt) with palettes
       const th = this.doc.theme || {};
-      const keys = (this.hints && this.hints.theme) || [];
-      panel.append(el("h2", { text: t("theme") }),
-        this.form(th, keys.map((k) => [k, "color"]), "/theme", (d) => { if (!d.theme || typeof d.theme !== "object") d.theme = {}; return d.theme; }));
+      const defaults = (this.hints && this.hints.theme) || {};
+      panel.append(el("h2", { text: t("theme") }), el("p", { class: "muted", text: t("theme_hint") }),
+        this.form(th, Object.entries(defaults).map(([k, dv]) => [k, "color", { default: dv }]), "/theme", (d) => { if (!d.theme || typeof d.theme !== "object") d.theme = {}; return d.theme; }));
     }
     return panel;
   }
