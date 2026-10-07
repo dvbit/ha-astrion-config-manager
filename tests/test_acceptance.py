@@ -562,3 +562,16 @@ async def test_rf9_apple_tv_direct(env, tmp_path):
         "entityId": "media_player.appletv_salon",
         "name": "Apple TV Living",
     } in st["haDevices"]
+
+
+async def test_monitor_rows_must_be_objects(env):
+    rid = (await register(env, "a", "R"))["id"]
+    card = {
+        "type": "monitor",
+        "options": {"title": "S", "entities": ["light.salotto", {"entity_id": "light.cucina", "name": "C"}]},
+    }
+    v = (await edit(env, rid, lambda d: d["pages"][0]["cards"].append(card)))["validation"]
+    assert [(w["code"], w["path"]) for w in v["warnings"]] == [
+        ("item_not_object", "/pages/0/cards/2/options/entities/0")
+    ]
+    assert v["issues"] == []

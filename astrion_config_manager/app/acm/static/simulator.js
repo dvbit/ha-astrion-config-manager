@@ -504,8 +504,8 @@ class Simulator {
   }
   card_speaker_group(o) {
     const master = o.master; const members = this.attr(master, "group_members") || [];
-    return this.card(`🔊 ${o.name || this.name({}, master)}`, ...(o.speakers || []).map((sp) => {
-      const id = typeof sp === "string" ? sp : sp.entity_id || sp.entity;
+    return this.card(`🔊 ${o.name || this.name({}, master)}`, ...(o.speakers || []).filter((sp) => sp && typeof sp === "object" && sp.entity_id).map((sp) => {
+      const id = sp.entity_id;
       const joined = members.includes(id);
       return el("div", { class: "row" }, el("span", { text: this.name(typeof sp === "object" ? sp : {}, id) }), el("span", { class: "spacer" }),
         id === master ? el("span", { class: "sim-muted", text: "master" })
@@ -576,8 +576,9 @@ class Simulator {
       id ? el("div", { text: `⛅ ${this.state(id) || "--"} · ${this.attr(id, "temperature") != null ? this.attr(id, "temperature") + "°" : ""}` }) : null);
   }
   card_monitor(o) {
-    return this.card(o.title || null, ...(o.entities || []).map((e) => {
-      const id = typeof e === "string" ? e : e.entity || e.entity_id;
+    // MonitorCard: rows are {entity_id, name}; anything else is skipped, as on the remote
+    return this.card(o.title || null, ...(o.entities || []).filter((e) => e && typeof e === "object" && e.entity_id).map((e) => {
+      const id = e.entity_id;
       const unit = this.attr(id, "unit_of_measurement");
       return el("div", { class: "row" }, el("span", { text: `${iconFor(typeof e === "object" ? e.icon : "", id)} ${this.name(typeof e === "object" ? e : {}, id)}` }),
         el("span", { class: "spacer" }), el("strong", { text: `${this.state(id) != null ? this.state(id) : "--"}${unit ? " " + unit : ""}` }));

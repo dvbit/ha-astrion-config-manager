@@ -251,10 +251,17 @@ class Editor {
     const summary = (it) => (it && typeof it === "object")
       ? [it.name, it.entity_id, it.service, it.app, it.activity, it.page, it.irCommand, it.harmonyCommand].filter(Boolean).slice(0, 2).join(" · ") || "…"
       : String(it);
+    const keyField = specs[0][0];
     const list = this.listEditor(items, `${path}`, getArr, summary,
-      (it, ip, get) => (it && typeof it === "object") ? this.form(it, specs, ip, get, new Set(specs.map((x) => x[0])))
-        : this.jsonField(key, it, ip, (v) => this.change((d) => { getArr(d)[+ip.split("/").pop()] = v; })),
-      () => ({}));
+      (it, ip, get) => {
+        if (it && typeof it === "object") return this.form(it, specs, ip, get, new Set(specs.map((x) => x[0])), true);
+        // A bare string is ignored by the remote (it reads objects): offer a one-click fix
+        const idx = +ip.split("/").pop();
+        return el("div", {}, this.jsonField(key, it, ip, (v) => this.change((d) => { getArr(d)[idx] = v; })),
+          typeof it === "string" ? el("button", { text: `${t("convert_item")} {"${keyField}": "${it}"}`,
+            onclick: () => this.change((d) => { getArr(d)[idx] = { [keyField]: it }; }) }) : null);
+      },
+      () => ({}), specs.length <= 3);
     return el("div", { class: "field items", "data-path": path }, el("label", { text: `${key} (${items.length})` }), list);
   }
 
@@ -366,7 +373,7 @@ class Editor {
   }
 
   /* Fields of `specs` plus "other fields" JSON for everything else (RF3.2). */
-  form(obj, specs, objPath, getObj, ownKeys) {
+  form(obj, specs, objPath, getObj, ownKeys, hideEmptyRest) {
     const wide = [];
     const set = this.setterFor(getObj);
     const grid = el("div", { class: "grid" });
@@ -382,25 +389,40 @@ class Editor {
       for (const k of Object.keys(o)) if (!own.has(k)) delete o[k];
       Object.assign(o, v || {});
     }));
+    // list items: no empty "Other fields" box (keeps compact rows compact)
+    if (hideEmptyRest && !Object.keys(rest).length) return el("div", {}, grid, ...wide);
     return el("div", {}, grid, ...wide, restBox);
   }
 
   /* Ordered list of objects with move/duplicate/remove (one version each). */
-  listEditor(items, path, getArr, summary, formFor, newItem) {
+  /* Ordered list editor. Expanded items are remembered in this.open (by JSON
+   * path) so a commit - which re-renders the editor - does not collapse the
+   * item being edited; new items open automatically; compact lists (few
+   * fields, e.g. monitor entities) are always open. */
+  listEditor(items, path, getArr, summary, formFor, newItem, compact) {
     const box = el("div", {});
+    this.open = this.open || new Set();
     items.forEach((item, idx) => {
       const ip = `${path}/${idx}`;
       const bad = this.issuesAt(ip).length;
-      const body = el("div", { hidden: !bad });
+      const isOpen = compact || bad || this.open.has(ip);
+      const body = el("div", { hidden: !isOpen });
       const head = el("div", { class: "list-item" },
-        el("button", { class: "icon", text: "▸", onclick: () => { body.hidden = !body.hidden; } }),
+        compact ? null : el("button", { class: "icon", text: isOpen ? "▾" : "▸", onclick: (e) => {
+          body.hidden = !body.hidden;
+          e.target.textContent = body.hidden ? "▸" : "▾";
+          if (body.hidden) this.open.delete(ip); else this.open.add(ip);
+        } }),
         el("strong", { text: summary(item, idx) }), bad ? el("span", { class: "badge unreachable", text: String(bad) }) : null,
         el("span", { class: "spacer" }),
         this.structButtons(getArr, idx, items.length));
       body.append(formFor(item, ip, (d) => getArr(d)[idx]));
       box.append(el("div", { class: "card" }, head, body));
     });
-    box.append(el("button", { text: "＋ " + t("add"), onclick: () => this.change((d) => getArr(d, true).push(newItem())) }));
+    box.append(el("button", { text: "＋ " + t("add"), onclick: () => {
+      this.open.add(`${path}/${items.length}`); // open the new item
+      this.change((d) => getArr(d, true).push(newItem()));
+    } }));
     return box;
   }
 

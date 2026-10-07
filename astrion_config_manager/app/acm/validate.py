@@ -163,6 +163,12 @@ def _card(ctx: _Ctx, card: Any, path: str) -> None:
     for key, fspec in spec["fields"].items():
         if key in opts and opts[key] is not None and not _KIND_CHECK[fspec["kind"]](opts[key]):
             ctx.err(_ptr_join(path, "options", key), "type_mismatch", expected=fspec["kind"])
+    # MonitorCard / SpeakerGroupCard read objects ({"entity_id", "name"}); a bare
+    # string row is skipped by the remote -> warning with a one-click fix in the UI
+    for key in {"monitor": "entities", "speaker_group": "speakers"}.get(ctype, "").split():
+        for idx, row in enumerate(opts.get(key) or [] if isinstance(opts.get(key), list) else []):
+            if not isinstance(row, dict):
+                ctx.warn(_ptr_join(path, "options", key, idx), "item_not_object")
     # RF9.3: apple_tv_remote with both ways set -> the remote uses appleTv
     if ctype == "apple_tv_remote" and opts.get("appleTv") and opts.get("deviceId"):
         ctx.warn(_ptr_join(path, "options", "deviceId"), "appletv_both")

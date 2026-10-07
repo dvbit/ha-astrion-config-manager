@@ -1,5 +1,15 @@
 # Changelog
 
+## 2.8.0 - 2026-10-08
+
+- Monitor card (and every list editor): items no longer collapse after each
+  edit (open items are remembered); new items open automatically; short item
+  forms (monitor entities, speakers, tv_remote apps-like rows of <=3 fields)
+  are always expanded; empty "Other fields" boxes hidden in list items.
+- monitor / speaker_group rows written as plain strings (skipped by the remote,
+  which reads `{"entity_id", "name"}`) get a warning and a one-click "Convert".
+- Simulator: monitor and speaker_group skip non-object rows like the remote.
+
 ## 2.7.0 - 2026-10-08
 
 Aligned with astrion-custom-dashboard **1.2.0**; spec v1.7 (RF3.6, RF9).

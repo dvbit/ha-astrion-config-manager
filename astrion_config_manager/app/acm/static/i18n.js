@@ -238,7 +238,9 @@ const I18N = {
   "ctl_harmony": "Harmony hub",
   "sim_appletv_direct": "Direct Apple TV control runs on the remote only: not executable from the add-on",
   "sim_err_appletv_direct": "Direct Apple TV control is not executable from the add-on",
-  "v_appletv_both": "Both appleTv and deviceId are set: the remote uses the Apple TV (direct)"
+  "v_appletv_both": "Both appleTv and deviceId are set: the remote uses the Apple TV (direct)",
+  "convert_item": "Convert to",
+  "v_item_not_object": "Plain value: the remote only reads {\"entity_id\", \"name\"} rows and skips this one"
  },
  "it": {
   "app_title": "Astrion Config Manager",
@@ -476,7 +478,9 @@ const I18N = {
   "ctl_harmony": "Hub Harmony",
   "sim_appletv_direct": "Il controllo diretto Apple TV gira solo sul telecomando: non eseguibile dall'add-on",
   "sim_err_appletv_direct": "Il controllo diretto Apple TV non è eseguibile dall'add-on",
-  "v_appletv_both": "Sono impostati sia appleTv sia deviceId: il telecomando usa l'Apple TV (diretto)"
+  "v_appletv_both": "Sono impostati sia appleTv sia deviceId: il telecomando usa l'Apple TV (diretto)",
+  "convert_item": "Converti in",
+  "v_item_not_object": "Valore semplice: il telecomando legge solo righe {\"entity_id\", \"name\"} e salta questa"
  },
  "fr": {
   "app_title": "Astrion Config Manager",
@@ -714,7 +718,9 @@ const I18N = {
   "ctl_harmony": "Hub Harmony",
   "sim_appletv_direct": "Le contrôle direct de l'Apple TV ne fonctionne que sur la télécommande : non exécutable depuis l'add-on",
   "sim_err_appletv_direct": "Le contrôle direct de l'Apple TV n'est pas exécutable depuis l'add-on",
-  "v_appletv_both": "appleTv et deviceId sont tous deux définis : la télécommande utilise l'Apple TV (direct)"
+  "v_appletv_both": "appleTv et deviceId sont tous deux définis : la télécommande utilise l'Apple TV (direct)",
+  "convert_item": "Convertir en",
+  "v_item_not_object": "Valeur simple : la télécommande ne lit que des lignes {\"entity_id\", \"name\"} et ignore celle-ci"
  },
  "es": {
   "app_title": "Astrion Config Manager",
@@ -952,7 +958,9 @@ const I18N = {
   "ctl_harmony": "Hub Harmony",
   "sim_appletv_direct": "El control directo del Apple TV solo funciona en el mando: no ejecutable desde el add-on",
   "sim_err_appletv_direct": "El control directo del Apple TV no es ejecutable desde el add-on",
-  "v_appletv_both": "Están definidos appleTv y deviceId: el mando usa el Apple TV (directo)"
+  "v_appletv_both": "Están definidos appleTv y deviceId: el mando usa el Apple TV (directo)",
+  "convert_item": "Convertir a",
+  "v_item_not_object": "Valor simple: el mando solo lee filas {\"entity_id\", \"name\"} y omite esta"
  },
  "de": {
   "app_title": "Astrion Config Manager",
@@ -1190,7 +1198,9 @@ const I18N = {
   "ctl_harmony": "Harmony-Hub",
   "sim_appletv_direct": "Direkte Apple-TV-Steuerung läuft nur auf der Fernbedienung: im Add-on nicht ausführbar",
   "sim_err_appletv_direct": "Direkte Apple-TV-Steuerung im Add-on nicht ausführbar",
-  "v_appletv_both": "appleTv und deviceId sind gesetzt: die Fernbedienung nutzt das Apple TV (direkt)"
+  "v_appletv_both": "appleTv und deviceId sind gesetzt: die Fernbedienung nutzt das Apple TV (direkt)",
+  "convert_item": "Umwandeln in",
+  "v_item_not_object": "Einfacher Wert: die Fernbedienung liest nur {\"entity_id\", \"name\"}-Zeilen und überspringt diese"
  }
 };
 
