@@ -1,6 +1,12 @@
 {
  "apple_tv_remote": {
   "fields": {
+   "appleTv": {
+    "kind": "string"
+   },
+   "buttons": {
+    "kind": "string_list"
+   },
    "deviceId": {
     "kind": "string"
    },
@@ -26,7 +32,7 @@
  "camera": {
   "fields": {
    "aspect": {
-    "kind": "json"
+    "kind": "float"
    },
    "entity_id": {
     "kind": "string"
@@ -60,10 +66,10 @@
     "kind": "string"
    },
    "show_captions": {
-    "kind": "json"
+    "kind": "bool"
    },
    "step": {
-    "kind": "json"
+    "kind": "float"
    },
    "swing_mode_style": {
     "kind": "string"
@@ -121,10 +127,10 @@
     "kind": "string"
    },
    "show_captions": {
-    "kind": "json"
+    "kind": "bool"
    },
    "step": {
-    "kind": "json"
+    "kind": "float"
    },
    "style": {
     "kind": "string"
@@ -216,7 +222,7 @@
  "picture_elements": {
   "fields": {
    "aspect": {
-    "kind": "json"
+    "kind": "float"
    },
    "elements": {
     "kind": "json"
@@ -283,7 +289,7 @@
     "kind": "string"
    },
    "icon_fill": {
-    "kind": "json"
+    "kind": "bool"
    },
    "layout": {
     "kind": "string"
@@ -292,7 +298,7 @@
     "kind": "json"
    },
    "show_labels": {
-    "kind": "json"
+    "kind": "bool"
    },
    "tile_height": {
     "kind": "int"
@@ -401,19 +407,19 @@
  "vacuum": {
   "fields": {
    "entity_id": {
-    "kind": "json"
+    "kind": "string"
    },
    "map_height": {
-    "kind": "json"
+    "kind": "float"
    },
    "map_image": {
-    "kind": "json"
+    "kind": "string"
    },
    "map_rotation": {
-    "kind": "json"
+    "kind": "float"
    },
    "name": {
-    "kind": "json"
+    "kind": "string"
    },
    "room_clean_action": {
     "kind": "json"

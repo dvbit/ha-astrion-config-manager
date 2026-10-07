@@ -228,7 +228,17 @@ const I18N = {
   "v_value_unexpected": "Value not supported by the remote ({value}): its default is used",
   "v_color_invalid": "Not a #RRGGBB / #AARRGGBB colour ({value}): ignored by the remote",
   "default_short": "default",
-  "theme_hint": "Theme colours are part of dashboard.json (pulled and pushed with it). Empty fields use the remote's built-in default shown in the swatch."
+  "theme_hint": "Theme colours are part of dashboard.json (pulled and pushed with it). Empty fields use the remote's built-in default shown in the swatch.",
+  "one_per_line": "one per line",
+  "card_type_new": "New card type:",
+  "border_accent": "Accent border",
+  "border_color": "Custom colour border",
+  "control_via": "Control via",
+  "ctl_direct": "Apple TV (direct)",
+  "ctl_harmony": "Harmony hub",
+  "sim_appletv_direct": "Direct Apple TV control runs on the remote only: not executable from the add-on",
+  "sim_err_appletv_direct": "Direct Apple TV control is not executable from the add-on",
+  "v_appletv_both": "Both appleTv and deviceId are set: the remote uses the Apple TV (direct)"
  },
  "it": {
   "app_title": "Astrion Config Manager",
@@ -456,7 +466,17 @@ const I18N = {
   "v_value_unexpected": "Valore non supportato dal telecomando ({value}): verrà usato il predefinito",
   "v_color_invalid": "Non è un colore #RRGGBB / #AARRGGBB ({value}): ignorato dal telecomando",
   "default_short": "predefinito",
-  "theme_hint": "I colori del tema fanno parte di dashboard.json (scaricati e inviati con esso). I campi vuoti usano il predefinito del telecomando mostrato nel campione."
+  "theme_hint": "I colori del tema fanno parte di dashboard.json (scaricati e inviati con esso). I campi vuoti usano il predefinito del telecomando mostrato nel campione.",
+  "one_per_line": "uno per riga",
+  "card_type_new": "Tipo nuova card:",
+  "border_accent": "Bordo accento",
+  "border_color": "Bordo colore personalizzato",
+  "control_via": "Controllo tramite",
+  "ctl_direct": "Apple TV (diretto)",
+  "ctl_harmony": "Hub Harmony",
+  "sim_appletv_direct": "Il controllo diretto Apple TV gira solo sul telecomando: non eseguibile dall'add-on",
+  "sim_err_appletv_direct": "Il controllo diretto Apple TV non è eseguibile dall'add-on",
+  "v_appletv_both": "Sono impostati sia appleTv sia deviceId: il telecomando usa l'Apple TV (diretto)"
  },
  "fr": {
   "app_title": "Astrion Config Manager",
@@ -684,7 +704,17 @@ const I18N = {
   "v_value_unexpected": "Valeur non prise en charge par la télécommande ({value}) : la valeur par défaut sera utilisée",
   "v_color_invalid": "Pas une couleur #RRGGBB / #AARRGGBB ({value}) : ignorée par la télécommande",
   "default_short": "par défaut",
-  "theme_hint": "Les couleurs du thème font partie de dashboard.json (récupérées et envoyées avec lui). Les champs vides utilisent la valeur par défaut de la télécommande affichée dans l'échantillon."
+  "theme_hint": "Les couleurs du thème font partie de dashboard.json (récupérées et envoyées avec lui). Les champs vides utilisent la valeur par défaut de la télécommande affichée dans l'échantillon.",
+  "one_per_line": "un par ligne",
+  "card_type_new": "Type de nouvelle carte :",
+  "border_accent": "Bordure accent",
+  "border_color": "Bordure couleur personnalisée",
+  "control_via": "Contrôle via",
+  "ctl_direct": "Apple TV (direct)",
+  "ctl_harmony": "Hub Harmony",
+  "sim_appletv_direct": "Le contrôle direct de l'Apple TV ne fonctionne que sur la télécommande : non exécutable depuis l'add-on",
+  "sim_err_appletv_direct": "Le contrôle direct de l'Apple TV n'est pas exécutable depuis l'add-on",
+  "v_appletv_both": "appleTv et deviceId sont tous deux définis : la télécommande utilise l'Apple TV (direct)"
  },
  "es": {
   "app_title": "Astrion Config Manager",
@@ -912,7 +942,17 @@ const I18N = {
   "v_value_unexpected": "Valor no admitido por el mando ({value}): se usará el predeterminado",
   "v_color_invalid": "No es un color #RRGGBB / #AARRGGBB ({value}): el mando lo ignora",
   "default_short": "predeterminado",
-  "theme_hint": "Los colores del tema forman parte de dashboard.json (se descargan y envían con él). Los campos vacíos usan el predeterminado del mando mostrado en la muestra."
+  "theme_hint": "Los colores del tema forman parte de dashboard.json (se descargan y envían con él). Los campos vacíos usan el predeterminado del mando mostrado en la muestra.",
+  "one_per_line": "uno por línea",
+  "card_type_new": "Tipo de nueva tarjeta:",
+  "border_accent": "Borde de acento",
+  "border_color": "Borde de color personalizado",
+  "control_via": "Control mediante",
+  "ctl_direct": "Apple TV (directo)",
+  "ctl_harmony": "Hub Harmony",
+  "sim_appletv_direct": "El control directo del Apple TV solo funciona en el mando: no ejecutable desde el add-on",
+  "sim_err_appletv_direct": "El control directo del Apple TV no es ejecutable desde el add-on",
+  "v_appletv_both": "Están definidos appleTv y deviceId: el mando usa el Apple TV (directo)"
  },
  "de": {
   "app_title": "Astrion Config Manager",
@@ -1140,7 +1180,17 @@ const I18N = {
   "v_value_unexpected": "Wert von der Fernbedienung nicht unterstützt ({value}): Standard wird verwendet",
   "v_color_invalid": "Keine Farbe #RRGGBB / #AARRGGBB ({value}): wird ignoriert",
   "default_short": "Standard",
-  "theme_hint": "Designfarben sind Teil von dashboard.json (werden mit ihr geholt und gesendet). Leere Felder nutzen den im Farbfeld gezeigten Standard der Fernbedienung."
+  "theme_hint": "Designfarben sind Teil von dashboard.json (werden mit ihr geholt und gesendet). Leere Felder nutzen den im Farbfeld gezeigten Standard der Fernbedienung.",
+  "one_per_line": "eins pro Zeile",
+  "card_type_new": "Typ der neuen Karte:",
+  "border_accent": "Akzentrahmen",
+  "border_color": "Rahmen in eigener Farbe",
+  "control_via": "Steuerung über",
+  "ctl_direct": "Apple TV (direkt)",
+  "ctl_harmony": "Harmony-Hub",
+  "sim_appletv_direct": "Direkte Apple-TV-Steuerung läuft nur auf der Fernbedienung: im Add-on nicht ausführbar",
+  "sim_err_appletv_direct": "Direkte Apple-TV-Steuerung im Add-on nicht ausführbar",
+  "v_appletv_both": "appleTv und deviceId sind gesetzt: die Fernbedienung nutzt das Apple TV (direkt)"
  }
 };
 

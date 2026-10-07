@@ -104,6 +104,10 @@ class Executor:
         if not isinstance(service, str) or "." not in service:
             raise StepError("service_invalid", str(service))
         domain, svc = service.split(".", 1)
+        if domain == "astrion_appletv":
+            # RF9.5: direct Apple TV control lives on the remote (Companion
+            # protocol + pairing keys); the add-on cannot execute it.
+            raise StepError("appletv_direct", str(entity_id or ""))
         try:
             await self._ha.call_service(domain, svc, entity_id or None, data if isinstance(data, dict) else None)
         except HAError as err:

@@ -8,6 +8,7 @@ the frontend (RNF3).
 from __future__ import annotations
 
 import asyncio
+import copy
 import logging
 import os
 import re
@@ -190,11 +191,47 @@ async def _refresh_devices(app: web.Application, rid: str) -> None:
     except DeviceError as err:
         _LOGGER.warning("Cannot read hubs/extenders of '%s': %s %s", meta["name"], err.code, err.detail)
         return
-    store.set_devices(rid, cfg["harmony_hubs"], cfg["extenders"])
+    store.set_devices(rid, cfg["harmony_hubs"], cfg["extenders"], cfg["apple_tvs"])
+
+
+def _with_apple_tvs(known: set[str] | None, meta: dict[str, Any] | None) -> set[str] | None:
+    """RF9.2: a paired Apple TV's entity exists on the remote, not in HA."""
+    if known is None or not meta:
+        return known
+    return known | {tv["entityId"] for tv in meta.get("apple_tvs") or [] if tv.get("entityId")}
+
+
+def reconcile_apple_tvs(doc: Any, apple_tvs: list[dict[str, str]]) -> Any:
+    """RF9.4: port of upstream ConfigServer.reconcileAppleTvHaDevices.
+
+    The remote (1.2.0) adds/updates a ``haDevices`` entry ``appletv_<localId>``
+    for every paired Apple TV whenever it serves dashboard.json; applying the
+    same change before a push keeps the post-push re-read identical.
+    """
+    if not apple_tvs or not isinstance(doc, dict):
+        return doc
+    out = copy.deepcopy(doc)
+    ha_devices = out.get("haDevices") if isinstance(out.get("haDevices"), list) else []
+    by_id = {d.get("id"): d for d in ha_devices if isinstance(d, dict) and d.get("id")}
+    changed = False
+    for tv in apple_tvs:
+        dev_id = f"appletv_{tv['localId']}"
+        existing = by_id.get(dev_id)
+        if existing is None:
+            ha_devices.append({"id": dev_id, "domain": "media_player", "entityId": tv["entityId"], "name": tv["name"]})
+            changed = True
+        elif existing.get("entityId") != tv["entityId"] or existing.get("name") != tv["name"]:
+            existing["entityId"], existing["name"] = tv["entityId"], tv["name"]
+            changed = True
+    if not changed:
+        return doc
+    out["haDevices"] = ha_devices
+    return out
 
 
 async def _validation(app: web.Application, doc: Any, meta: dict[str, Any] | None = None) -> dict[str, Any]:
-    return validate(doc, await _known_entities(app), await _known_icons(app, meta), _known_devices(meta))
+    known = _with_apple_tvs(await _known_entities(app), meta)
+    return validate(doc, known, await _known_icons(app, meta), _known_devices(meta))
 
 
 def _summary(ver: dict[str, Any]) -> dict[str, Any]:
@@ -479,14 +516,20 @@ async def push(request: web.Request) -> web.Response:
         hist = store.history(rid)
         if _int(data.get("head")) != hist.head:
             raise StoreError("head_changed", 409, head=hist.head)
+        # RF9.4: fresh devices (Apple TVs), then align the catalog like the remote
+        await _refresh_devices(request.app, rid)
         meta = store.remote_info(rid)
+        aligned = reconcile_apple_tvs(hist.state(hist.head), meta.get("apple_tvs") or [])
+        if store.commit(rid, hist.head, aligned, "Astrion remote (Apple TV catalog)", T_SYNC_IMPORT):
+            _LOGGER.info("Push '%s': Apple TV catalog entries added as v%s", meta["name"], hist.head)
+            meta = store.remote_info(rid)
         head_state = hist.state(hist.head)
         # 0. fresh icon list of the remote (RF7.3/RF7.4); unreachable blocks
         device_icons = await _device_icons(request.app, meta, force=True)
         # 1. validation (RF4.5, icons included)
         check = validate(
             head_state,
-            await _known_entities(request.app),
+            _with_apple_tvs(await _known_entities(request.app), meta),
             request.app[K_ICONS].names() | device_icons,
             _known_devices(meta),
         )
@@ -647,7 +690,7 @@ async def devices_refresh(request: web.Request) -> web.Response:
     rid = request.match_info["rid"]
     meta = request.app[K_STORE].remote_info(rid)
     cfg = await _device(request.app, meta).devices_config()  # errors -> 502/503
-    request.app[K_STORE].set_devices(rid, cfg["harmony_hubs"], cfg["extenders"])
+    request.app[K_STORE].set_devices(rid, cfg["harmony_hubs"], cfg["extenders"], cfg["apple_tvs"])
     return web.json_response(request.app[K_STORE].remote_info(rid))
 
 

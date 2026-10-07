@@ -13,6 +13,9 @@
  * - RF7.5  form for the haDevices entity catalog.
  * - RF8.6  "hub" fields and IR extender targets are dropdowns of the hubs /
  *          extenders read from the remote; unknown hubs are warnings.
+ * - RF3.6  list options (buttons, scenes, apps, monitor entities, speakers,
+ *          picture elements) are item forms; row.cards nests full card forms.
+ * - RF9    apple_tv_remote: "control via" Apple TV (direct, 1.2.0) or Harmony.
  * - RF3.5  fixed-value fields are dropdowns and colour fields have a palette
  *          (field_hints.json, from the upstream builder and renderers);
  *          the theme is a form of colours; JSON editors can insert a colour.
@@ -106,7 +109,7 @@ class Editor {
   pages() { return (this.doc && Array.isArray(this.doc.pages)) ? this.doc.pages : []; }
 
   /* Build one field bound to obj[key]; objPath is the JSON pointer of obj. */
-  field(obj, key, kind, opts, objPath, setter) {
+  field(obj, key, kind, opts, objPath, setter, getObj) {
     const path = objPath + ptr(key);
     const has = Object.prototype.hasOwnProperty.call(obj, key);
     const val = has ? obj[key] : undefined;
@@ -140,6 +143,30 @@ class Editor {
         break;
       case "select": input = sel(opts, val); break;
       case "enum": return this.wrap(key, this.enumInput(opts, val, has, set), path);
+      case "items": return this.itemsField(key, val, path, opts, getObj);
+      case "cards": return this.cardsField(key, val, path, getObj);
+      case "multi": return this.wrap(key, this.multiInput(opts, val, has, set), path);
+      case "values": {
+        // RF3.6 state_value: one value (string) or several (list), one per line
+        input = el("textarea", { rows: 2, placeholder: t("one_per_line") });
+        input.value = Array.isArray(val) ? val.join("\n") : (has && val != null ? String(val) : "");
+        input.onchange = () => {
+          const v = input.value.split("\n").map((x) => x.trim()).filter(Boolean);
+          set(v.length === 0 ? undefined : v.length === 1 ? v[0] : v);
+        };
+        break;
+      }
+      case "border": return this.wrap(key, this.borderInput(val, has, set), path);
+      case "pagemode": input = sel(["page", "popup"], val); break;
+      case "activity": input = sel((this.doc.activities || []).map((a) => a.id).filter(Boolean), val); break;
+      case "appletv": {
+        const tvs = (this.remote().apple_tvs || []);
+        const s2 = el("select", {}, el("option", { value: "", text: t("none") }),
+          ...tvs.map((tv) => el("option", { value: tv.entityId, text: `${tv.name} (${tv.entityId})`, selected: tv.entityId === val })));
+        if (val && !tvs.some((tv) => tv.entityId === val)) s2.append(el("option", { value: val, text: `${val} ⚠`, selected: true }));
+        s2.onchange = () => set(s2.value === "" ? undefined : s2.value);
+        return this.wrap(key, s2, path);
+      }
       case "color": return this.wrap(key, this.colorInput(val, has, set, opts && opts.default), path);
       case "page": input = sel(this.pages().map((p) => p.name).filter(Boolean), val); break;
       case "hwkey": input = sel(this.hwKeys, val); break;
@@ -213,6 +240,70 @@ class Editor {
     return el("div", { class: "row color-row" }, pick, txt, clear);
   }
 
+  /* RF3.6: ordered list of objects edited with item forms (one version per change). */
+  itemsField(key, val, path, specs, getObj) {
+    const items = Array.isArray(val) ? val : [];
+    const getArr = (d, create) => {
+      const o = getObj(d);
+      if (create && !Array.isArray(o[key])) o[key] = [];
+      return o[key];
+    };
+    const summary = (it) => (it && typeof it === "object")
+      ? [it.name, it.entity_id, it.service, it.app, it.activity, it.page, it.irCommand, it.harmonyCommand].filter(Boolean).slice(0, 2).join(" · ") || "…"
+      : String(it);
+    const list = this.listEditor(items, `${path}`, getArr, summary,
+      (it, ip, get) => (it && typeof it === "object") ? this.form(it, specs, ip, get, new Set(specs.map((x) => x[0])))
+        : this.jsonField(key, it, ip, (v) => this.change((d) => { getArr(d)[+ip.split("/").pop()] = v; })),
+      () => ({}));
+    return el("div", { class: "field items", "data-path": path }, el("label", { text: `${key} (${items.length})` }), list);
+  }
+
+  /* RF3.6: row.cards - nested cards with their full forms. */
+  cardsField(key, val, path, getObj) {
+    const items = Array.isArray(val) ? val : [];
+    const getArr = (d, create) => {
+      const o = getObj(d);
+      if (create && !Array.isArray(o[key])) o[key] = [];
+      return o[key];
+    };
+    const typeSel = el("select", {}, ...Object.keys(this.schema).filter((k) => k !== "row").sort().map((k) => el("option", { value: k, text: k })));
+    const list = this.listEditor(items, path, getArr,
+      (c) => `${c.type || "?"} ${(c.options && (c.options.name || c.options.title || c.options.entity_id)) || ""}`,
+      (c, ip, get) => this.cardBody(c, ip, get),
+      () => ({ type: typeSel.value, options: {} }));
+    return el("div", { class: "field items", "data-path": path }, el("label", { text: `${key} (${items.length})` }),
+      el("div", { class: "row" }, el("span", { class: "muted", text: t("card_type_new") }), typeSel), list);
+  }
+
+  /* apple_tv_remote buttons: several values from a fixed set (checkboxes). */
+  multiInput(hint, val, has, set) {
+    const cur = has && Array.isArray(val) ? val : null;
+    const box = el("div", { class: "row multi" });
+    for (const v of hint.values) {
+      const cb = el("input", { type: "checkbox" });
+      cb.checked = (cur || hint.default).includes(v);
+      cb.onchange = () => {
+        const next = hint.values.filter((x) => (x === v ? cb.checked : (cur || hint.default).includes(x)));
+        set(next);
+      };
+      box.append(el("label", { class: "row" }, cb, v));
+    }
+    box.append(el("button", { class: "icon", text: t("default_short"), title: hint.default.join(", "), disabled: !has, onclick: () => set(undefined) }));
+    return box;
+  }
+
+  /* active_border: true = theme accent, or a hex colour (ButtonGridCard). */
+  borderInput(val, has, set) {
+    const mode = !has || val === false ? "" : val === true ? "accent" : "color";
+    const s2 = el("select", {}, el("option", { value: "", text: t("none") }),
+      el("option", { value: "accent", text: t("border_accent"), selected: mode === "accent" }),
+      el("option", { value: "color", text: t("border_color"), selected: mode === "color" }));
+    s2.onchange = () => set(s2.value === "" ? undefined : s2.value === "accent" ? true : "#6EA8FE");
+    const box = el("div", { class: "row" }, s2);
+    if (mode === "color") box.append(this.colorInput(val, true, set));
+    return box;
+  }
+
   /* Thumbnail of a custom icon value (empty when not an icon path). */
   thumb(val) {
     const name = iconName(val);
@@ -276,9 +367,14 @@ class Editor {
 
   /* Fields of `specs` plus "other fields" JSON for everything else (RF3.2). */
   form(obj, specs, objPath, getObj, ownKeys) {
+    const wide = [];
     const set = this.setterFor(getObj);
     const grid = el("div", { class: "grid" });
-    for (const [k, kind, opts] of specs) grid.append(this.field(obj, k, kind, opts, objPath, set));
+    for (const [k, kind, opts] of specs) {
+      const f = this.field(obj, k, kind, opts, objPath, set, getObj);
+      // list editors take the full width below the grid of simple fields
+      if (kind === "items" || kind === "cards") wide.push(f); else grid.append(f);
+    }
     const own = ownKeys || new Set(specs.map((s) => s[0]));
     const rest = Object.fromEntries(Object.entries(obj).filter(([k]) => !own.has(k)));
     const restBox = this.jsonField(t("unknown_fields"), rest, objPath, (v) => this.change((d) => {
@@ -286,7 +382,7 @@ class Editor {
       for (const k of Object.keys(o)) if (!own.has(k)) delete o[k];
       Object.assign(o, v || {});
     }));
-    return el("div", {}, grid, restBox);
+    return el("div", {}, grid, ...wide, restBox);
   }
 
   /* Ordered list of objects with move/duplicate/remove (one version each). */
@@ -454,28 +550,62 @@ class Editor {
       panel.append(this.renderRaw(path, card, (v) => this.change((d) => { d.pages[pi].cards[ci] = v; })));
       return panel;
     }
+    panel.append(this.cardBody(card, path, (d) => d.pages[pi].cards[ci]));
+    return panel;
+  }
+
+  /* Form of one card (top-level or nested in a row); getCard(d) -> card object. */
+  cardBody(card, path, getCard) {
+    const spec = this.schema[card.type];
+    const box = el("div", {});
+    if (!spec) {
+      box.append(el("p", { class: "muted", text: t("unknown_card") }),
+        this.jsonField(t("raw_json"), card, path, (v) => this.change((d) => { const c = getCard(d); for (const k of Object.keys(c)) delete c[k]; Object.assign(c, v || {}); })));
+      return box;
+    }
     const opts = card.options || {};
-    const kindMap = { string: "text", bool: "bool", int: "int", string_list: "lines", json: "json" };
-    const hints = this.hints || { enums: {}, colors: {} };
+    const kindMap = { string: "text", bool: "bool", int: "int", float: "float", string_list: "lines", json: "json" };
+    const hints = this.hints || { enums: {}, colors: {}, items: {}, multi: {} };
     const enums = hints.enums[card.type] || {};
     const colors = new Set(hints.colors[card.type] || []);
-    const specs = Object.entries(spec.fields).map(([k, f]) => enums[k] ? [k, "enum", enums[k]]
-      : colors.has(k) ? [k, "color", f] : [k, kindMap[f.kind], f]);
-    panel.append(this.form(opts, specs, `${path}/options`, (d) => {
-      const c = d.pages[pi].cards[ci];
-      c.options = c.options || {};
-      return c.options;
-    }));
+    const multi = (hints.multi || {})[card.type] || {};
+    const items = hints.items || {};
+    let entries = Object.entries(spec.fields);
+    const getOpts = (d) => { const c = getCard(d); c.options = c.options || {}; return c.options; };
+    if (card.type === "apple_tv_remote") {
+      // RF9: "Control via" like the native builder; appleTv wins when both are set
+      const mode = opts.appleTv ? "direct" : "harmony";
+      const via = el("select", {}, el("option", { value: "direct", text: t("ctl_direct"), selected: mode === "direct" }),
+        el("option", { value: "harmony", text: t("ctl_harmony"), selected: mode === "harmony" }));
+      via.onchange = () => this.change((d) => {
+        const o = getOpts(d);
+        if (via.value === "direct") { delete o.deviceId; delete o.hub; o.appleTv = ((this.remote().apple_tvs || [])[0] || {}).entityId || ""; }
+        else { delete o.appleTv; o.deviceId = o.deviceId || ""; }
+      });
+      box.append(this.wrap(t("control_via"), via, `${path}/options/appleTv`));
+      entries = entries.filter(([k]) => (mode === "direct" ? k !== "deviceId" && k !== "hub" : k !== "appleTv"));
+    }
+    const specs = entries.map(([k, f]) => {
+      const it = items[`${card.type}.${k}`];
+      if (it === "cards") return [k, "cards", f];
+      if (it) return [k, "items", it];
+      if (multi[k]) return [k, "multi", multi[k]];
+      if (k === "appleTv") return [k, "appletv", f];
+      if (enums[k]) return [k, "enum", enums[k]];
+      if (colors.has(k)) return [k, "color", f];
+      return [k, kindMap[f.kind], f];
+    });
+    box.append(this.form(opts, specs, `${path}/options`, getOpts));
     // Keys beside type/options on the card object itself (RF3.2)
     const extra = Object.fromEntries(Object.entries(card).filter(([k]) => k !== "type" && k !== "options"));
     if (Object.keys(extra).length) {
-      panel.append(this.jsonField(t("unknown_fields"), extra, path, (v) => this.change((d) => {
-        const c = d.pages[pi].cards[ci];
+      box.append(this.jsonField(t("unknown_fields"), extra, path, (v) => this.change((d) => {
+        const c = getCard(d);
         for (const k of Object.keys(c)) if (k !== "type" && k !== "options") delete c[k];
         Object.assign(c, v || {});
       })));
     }
-    return panel;
+    return box;
   }
 
   hotkeyList(items, path, getArr) {

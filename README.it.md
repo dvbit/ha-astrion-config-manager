@@ -19,7 +19,7 @@ sulle entità HA, push/pull con rilevamento della deriva.
 3. Installa **Astrion Config Manager**, avvialo e apri **Astrion** nella barra laterale.
 
 Su ogni telecomando abilita il **config server** dell'app (porta 8080, pagina impostazioni).
-Schema seguito: release upstream **1.1.9-beta**.
+Schema seguito: release upstream **1.2.0** (campi delle card rigenerati con `tools/extract_card_schema.py`).
 
 ## Funzioni
 

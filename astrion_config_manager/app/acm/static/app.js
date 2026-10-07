@@ -61,6 +61,8 @@ async function openIconPicker(rid, onPick) {
 function refreshEntityList() {
   const cat = (S.doc && Array.isArray(S.doc.haDevices)) ? S.doc.haDevices : [];
   const named = new Map(cat.filter((d) => d && d.entityId).map((d) => [d.entityId, d.name]));
+  // RF9.2: paired Apple TVs are entities of the remote itself
+  for (const tv of (S.remote && S.remote.apple_tvs) || []) if (!named.has(tv.entityId)) named.set(tv.entityId, tv.name);
   document.getElementById("entity-list").replaceChildren(
     ...[...named].map(([e, n]) => el("option", { value: e, label: `★ ${n}` })),
     ...S.entities.filter((e) => !named.has(e)).map((e) => el("option", { value: e })));

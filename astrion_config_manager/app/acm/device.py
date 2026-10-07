@@ -12,7 +12,8 @@ browser on ``http://<host>:<port>``, as implemented upstream in
 * ``POST /icons`` multipart field ``file`` -> store icon (redirect on success);
 * ``GET  /icons/<name>`` -> icon bytes;
 * ``GET  /devices-config`` -> remote settings: ``harmonyHubs`` [{localId, name,
-  ip, hubId}], ``extenders`` [{localId, name, host, mac}] and ``ha`` (URL and
+  ip, hubId}], ``extenders`` [{localId, name, host, mac}], ``appleTvs``
+  (1.2.0: localId, name, entityId, credentials, ...) and ``ha`` (URL and
   token).  Only hubs and extenders are kept (RF8.1): the ``ha`` block, which
   holds the remote's HA token, is discarded and never stored or logged.
 """
@@ -118,6 +119,9 @@ class DeviceClient:
         return {
             "harmony_hubs": keep(raw.get("harmonyHubs"), ("localId", "name", "ip", "hubId")),
             "extenders": keep(raw.get("extenders"), ("localId", "name", "host")),
+            # RF9.1 (upstream 1.2.0): paired Apple TVs. Their pairing
+            # "credentials" and network details are deliberately not kept.
+            "apple_tvs": keep(raw.get("appleTvs"), ("localId", "name", "entityId")),
         }
 
     async def icons_list(self) -> set[str]:

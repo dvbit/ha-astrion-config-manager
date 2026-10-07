@@ -118,3 +118,8 @@ img.sim-ico-img { width: 36px; height: 36px; object-fit: contain; }
 input.swatch { width: 44px; height: 34px; padding: 2px; flex: none; cursor: pointer; }
 .color-row input.hex { flex: 1; font-family: ui-monospace, Menlo, Consolas, monospace; }
 input.hidden-color { position: absolute; width: 0; height: 0; opacity: 0; border: 0; padding: 0; }
+/* RF3.6 item lists inside card forms */
+.field.items { margin-top: 10px; }
+.field.items > label { font-weight: 600; color: var(--fg); }
+.field.items .card { background: var(--bg); margin-bottom: 6px; }
+.multi label { font-size: 12px; gap: 4px; }

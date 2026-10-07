@@ -403,10 +403,23 @@ class Store:
         _LOGGER.info("Remote '%s' %s", meta["name"], "archived" if archived else "restored")
         return self.remote_info(rid)
 
-    def set_devices(self, rid: str, hubs: list[dict[str, str]], extenders: list[dict[str, str]]) -> None:
-        """RF8.1: keep the hubs/extenders read from the remote (read-only copy)."""
+    def set_devices(
+        self,
+        rid: str,
+        hubs: list[dict[str, str]],
+        extenders: list[dict[str, str]],
+        apple_tvs: list[dict[str, str]] | None = None,
+    ) -> None:
+        """RF8.1 / RF9.1: keep hubs, extenders, Apple TVs read from the remote."""
         meta = self._get(rid)
-        meta.update({"harmony_hubs": hubs, "extenders": extenders, "devices_read_at": time.time()})
+        meta.update(
+            {
+                "harmony_hubs": hubs,
+                "extenders": extenders,
+                "apple_tvs": apple_tvs or [],
+                "devices_read_at": time.time(),
+            }
+        )
         _write_json(self.rdir / rid / "meta.json", meta)
         _LOGGER.info("Remote '%s': %s hub(s), %s extender(s) read", meta["name"], len(hubs), len(extenders))
 

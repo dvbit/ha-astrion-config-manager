@@ -52,6 +52,12 @@ class FakeDevice:
         async def get(_):
             if self.text is None:
                 return web.Response(status=404, text="No dashboard.json yet")
+            tvs = (self.devices_cfg or {}).get("appleTvs")
+            if tvs:  # emulate upstream 1.2.0 reconcileAppleTvHaDevices on read
+                from acm.api import reconcile_apple_tvs
+
+                doc = reconcile_apple_tvs(json.loads(self.text), tvs)
+                self.text = json.dumps(doc)
             return web.Response(text=self.text, content_type="application/json")
 
         async def post(request):
@@ -508,3 +514,51 @@ async def test_index_versioned_assets(env):
     assert f'static/editor.js?v={__version__}"' in html and "__ACM_VERSION__" not in html
     resp = await env.get(f"/static/editor.js?v={__version__}")
     assert resp.status == 200 and resp.headers["Cache-Control"] == "no-cache"
+
+
+# ---------------------------------------------------------------- RF9 (upstream 1.2.0)
+
+
+async def test_rf9_apple_tv_direct(env, tmp_path):
+    cred = "ltpk:ltsk:atv:client-SECRET"
+    tv = {
+        "localId": "salon",
+        "name": "Apple TV Salon",
+        "entityId": "media_player.appletv_salon",
+        "host": "10.0.0.7",
+        "port": 49153,
+        "credentials": cred,
+    }
+    env.devices["a"].devices_cfg = {"harmonyHubs": [], "extenders": [], "appleTvs": [tv]}
+    info = await register(env, "a", "R")
+    assert info["apple_tvs"] == [
+        {"localId": "salon", "name": "Apple TV Salon", "entityId": "media_player.appletv_salon"}
+    ]
+    for f in tmp_path.rglob("*"):
+        if f.is_file():
+            assert b"SECRET" not in f.read_bytes(), f
+    rid = info["id"]
+    # the remote-only entity is valid; both ways set -> warning only
+    card = {"type": "apple_tv_remote", "options": {"appleTv": "media_player.appletv_salon", "deviceId": "123"}}
+    r = await edit(env, rid, lambda d: d["pages"][0]["cards"].append(card))
+    assert r["validation"]["issues"] == []
+    assert [w["code"] for w in r["validation"]["warnings"]] == ["appletv_both"]
+    # v1 import already contains the catalog entry (remote reconciled on read)
+    head = r["remote"]["head"]
+    resp = await env.post(f"/api/remotes/{rid}/push", json={"head": head})
+    assert resp.status == 200, await resp.text()
+    # rename on the remote -> push adds a sync-import version first, then verifies
+    tv["name"] = "Apple TV Living"
+    resp = await env.post(f"/api/remotes/{rid}/push", json={"head": head})
+    body = await resp.json()
+    assert resp.status == 200, body
+    assert body["remote"]["head"] == head + 1
+    hist = await (await env.get(f"/api/remotes/{rid}/versions")).json()
+    assert hist["versions"][0]["type"] == "sync-import"
+    st = (await state(env, rid))["state"]
+    assert {
+        "id": "appletv_salon",
+        "domain": "media_player",
+        "entityId": "media_player.appletv_salon",
+        "name": "Apple TV Living",
+    } in st["haDevices"]

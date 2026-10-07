@@ -1,6 +1,6 @@
-# Requisito — Astrion Config Manager (add-on HA) v1.6
+# Requisito — Astrion Config Manager (add-on HA) v1.7
 
-Stato: approvato dal richiedente. v1.3: aggiunto RF6.12 (modalità solo navigazione). v1.4: aggiunto RF7 (icone e catalogo entità). v1.5: aggiunto RF8 (più hub Harmony e destinazioni IR). v1.6: aggiunto RF3.5 (menu e tavolozze). Sostituisce la v1.0: Harmony e IR rientrano nell'ambito; aggiunte le versioni con nome (RF2.11–RF2.13). Lingua del documento: italiano. Traduzione inglese: [SPEC.en.md](SPEC.en.md).
+Stato: approvato dal richiedente. v1.3: aggiunto RF6.12 (modalità solo navigazione). v1.4: aggiunto RF7 (icone e catalogo entità). v1.5: aggiunto RF8 (più hub Harmony e destinazioni IR). v1.6: aggiunto RF3.5 (menu e tavolozze). v1.7: aggiunti RF3.6 (liste strutturate) e RF9 (allineamento a upstream 1.2.0, Apple TV diretto). Sostituisce la v1.0: Harmony e IR rientrano nell'ambito; aggiunte le versioni con nome (RF2.11–RF2.13). Lingua del documento: italiano. Traduzione inglese: [SPEC.en.md](SPEC.en.md).
 
 ## 1. Scopo
 
@@ -12,7 +12,7 @@ Add-on di Home Assistant con pannello Ingress che gestisce le configurazioni (`d
 
 ## 3. Riferimenti
 
-- Schema di riferimento: `dashboard.json` secondo la release più recente del repo al momento dello sviluppo (ultima osservata: 1.1.5-beta). Comportamento di card e azioni: sorgenti Kotlin (`cards/impl/`, `config/DashboardLoader.kt`) e editor web (`docs/index.html`, `cards.js`).
+- Schema di riferimento: `dashboard.json` secondo la release più recente del repo al momento dello sviluppo (ultima osservata: 1.2.0). Comportamento di card e azioni: sorgenti Kotlin (`cards/impl/`, `config/DashboardLoader.kt`) e editor web (`docs/index.html`, `cards.js`).
 - Telecomando: il dispositivo non espone un'API. L'add-on esegue le stesse richieste HTTP del browser sulla pagina di configurazione `http://<host>:<porta>` (download e upload di `dashboard.json`), ricavate dai sorgenti `web/` del repo. L'editing avviene solo nell'interfaccia web dell'add-on.
 - Home Assistant: API WebSocket tramite token Supervisor dell'add-on; nessun token inserito dall'utente.
 - Hub Harmony: protocollo locale dell'Hub usato dal client Harmony dell'app (sorgenti Kotlin del repo).
@@ -58,6 +58,7 @@ Add-on di Home Assistant con pannello Ingress che gestisce le configurazioni (`d
 - RF3.2 Round-trip senza perdite: card, campi e azioni sconosciuti restano intatti nel file salvato e sono modificabili come JSON grezzo. L'ordine delle chiavi non è garantito; il contenuto è semanticamente identico.
 - RF3.3 Copia di pagine e card da un telecomando a un altro: crea una sola versione nel telecomando di destinazione. Le collisioni di chiavi/id nella destinazione si risolvono con suffisso numerico, aggiornando i riferimenti interni agli elementi copiati.
 - RF3.5 I campi a valori fissi (es. `alignment`) sono menu a tendina con i valori documentati dall'implementazione di riferimento e un'opzione «predefinito» che rimuove la chiave. I campi colore (card e tema) hanno una tavolozza più il valore esadecimale (#RRGGBB o #AARRGGBB, alfa preservato). Gli editor JSON permettono di inserire un colore. Valori fuori elenco o colori malformati sono avvisi, non errori.
+- RF3.6 Le opzioni a lista hanno form per elemento con aggiunta, riordino, duplicazione e rimozione: `button_grid.buttons`, `scene_grid.scenes`, `tv_remote.apps`, `monitor.entities`, `speaker_group.speakers`, `picture_elements.elements`. `row.cards` contiene card annidate con il loro form completo. Copre le card senza form nel builder nativo (`monitor`, `picture_elements`, `row`, `source_select`, `speaker_group`).
 - RF3.4 Token e segreti presenti nel JSON sono salvati in chiaro nello storico e mostrati senza mascheratura (rischio accettato dal richiedente).
 
 ### RF4 — Validazione
@@ -109,6 +110,14 @@ Add-on di Home Assistant con pannello Ingress che gestisce le configurazioni (`d
 - RF8.5 Verso un extender, i codici ir-database sono inviati così come sono; i codici inline sono convertiti in Pronto.
 - RF8.6 Nell'editor `hub` e destinazione IR sono menu a tendina. Un extender sconosciuto è un errore che blocca il push; un hub sconosciuto è solo un avviso.
 - RF8.7 Il simulatore indica nei messaggi d'errore e in «Solo navigazione» l'hub o l'extender usato.
+
+### RF9 — Allineamento a upstream 1.2.0 (Apple TV diretto)
+
+- RF9.1 Le Apple TV abbinate sono lette da `/devices-config` (solo localId, nome, entità); le credenziali di abbinamento non vengono mai salvate.
+- RF9.2 Le entità `media_player.appletv_*` delle Apple TV abbinate sono valide anche se non esistono in HA.
+- RF9.3 `apple_tv_remote` supporta entrambi i modi: diretto (`appleTv`) e Harmony (`deviceId`/`hub`); l'editor offre «Controllo tramite». Se sono impostati entrambi vale `appleTv` (avviso).
+- RF9.4 Prima del push le voci `appletv_<localId>` vengono aggiunte al catalogo `haDevices` come versione `sync-import`, con la stessa logica del telecomando, così la verifica del push resta coerente.
+- RF9.5 Il controllo diretto Apple TV non è eseguibile dall'add-on: nel simulatore è disabilitato con il motivo.
 
 ## 6. Requisiti non funzionali
 

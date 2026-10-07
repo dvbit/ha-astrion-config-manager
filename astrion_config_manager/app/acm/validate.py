@@ -71,6 +71,7 @@ ENTITY_KEYS = {
     "state_entity",
     "calendar_entity",
     "vacuum",
+    "appleTv",  # RF9.2 (1.2.0) paired Apple TV entity
 }
 _ENTITY_RE = re.compile(r"^[a-z_]+\.[a-z0-9_]+$")
 
@@ -95,6 +96,7 @@ _KIND_CHECK = {
     "string": lambda v: isinstance(v, str),
     "bool": lambda v: isinstance(v, bool),
     "int": lambda v: isinstance(v, int) and not isinstance(v, bool),
+    "float": lambda v: isinstance(v, (int, float)) and not isinstance(v, bool),
     "string_list": lambda v: isinstance(v, list) and all(isinstance(x, str) for x in v),
     "json": lambda v: True,
 }
@@ -161,6 +163,9 @@ def _card(ctx: _Ctx, card: Any, path: str) -> None:
     for key, fspec in spec["fields"].items():
         if key in opts and opts[key] is not None and not _KIND_CHECK[fspec["kind"]](opts[key]):
             ctx.err(_ptr_join(path, "options", key), "type_mismatch", expected=fspec["kind"])
+    # RF9.3: apple_tv_remote with both ways set -> the remote uses appleTv
+    if ctype == "apple_tv_remote" and opts.get("appleTv") and opts.get("deviceId"):
+        ctx.warn(_ptr_join(path, "options", "deviceId"), "appletv_both")
     # RF3.5: unexpected fixed values / malformed colours -> warnings
     for key, hint in HINTS["enums"].get(ctype, {}).items():
         if key in opts and not hint.get("presets") and opts[key] not in hint["values"]:

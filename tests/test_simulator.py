@@ -293,3 +293,15 @@ async def test_rf8_extender(multi):
     assert [r.get("error") for r in res["results"]] == [None, None, "ir_extender_unknown", "ir_not_configured"]
     assert bodies == [pattern_to_pronto(38000, [9000, 4500, 560, 560]), PRONTO]
     assert ha.calls == []
+
+
+async def test_rf9_appletv_direct_not_executable(executor):
+    ex, ha, meta, _ = executor
+    step = {
+        "kind": "service",
+        "service": "astrion_appletv.send_command",
+        "entity_id": "media_player.appletv_salon",
+        "data": {"command": "Menu"},
+    }
+    res = await ex.run(meta, DOC, [step])
+    assert res["results"][0]["error"] == "appletv_direct" and ha.calls == []

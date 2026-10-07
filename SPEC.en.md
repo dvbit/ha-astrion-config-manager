@@ -1,9 +1,9 @@
-# Requirement — Astrion Config Manager (HA add-on) v1.6
+# Requirement — Astrion Config Manager (HA add-on) v1.7
 
 > English translation of [SPEC.md](SPEC.md). The Italian document is the
 > reference; in case of discrepancy the Italian text prevails.
 
-Status: approved by the requester. v1.3: added RF6.12 (navigation-only mode). v1.4: added RF7 (icons and entity catalog). v1.5: added RF8 (multiple Harmony hubs and IR targets). v1.6: added RF3.5 (dropdowns and palettes). Supersedes v1.0: Harmony and IR are now in scope; named versions added (RF2.11–RF2.13). Original document language: Italian.
+Status: approved by the requester. v1.3: added RF6.12 (navigation-only mode). v1.4: added RF7 (icons and entity catalog). v1.5: added RF8 (multiple Harmony hubs and IR targets). v1.6: added RF3.5 (dropdowns and palettes). v1.7: added RF3.6 (structured lists) and RF9 (upstream 1.2.0, direct Apple TV). Supersedes v1.0: Harmony and IR are now in scope; named versions added (RF2.11–RF2.13). Original document language: Italian.
 
 ## 1. Purpose
 
@@ -15,7 +15,7 @@ Home Assistant add-on with an Ingress panel that manages the configurations (`da
 
 ## 3. References
 
-- Reference schema: `dashboard.json` as defined by the most recent release of the repo at development time (last observed: 1.1.5-beta). Card and action behaviour: Kotlin sources (`cards/impl/`, `config/DashboardLoader.kt`) and web editor (`docs/index.html`, `cards.js`).
+- Reference schema: `dashboard.json` as defined by the most recent release of the repo at development time (last observed: 1.2.0). Card and action behaviour: Kotlin sources (`cards/impl/`, `config/DashboardLoader.kt`) and web editor (`docs/index.html`, `cards.js`).
 - Remote: the device exposes no API. The add-on issues the same HTTP requests as the browser on the configuration page `http://<host>:<port>` (download and upload of `dashboard.json`), derived from the repo's `web/` sources. Editing happens only in the add-on's web interface.
 - Home Assistant: WebSocket API via the add-on's Supervisor token; no token entered by the user.
 - Harmony Hub: the Hub's local protocol as used by the app's Harmony client (Kotlin sources of the repo).
@@ -61,6 +61,7 @@ Home Assistant add-on with an Ingress panel that manages the configurations (`da
 - RF3.2 Lossless round-trip: unknown cards, fields and actions remain intact in the saved file and can be edited as raw JSON. Key order is not guaranteed; the content is semantically identical.
 - RF3.3 Copying pages and cards from one remote to another: creates a single version in the destination remote. Key/id collisions in the destination are resolved with a numeric suffix, updating the internal references to the copied elements.
 - RF3.5 Fixed-value fields (e.g. `alignment`) are dropdowns with the values documented by the reference implementation and a "default" option that removes the key. Colour fields (cards and theme) have a palette plus the hex value (#RRGGBB or #AARRGGBB, alpha preserved). JSON editors can insert a colour. Out-of-list values or malformed colours are warnings, not errors.
+- RF3.6 List options have per-item forms with add, reorder, duplicate and remove: `button_grid.buttons`, `scene_grid.scenes`, `tv_remote.apps`, `monitor.entities`, `speaker_group.speakers`, `picture_elements.elements`. `row.cards` holds nested cards with their full form. This covers the cards with no form in the native builder (`monitor`, `picture_elements`, `row`, `source_select`, `speaker_group`).
 - RF3.4 Tokens and secrets present in the JSON are stored in clear text in the history and shown unmasked (risk accepted by the requester).
 
 ### RF4 — Validation
@@ -113,6 +114,14 @@ Home Assistant add-on with an Ingress panel that manages the configurations (`da
 - RF8.6 In the editor `hub` and the IR target are dropdowns. An unknown extender is an error that blocks push; an unknown hub is only a warning.
 - RF8.7 The simulator names the hub or extender used in error messages and in "Navigation only".
 
+### RF9 — Alignment with upstream 1.2.0 (direct Apple TV)
+
+- RF9.1 Paired Apple TVs are read from `/devices-config` (localId, name, entity only); pairing credentials are never stored.
+- RF9.2 The `media_player.appletv_*` entities of paired Apple TVs are valid even though they do not exist in HA.
+- RF9.3 `apple_tv_remote` supports both ways: direct (`appleTv`) and Harmony (`deviceId`/`hub`); the editor offers "Control via". When both are set `appleTv` wins (warning).
+- RF9.4 Before a push the `appletv_<localId>` entries are added to the `haDevices` catalog as a `sync-import` version, with the same logic as the remote, so push verification stays consistent.
+- RF9.5 Direct Apple TV control cannot be executed by the add-on: the simulator shows it disabled with the reason.
+
 ## 6. Non-functional requirements
 
 - RNF1 Add-on with an Ingress panel, accessible to HA administrators only.
@@ -141,7 +150,7 @@ Decisions taken during requirement consolidation, not part of the original text:
 
 - Delivered as a Home Assistant app (add-on) repository, not HACS.
 - UI in five languages (EN, IT, FR, ES, DE), extending RNF3.
-- Reference schema at development time: upstream release 1.1.9-beta.
+- Reference schema: upstream release 1.2.0 (v2.7.0 of the add-on; previously 1.1.9-beta).
 - Phased delivery: v1.0 covered RF1–RF5; v2.0 adds RF6 (simulator, Harmony, IR via Broadlink).
 - RF6.3 fidelity: layout, colours (ThemeConfig) and controls follow the app; icons are simplified.
 - Harmony routing: superseded by RF8 (v1.5), per-action `hub` with first-hub fallback.

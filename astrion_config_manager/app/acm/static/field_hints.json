@@ -173,7 +173,8 @@
         ],
         "default": "12"
       }
-    }
+    },
+    "apple_tv_remote": {}
   },
   "colors": {
     "title": [
@@ -205,5 +206,245 @@
     "success": "#4CAF50"
   },
   "_presets": "'presets': true = common choices only; any number is valid (no warning, 'other' allowed in the editor).",
-  "_theme": "ThemeConfig defaults (config/AppConfig.kt): used by the remote for every key absent from dashboard.json 'theme'."
+  "_theme": "ThemeConfig defaults (config/AppConfig.kt): used by the remote for every key absent from dashboard.json 'theme'.",
+  "_items": "RF3.6: structured editors for list options. Field kinds: text, entity, icon (by key), color, bool, int, float, json, lines, values (string or list), page, pagemode, hub (by key), irdev, activity, border, appletv. Keys from upstream cards/impl (1.2.0).",
+  "items": {
+    "button_grid.buttons": [
+      [
+        "name",
+        "text"
+      ],
+      [
+        "icon",
+        "text"
+      ],
+      [
+        "service",
+        "text"
+      ],
+      [
+        "entity_id",
+        "entity"
+      ],
+      [
+        "data",
+        "json"
+      ],
+      [
+        "harmonyDevice",
+        "text"
+      ],
+      [
+        "harmonyCommand",
+        "text"
+      ],
+      [
+        "activityId",
+        "text"
+      ],
+      [
+        "hub",
+        "text"
+      ],
+      [
+        "irDevice",
+        "irdev"
+      ],
+      [
+        "irCommand",
+        "text"
+      ],
+      [
+        "state_entity",
+        "entity"
+      ],
+      [
+        "state_value",
+        "values"
+      ],
+      [
+        "active_color",
+        "color"
+      ],
+      [
+        "active_border",
+        "border"
+      ],
+      [
+        "closePopup",
+        "bool"
+      ]
+    ],
+    "scene_grid.scenes": [
+      [
+        "name",
+        "text"
+      ],
+      [
+        "icon",
+        "text"
+      ],
+      [
+        "color",
+        "color"
+      ],
+      [
+        "entity_id",
+        "entity"
+      ],
+      [
+        "activity",
+        "activity"
+      ],
+      [
+        "track",
+        "bool"
+      ],
+      [
+        "room",
+        "text"
+      ],
+      [
+        "activityId",
+        "text"
+      ],
+      [
+        "harmonyDevice",
+        "text"
+      ],
+      [
+        "harmonyCommand",
+        "text"
+      ],
+      [
+        "hub",
+        "text"
+      ],
+      [
+        "irDevice",
+        "irdev"
+      ],
+      [
+        "irCommand",
+        "text"
+      ],
+      [
+        "page",
+        "page"
+      ],
+      [
+        "pageMode",
+        "pagemode"
+      ],
+      [
+        "state_entity",
+        "entity"
+      ],
+      [
+        "state_value",
+        "values"
+      ],
+      [
+        "active_color",
+        "color"
+      ],
+      [
+        "active_border",
+        "border"
+      ],
+      [
+        "closePopup",
+        "bool"
+      ]
+    ],
+    "tv_remote.apps": [
+      [
+        "name",
+        "text"
+      ],
+      [
+        "app",
+        "text"
+      ],
+      [
+        "service",
+        "text"
+      ],
+      [
+        "entity_id",
+        "entity"
+      ],
+      [
+        "data",
+        "json"
+      ]
+    ],
+    "monitor.entities": [
+      [
+        "entity_id",
+        "entity"
+      ],
+      [
+        "name",
+        "text"
+      ]
+    ],
+    "speaker_group.speakers": [
+      [
+        "entity_id",
+        "entity"
+      ],
+      [
+        "name",
+        "text"
+      ]
+    ],
+    "picture_elements.elements": [
+      [
+        "left",
+        "float"
+      ],
+      [
+        "top",
+        "float"
+      ],
+      [
+        "entity_id",
+        "entity"
+      ],
+      [
+        "icon",
+        "text"
+      ],
+      [
+        "service",
+        "text"
+      ],
+      [
+        "targets",
+        "lines"
+      ]
+    ],
+    "row.cards": "cards"
+  },
+  "multi": {
+    "apple_tv_remote": {
+      "buttons": {
+        "values": [
+          "Menu",
+          "Home",
+          "Siri",
+          "Screensaver",
+          "Guide",
+          "VolumeUp",
+          "VolumeDown",
+          "ControlCenter"
+        ],
+        "default": [
+          "Menu",
+          "Home"
+        ]
+      }
+    }
+  }
 }

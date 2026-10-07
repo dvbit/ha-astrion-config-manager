@@ -1,5 +1,26 @@
 # Changelog
 
+## 2.7.0 - 2026-10-08
+
+Aligned with astrion-custom-dashboard **1.2.0**; spec v1.7 (RF3.6, RF9).
+
+- Direct Apple TV (1.2.0): paired Apple TVs read from the remote (credentials
+  never stored); their `media_player.appletv_*` entities are valid; the
+  `apple_tv_remote` editor offers "Control via: Apple TV (direct) / Harmony hub"
+  (both ways still supported, `appleTv` wins with a warning); `buttons`
+  multi-select. Simulator shows direct Apple TV actions disabled with the reason.
+- Push: the Apple TV catalog entries the 1.2.0 remote adds to `haDevices` are
+  added first as a `sync-import` version, so push verification succeeds.
+- Structured list editors (add/reorder/duplicate/remove, item forms with
+  entity, icon, colour, page, hub, IR, activity pickers): button_grid buttons,
+  scene_grid scenes, tv_remote apps, monitor entities, speaker_group speakers,
+  picture_elements elements; `row.cards` nests full card forms.
+- Card schema regenerated from 1.2.0 with `tools/extract_card_schema.py`, which
+  now types `options[...] as? Boolean/Number` fields (e.g. scene_grid
+  show_labels/icon_fill become checkboxes, climate/fan step numbers).
+- Simulator: picture_elements follows upstream (left/top %, entity toggle or
+  service on targets).
+
 ## 2.6.0 - 2026-10-05
 
 - Theme form: keys absent from `dashboard.json` now show the remote's built-in

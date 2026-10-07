@@ -12,6 +12,8 @@
  * - RF6.9  HA100 physical keys panel (short and long press).
  * - RF6.10 permanent "real execution" indicator.
  * - RF6.12 "navigation only" switch: actions are listed, not executed.
+ * - RF9    direct Apple TV (1.2.0, appleTv / astrion_appletv.*) cannot be
+ *          driven by the add-on: shown disabled with the reason.
  * - RF8    several Harmony hubs (action "hub" = localId, else first hub) and
  *          IR targets per device (local -> remote.* entity, or an extender).
  */
@@ -133,6 +135,7 @@ class Simulator {
   }
   /* Reason why a step cannot run (RF6.7/RF6.8/RF8), or null. */
   blocked(steps) {
+    if (steps.some((s) => s.kind === "service" && String(s.service).startsWith("astrion_appletv."))) return t("sim_appletv_direct");
     if (steps.some((s) => s.kind.startsWith("harmony")) && !this.hubFor(null)) return t("sim_no_harmony");
     for (const s of steps.filter((x) => x.kind === "ir")) {
       const tg = this.irTarget(s.device);
@@ -539,11 +542,21 @@ class Simulator {
         ? [{ kind: "service", service: a.service, entity_id: a.entity_id, data: a.data }]
         : [{ kind: "service", service: "media_player.play_media", entity_id: media, data: { media_content_type: "app", media_content_id: a.app } }]))));
   }
+  /* AppleTvRemoteCard (1.2.0): appleTv (direct, wins) or Harmony deviceId/hub;
+   * "buttons" picks the extra row (default Menu, Home). */
   card_apple_tv_remote(o) {
-    const send = (cmd) => [{ kind: "harmony_command", device: o.deviceId, command: cmd, hub: o.hub }];
-    return this.card(" Apple TV",
+    const direct = !!o.appleTv;
+    const send = (cmd) => direct
+      ? [{ kind: "service", service: "astrion_appletv.send_command", entity_id: o.appleTv, data: { command: cmd } }]
+      : [{ kind: "harmony_command", device: o.deviceId, command: cmd, hub: o.hub }];
+    const labels = { Menu: "☰ Menu", Home: "Home", Siri: "Siri", Screensaver: "Screensaver", Guide: "Guide",
+      VolumeUp: "Vol +", VolumeDown: "Vol −", ControlCenter: "Control Center" };
+    const extra = (Array.isArray(o.buttons) && o.buttons.length ? o.buttons : ["Menu", "Home"]);
+    return this.card(` Apple TV${direct ? ` · ${this.name({}, o.appleTv)}` : ""}`,
       this.dpad((k) => send({ up: "DirectionUp", down: "DirectionDown", left: "DirectionLeft", right: "DirectionRight", center: "Select" }[k])),
-      el("div", { class: "row" }, this.ctl("☰ Menu", send("Menu")), this.ctl("Home", send("Home")), this.ctl("▶", send("Play")), this.ctl("⏸", send("Pause"))));
+      el("div", { class: "row" }, ...extra.map((b) => this.ctl(labels[b] || b, send(b)))),
+      el("div", { class: "row" }, this.ctl("⏯", send(direct ? "PlayPause" : "Play"))),
+      direct ? el("div", { class: "sim-why", text: "⛔ " + t("sim_appletv_direct") }) : null);
   }
   dpad(stepsFor) {
     const b = (k, txt) => this.ctl(txt, stepsFor(k));
@@ -575,15 +588,18 @@ class Simulator {
     return this.card(o.name || this.name({}, id), pic ? el("img", { class: "sim-art", src: `${pic}${pic.includes("?") ? "&" : "?"}t=${Math.floor(Date.now() / 10000)}`, alt: "" })
       : el("div", { class: "sim-muted", text: `${id} — ${this.state(id) || "?"}` }));
   }
+  /* PictureElementsCard: elements at left/top %, tap toggles entity_id, else
+   * calls service (on "targets" when given); icon "power" = power glyph. */
   card_picture_elements(o) {
-    const box = el("div", { class: "sim-pic", style: o.aspect ? `aspect-ratio:${o.aspect}` : "" }, o.image ? el("img", { src: o.image, alt: "" }) : null);
+    const box = el("div", { class: "sim-pic", style: `aspect-ratio:${o.aspect || 1.3}` }, o.image ? el("img", { src: o.image, alt: "" }) : null);
     for (const e of o.elements || []) {
-      const id = e.entity || e.entity_id;
-      const style = Object.entries(e.style || {}).map(([k, v]) => `${k}:${v}`).join(";");
-      const label = e.type === "state-label" ? `${this.state(id) || "--"}${this.attr(id, "unit_of_measurement") || ""}` : iconFor(e.icon, id);
-      const steps = e.tap_action && e.tap_action.action === "toggle" ? [{ kind: "service", service: `${String(id).split(".")[0]}.toggle`, entity_id: id }]
-        : this.stepsOf(e, false);
-      box.append(el("button", { class: "sim-pe" + (this.isOn(id) ? " active" : ""), style: `position:absolute;${style}`, text: label,
+      const id = e.entity_id;
+      const label = e.icon === "power" ? "⏻" : (this.isOn(id) ? "💡" : "○");
+      let steps = [];
+      if (id) steps = [{ kind: "service", service: `${String(id).split(".")[0]}.toggle`, entity_id: id }];
+      else if (e.service) steps = [{ kind: "service", service: e.service, entity_id: (e.targets && e.targets.length) ? e.targets : undefined }];
+      box.append(el("button", { class: "sim-pe" + (this.isOn(id) ? " active" : ""), title: id || e.service || "",
+        style: `position:absolute;left:${e.left != null ? e.left : 50}%;top:${e.top != null ? e.top : 50}%`, text: label,
         onclick: () => this.run(steps) }));
     }
     return this.card(null, box);
