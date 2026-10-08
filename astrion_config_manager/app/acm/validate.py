@@ -169,6 +169,18 @@ def _card(ctx: _Ctx, card: Any, path: str) -> None:
         for idx, row in enumerate(opts.get(key) or [] if isinstance(opts.get(key), list) else []):
             if not isinstance(row, dict):
                 ctx.warn(_ptr_join(path, "options", key, idx), "item_not_object")
+    # RF9.6 (1.2.1-beta): grid "long_press" must be an object; else the remote ignores it
+    for key in {"button_grid": "buttons", "scene_grid": "scenes"}.get(ctype, "").split():
+        for idx, tile in enumerate(opts.get(key) if isinstance(opts.get(key), list) else []):
+            if isinstance(tile, dict) and "long_press" in tile and not isinstance(tile["long_press"], dict):
+                ctx.warn(_ptr_join(path, "options", key, idx, "long_press"), "type_mismatch", expected="object")
+    # MediaPlayerCard comma lists: unknown keys are ignored by the remote
+    for key, hint in HINTS.get("csv", {}).get(ctype, {}).items():
+        val = opts.get(key)
+        if isinstance(val, str):
+            bad = [x for x in (v.strip() for v in val.split(",")) if x and x not in hint["values"]]
+            if bad:
+                ctx.warn(_ptr_join(path, "options", key), "value_unexpected", value=",".join(bad))
     # RF9.3: apple_tv_remote with both ways set -> the remote uses appleTv
     if ctype == "apple_tv_remote" and opts.get("appleTv") and opts.get("deviceId"):
         ctx.warn(_ptr_join(path, "options", "deviceId"), "appletv_both")

@@ -82,7 +82,7 @@ class Executor:
     async def _step(self, meta: dict[str, Any], doc: Any, step: dict[str, Any]) -> None:
         kind = step.get("kind")
         if kind == "service":
-            await self._service(step.get("service"), step.get("entity_id"), step.get("data"))
+            await self._service(step.get("service"), step.get("entity_id"), step.get("data"), meta)
         elif kind == "harmony_command":
             await self._harmony_cmd(meta, step.get("device"), step.get("command"), step.get("hub"))
         elif kind == "harmony_activity":
@@ -100,13 +100,15 @@ class Executor:
         else:
             raise StepError("step_unknown", str(kind))
 
-    async def _service(self, service: Any, entity_id: Any, data: Any) -> None:
+    async def _service(self, service: Any, entity_id: Any, data: Any, meta: dict[str, Any] | None = None) -> None:
         if not isinstance(service, str) or "." not in service:
             raise StepError("service_invalid", str(service))
         domain, svc = service.split(".", 1)
-        if domain == "astrion_appletv":
+        tv_entities = {tv.get("entityId") for tv in (meta or {}).get("apple_tvs") or []}
+        if domain == "astrion_appletv" or (isinstance(entity_id, str) and entity_id in tv_entities):
             # RF9.5: direct Apple TV control lives on the remote (Companion
-            # protocol + pairing keys); the add-on cannot execute it.
+            # protocol + pairing keys). Upstream AppleTvRegistry.handle consumes
+            # every call on a paired TV's entity locally - HA does not know it.
             raise StepError("appletv_direct", str(entity_id or ""))
         try:
             await self._ha.call_service(domain, svc, entity_id or None, data if isinstance(data, dict) else None)
@@ -194,7 +196,7 @@ class Executor:
     async def _device_power(self, meta, doc, dev: dict[str, Any], on: bool) -> None:
         if dev.get("source") == "ha":
             entity = str(dev.get("deviceId"))
-            await self._service(f"{entity.split('.')[0]}.{'turn_on' if on else 'turn_off'}", entity, None)
+            await self._service(f"{entity.split('.')[0]}.{'turn_on' if on else 'turn_off'}", entity, None, meta)
         else:
             await self._device_command(meta, doc, dev, dev.get("powerOnCommand" if on else "powerOffCommand"))
 
@@ -208,7 +210,7 @@ class Executor:
             await self._harmony_cmd(meta, dev_id, command, dev.get("hub"))
         elif source == "ha":
             entity = str(dev_id)
-            await self._service(f"{entity.split('.')[0]}.select_source", entity, {"source": command})
+            await self._service(f"{entity.split('.')[0]}.select_source", entity, {"source": command}, meta)
 
     async def _safe(self, coro, errors: list[str]) -> None:
         """Run one Activity step; collect the error and continue."""

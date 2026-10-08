@@ -273,6 +273,10 @@
       [
         "closePopup",
         "bool"
+      ],
+      [
+        "long_press",
+        "action"
       ]
     ],
     "scene_grid.scenes": [
@@ -355,6 +359,10 @@
       [
         "closePopup",
         "bool"
+      ],
+      [
+        "long_press",
+        "action"
       ]
     ],
     "tv_remote.apps": [
@@ -446,5 +454,84 @@
         ]
       }
     }
-  }
+  },
+  "long_press": [
+    [
+      "service",
+      "text"
+    ],
+    [
+      "entity_id",
+      "entity"
+    ],
+    [
+      "data",
+      "json"
+    ],
+    [
+      "harmonyDevice",
+      "text"
+    ],
+    [
+      "harmonyCommand",
+      "text"
+    ],
+    [
+      "activityId",
+      "text"
+    ],
+    [
+      "hub",
+      "text"
+    ],
+    [
+      "irDevice",
+      "irdev"
+    ],
+    [
+      "irCommand",
+      "text"
+    ],
+    [
+      "activity",
+      "activity"
+    ],
+    [
+      "page",
+      "page"
+    ],
+    [
+      "pageMode",
+      "pagemode"
+    ],
+    [
+      "closePopup",
+      "bool"
+    ]
+  ],
+  "_long_press": "1.2.1-beta GridLongPress.kt: optional 'long_press' object on button_grid buttons / scene_grid tiles; same action fields as a tile, hub falls back to the tile's own.",
+  "csv": {
+    "media_player": {
+      "media_controls": {
+        "values": [
+          "on_off",
+          "shuffle",
+          "previous",
+          "play_pause",
+          "next",
+          "repeat"
+        ],
+        "default": "previous,play_pause,next"
+      },
+      "volume_controls": {
+        "values": [
+          "mute",
+          "buttons",
+          "set"
+        ],
+        "default": "mute,buttons"
+      }
+    }
+  },
+  "_csv": "MediaPlayerCard.kt MEDIA_CONTROL_KEYS / VOLUME_CONTROL_KEYS: comma-separated list; empty string = none, key absent = default."
 }

@@ -1,5 +1,27 @@
 # Changelog
 
+## 2.9.0 - 2026-10-08
+
+Aligned with astrion-custom-dashboard **1.2.1-beta**, and re-checked against
+**1.2.0**; spec v1.8 (RF9.6, RF9.7).
+
+- 1.2.1-beta: `long_press` block on `button_grid` buttons and `scene_grid`
+  tiles. Editor: "Long-press action" toggle with its own form (service,
+  entity, Harmony, hub, IR, Activity, page/popup, closePopup). Entities inside
+  are validated; copying rewrites its page and IR references; a non-object
+  value is a warning. Simulator: hold a tile to fire it (hub falls back to the
+  tile's own, `entity_id` alone = `turn_on`, as upstream).
+- 1.2.0 recheck: any service call on a paired Apple TV entity (not only
+  `astrion_appletv.*`) is handled by the remote itself, so the simulator no
+  longer forwards it to Home Assistant (it shows the reason instead).
+- 1.2.0 recheck: `media_controls` / `volume_controls` are comma lists:
+  checkbox editor (empty = none, absent = default), unknown keys warned, and the
+  simulator draws exactly the configured controls (incl. on_off, shuffle,
+  repeat, volume slider).
+- 1.2.0 recheck: `openWhenState` absent means the literal state `"on"`.
+- Fix: in the simulator a tap could be lost when a Home Assistant state update
+  arrived during the press (the tile was redrawn before the click).
+
 ## 2.8.0 - 2026-10-08
 
 - Monitor card (and every list editor): items no longer collapse after each

@@ -1,9 +1,9 @@
-# Requirement — Astrion Config Manager (HA add-on) v1.7
+# Requirement — Astrion Config Manager (HA add-on) v1.8
 
 > English translation of [SPEC.md](SPEC.md). The Italian document is the
 > reference; in case of discrepancy the Italian text prevails.
 
-Status: approved by the requester. v1.3: added RF6.12 (navigation-only mode). v1.4: added RF7 (icons and entity catalog). v1.5: added RF8 (multiple Harmony hubs and IR targets). v1.6: added RF3.5 (dropdowns and palettes). v1.7: added RF3.6 (structured lists) and RF9 (upstream 1.2.0, direct Apple TV). Supersedes v1.0: Harmony and IR are now in scope; named versions added (RF2.11–RF2.13). Original document language: Italian.
+Status: approved by the requester. v1.3: added RF6.12 (navigation-only mode). v1.4: added RF7 (icons and entity catalog). v1.5: added RF8 (multiple Harmony hubs and IR targets). v1.6: added RF3.5 (dropdowns and palettes). v1.7: added RF3.6 (structured lists) and RF9 (upstream 1.2.0, direct Apple TV). v1.8: RF9.6–RF9.7 (upstream 1.2.1-beta and 1.2.0 recheck). Supersedes v1.0: Harmony and IR are now in scope; named versions added (RF2.11–RF2.13). Original document language: Italian.
 
 ## 1. Purpose
 
@@ -120,7 +120,9 @@ Home Assistant add-on with an Ingress panel that manages the configurations (`da
 - RF9.2 The `media_player.appletv_*` entities of paired Apple TVs are valid even though they do not exist in HA.
 - RF9.3 `apple_tv_remote` supports both ways: direct (`appleTv`) and Harmony (`deviceId`/`hub`); the editor offers "Control via". When both are set `appleTv` wins (warning).
 - RF9.4 Before a push the `appletv_<localId>` entries are added to the `haDevices` catalog as a `sync-import` version, with the same logic as the remote, so push verification stays consistent.
-- RF9.5 Direct Apple TV control cannot be executed by the add-on: the simulator shows it disabled with the reason.
+- RF9.5 Direct Apple TV control cannot be executed by the add-on: the simulator shows it disabled with the reason. This covers `astrion_appletv.*` and any service on a paired Apple TV's entity, which the remote handles locally.
+- RF9.6 (1.2.1-beta) Every `button_grid` button and `scene_grid` tile can carry a `long_press` block with the same action fields; dedicated editor form, validation of the entities inside, copy with reference rewriting, simulator long press (fallback hub = the tile's own).
+- RF9.7 `media_player.media_controls`/`volume_controls` are comma lists (empty string = no controls, key absent = default): checkbox editor, faithful simulator. `openWhenState` defaults to `"on"`.
 
 ## 6. Non-functional requirements
 

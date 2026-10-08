@@ -305,3 +305,23 @@ async def test_rf9_appletv_direct_not_executable(executor):
     }
     res = await ex.run(meta, DOC, [step])
     assert res["results"][0]["error"] == "appletv_direct" and ha.calls == []
+
+
+async def test_any_service_on_paired_apple_tv_is_local(executor):
+    ex, ha, meta, _ = executor
+    meta = {**meta, "apple_tvs": [{"localId": "s", "name": "S", "entityId": "media_player.appletv_s"}]}
+    res = await ex.run(
+        meta,
+        DOC,
+        [
+            {
+                "kind": "service",
+                "service": "media_player.select_source",
+                "entity_id": "media_player.appletv_s",
+                "data": {"source": "Netflix"},
+            },
+            {"kind": "service", "service": "light.toggle", "entity_id": "light.x"},
+        ],
+    )
+    assert [r.get("error") for r in res["results"]] == ["appletv_direct", None]
+    assert ha.calls == [("light.toggle", "light.x", None)]

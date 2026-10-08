@@ -575,3 +575,59 @@ async def test_monitor_rows_must_be_objects(env):
         ("item_not_object", "/pages/0/cards/2/options/entities/0")
     ]
     assert v["issues"] == []
+
+
+# ---------------------------------------------------------------- 1.2.1-beta
+
+
+async def test_long_press_and_media_controls(env):
+    rid = (await register(env, "a", "R"))["id"]
+    grid = {
+        "type": "button_grid",
+        "options": {
+            "buttons": [
+                {
+                    "name": "Ok",
+                    "service": "light.toggle",
+                    "entity_id": "light.salotto",
+                    "long_press": {"service": "light.turn_off", "entity_id": "light.ghost", "page": "Home"},
+                },
+                {"name": "Bad", "long_press": "nope"},
+            ]
+        },
+    }
+    media = {
+        "type": "media_player",
+        "options": {"entity_id": "media_player.tv", "media_controls": "previous,stop", "volume_controls": ""},
+    }
+    v = (await edit(env, rid, lambda d: d["pages"][0]["cards"].extend([grid, media])))["validation"]
+    # entities inside long_press are validated like the tile's own
+    assert [(i["code"], i["path"]) for i in v["issues"]] == [
+        ("entity_missing", "/pages/0/cards/2/options/buttons/0/long_press/entity_id")
+    ]
+    assert sorted((w["code"], w["path"]) for w in v["warnings"]) == [
+        ("type_mismatch", "/pages/0/cards/2/options/buttons/1/long_press"),
+        ("value_unexpected", "/pages/0/cards/3/options/media_controls"),
+    ]
+
+
+async def test_copy_rewrites_page_in_long_press(env):
+    a = (await register(env, "a", "A"))["id"]
+    b = (await register(env, "b", "B"))["id"]
+    tile = {"name": "T", "long_press": {"page": "Home", "irDevice": "tv", "irCommand": "on"}}
+    await edit(
+        env,
+        a,
+        lambda d: (
+            d.update(irDevices=[{"id": "tv", "commands": {"on": {"freq": 38000, "pattern": [1, 2]}}}]),
+            d["pages"][0]["cards"].append({"type": "scene_grid", "options": {"scenes": [tile]}}),
+        ),
+    )
+    await edit(
+        env, b, lambda d: d.update(irDevices=[{"id": "tv", "commands": {"off": {"freq": 38000, "pattern": [3]}}}])
+    )
+    body = await (
+        await env.post("/api/copy", json={"src": a, "dst": b, "kind": "pages", "pages": [0], "head": 2})
+    ).json()
+    lp = body["state"]["pages"][-1]["cards"][-1]["options"]["scenes"][0]["long_press"]
+    assert lp["page"] == "Home 2" and lp["irDevice"] == "tv_2"

@@ -240,7 +240,10 @@ const I18N = {
   "sim_err_appletv_direct": "Direct Apple TV control is not executable from the add-on",
   "v_appletv_both": "Both appleTv and deviceId are set: the remote uses the Apple TV (direct)",
   "convert_item": "Convert to",
-  "v_item_not_object": "Plain value: the remote only reads {\"entity_id\", \"name\"} rows and skips this one"
+  "v_item_not_object": "Plain value: the remote only reads {\"entity_id\", \"name\"} rows and skips this one",
+  "long_press_enable": "Long-press action (hold)",
+  "long_press_hint": "Fired when the tile is held instead of tapped. Same fields as the tile; hub falls back to the tile's own.",
+  "sim_long_hint": "hold for the long-press action"
  },
  "it": {
   "app_title": "Astrion Config Manager",
@@ -480,7 +483,10 @@ const I18N = {
   "sim_err_appletv_direct": "Il controllo diretto Apple TV non è eseguibile dall'add-on",
   "v_appletv_both": "Sono impostati sia appleTv sia deviceId: il telecomando usa l'Apple TV (diretto)",
   "convert_item": "Converti in",
-  "v_item_not_object": "Valore semplice: il telecomando legge solo righe {\"entity_id\", \"name\"} e salta questa"
+  "v_item_not_object": "Valore semplice: il telecomando legge solo righe {\"entity_id\", \"name\"} e salta questa",
+  "long_press_enable": "Azione a pressione lunga (tieni premuto)",
+  "long_press_hint": "Eseguita quando il riquadro viene tenuto premuto invece che toccato. Stessi campi del riquadro; l'hub, se vuoto, è quello del riquadro.",
+  "sim_long_hint": "tieni premuto per l'azione lunga"
  },
  "fr": {
   "app_title": "Astrion Config Manager",
@@ -720,7 +726,10 @@ const I18N = {
   "sim_err_appletv_direct": "Le contrôle direct de l'Apple TV n'est pas exécutable depuis l'add-on",
   "v_appletv_both": "appleTv et deviceId sont tous deux définis : la télécommande utilise l'Apple TV (direct)",
   "convert_item": "Convertir en",
-  "v_item_not_object": "Valeur simple : la télécommande ne lit que des lignes {\"entity_id\", \"name\"} et ignore celle-ci"
+  "v_item_not_object": "Valeur simple : la télécommande ne lit que des lignes {\"entity_id\", \"name\"} et ignore celle-ci",
+  "long_press_enable": "Action sur appui long (maintenir)",
+  "long_press_hint": "Déclenchée quand la tuile est maintenue au lieu d'être touchée. Mêmes champs que la tuile ; le hub vide reprend celui de la tuile.",
+  "sim_long_hint": "maintenir pour l'action longue"
  },
  "es": {
   "app_title": "Astrion Config Manager",
@@ -960,7 +969,10 @@ const I18N = {
   "sim_err_appletv_direct": "El control directo del Apple TV no es ejecutable desde el add-on",
   "v_appletv_both": "Están definidos appleTv y deviceId: el mando usa el Apple TV (directo)",
   "convert_item": "Convertir a",
-  "v_item_not_object": "Valor simple: el mando solo lee filas {\"entity_id\", \"name\"} y omite esta"
+  "v_item_not_object": "Valor simple: el mando solo lee filas {\"entity_id\", \"name\"} y omite esta",
+  "long_press_enable": "Acción al mantener pulsado",
+  "long_press_hint": "Se ejecuta al mantener pulsado el mosaico en lugar de tocarlo. Mismos campos que el mosaico; el hub vacío usa el del mosaico.",
+  "sim_long_hint": "mantener para la acción larga"
  },
  "de": {
   "app_title": "Astrion Config Manager",
@@ -1200,7 +1212,10 @@ const I18N = {
   "sim_err_appletv_direct": "Direkte Apple-TV-Steuerung im Add-on nicht ausführbar",
   "v_appletv_both": "appleTv und deviceId sind gesetzt: die Fernbedienung nutzt das Apple TV (direkt)",
   "convert_item": "Umwandeln in",
-  "v_item_not_object": "Einfacher Wert: die Fernbedienung liest nur {\"entity_id\", \"name\"}-Zeilen und überspringt diese"
+  "v_item_not_object": "Einfacher Wert: die Fernbedienung liest nur {\"entity_id\", \"name\"}-Zeilen und überspringt diese",
+  "long_press_enable": "Aktion bei langem Drücken (halten)",
+  "long_press_hint": "Wird ausgelöst, wenn die Kachel gehalten statt angetippt wird. Gleiche Felder wie die Kachel; ein leerer Hub übernimmt den der Kachel.",
+  "sim_long_hint": "halten für die lange Aktion"
  }
 };
 

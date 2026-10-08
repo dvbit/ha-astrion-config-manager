@@ -74,6 +74,7 @@ class Editor {
   constructor(opts) {
     Object.assign(this, opts);
     this.sel = { kind: "page", p: 0 };
+    this.open = new Set(); // expanded list items, by JSON path
     this.doc = null;
     this.issues = [];
     this.warnings = [];
@@ -146,6 +147,8 @@ class Editor {
       case "items": return this.itemsField(key, val, path, opts, getObj);
       case "cards": return this.cardsField(key, val, path, getObj);
       case "multi": return this.wrap(key, this.multiInput(opts, val, has, set), path);
+      case "csv": return this.wrap(key, this.csvInput(opts, val, has, set), path);
+      case "action": return this.actionField(key, val, has, path, getObj);
       case "values": {
         // RF3.6 state_value: one value (string) or several (list), one per line
         input = el("textarea", { rows: 2, placeholder: t("one_per_line") });
@@ -282,6 +285,44 @@ class Editor {
       el("div", { class: "row" }, el("span", { class: "muted", text: t("card_type_new") }), typeSel), list);
   }
 
+  /* 1.2.1-beta "long_press" block: optional object with the tile's action fields.
+   * Absent = a hold is a normal tap (upstream GridLongPress.longPressActionOf). */
+  actionField(key, val, has, path, getObj) {
+    const box = el("div", { class: "field items", "data-path": path });
+    const on = has && val && typeof val === "object" && !Array.isArray(val);
+    const cb = el("input", { type: "checkbox" });
+    cb.checked = !!on;
+    cb.onchange = () => {
+      if (cb.checked) this.open.add(path);
+      this.change((d) => { const o = getObj(d); if (cb.checked) o[key] = o[key] && typeof o[key] === "object" ? o[key] : {}; else delete o[key]; });
+    };
+    box.append(el("label", { class: "row" }, cb, t("long_press_enable")));
+    if (has && !on) { // malformed value: keep it visible as JSON
+      box.append(this.jsonField(key, val, path, (v) => this.change((d) => { const o = getObj(d); if (v === undefined) delete o[key]; else o[key] = v; })));
+      return box;
+    }
+    if (!on) return box;
+    const specs = (this.hints && this.hints.long_press) || [];
+    box.append(el("p", { class: "muted", text: t("long_press_hint") }),
+      this.form(val, specs, path, (d) => getObj(d)[key], new Set(specs.map((x) => x[0])), true));
+    return box;
+  }
+
+  /* MediaPlayerCard comma lists (media_controls / volume_controls): checkboxes.
+   * Absent = remote default; all unchecked = "" (= no controls). */
+  csvInput(hint, val, has, set) {
+    const cur = has && typeof val === "string" ? val.split(",").map((x) => x.trim()).filter(Boolean) : hint.default.split(",");
+    const box = el("div", { class: "row multi" });
+    for (const v of hint.values) {
+      const cb = el("input", { type: "checkbox" });
+      cb.checked = cur.includes(v);
+      cb.onchange = () => set(hint.values.filter((x) => (x === v ? cb.checked : cur.includes(x))).join(","));
+      box.append(el("label", { class: "row" }, cb, v));
+    }
+    box.append(el("button", { class: "icon", text: t("default_short"), title: hint.default, disabled: !has, onclick: () => set(undefined) }));
+    return box;
+  }
+
   /* apple_tv_remote buttons: several values from a fixed set (checkboxes). */
   multiInput(hint, val, has, set) {
     const cur = has && Array.isArray(val) ? val : null;
@@ -380,7 +421,7 @@ class Editor {
     for (const [k, kind, opts] of specs) {
       const f = this.field(obj, k, kind, opts, objPath, set, getObj);
       // list editors take the full width below the grid of simple fields
-      if (kind === "items" || kind === "cards") wide.push(f); else grid.append(f);
+      if (kind === "items" || kind === "cards" || kind === "action") wide.push(f); else grid.append(f);
     }
     const own = ownKeys || new Set(specs.map((s) => s[0]));
     const rest = Object.fromEntries(Object.entries(obj).filter(([k]) => !own.has(k)));
@@ -612,6 +653,8 @@ class Editor {
       if (it === "cards") return [k, "cards", f];
       if (it) return [k, "items", it];
       if (multi[k]) return [k, "multi", multi[k]];
+      const csv = ((hints.csv || {})[card.type] || {})[k];
+      if (csv) return [k, "csv", csv];
       if (k === "appleTv") return [k, "appletv", f];
       if (enums[k]) return [k, "enum", enums[k]];
       if (colors.has(k)) return [k, "color", f];

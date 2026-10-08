@@ -19,7 +19,7 @@ validation against your HA entities, push/pull with drift detection.
 3. Install **Astrion Config Manager**, start it, open **Astrion** in the sidebar.
 
 On each remote, enable the app's **config server** (port 8080, settings page).
-Schema followed: upstream release **1.2.0** (card fields regenerated with `tools/extract_card_schema.py`).
+Schema followed: upstream release **1.2.0** and beta **1.2.1-beta** (card fields regenerated with `tools/extract_card_schema.py`).
 
 ## Features
 

@@ -1,6 +1,6 @@
-# Requisito — Astrion Config Manager (add-on HA) v1.7
+# Requisito — Astrion Config Manager (add-on HA) v1.8
 
-Stato: approvato dal richiedente. v1.3: aggiunto RF6.12 (modalità solo navigazione). v1.4: aggiunto RF7 (icone e catalogo entità). v1.5: aggiunto RF8 (più hub Harmony e destinazioni IR). v1.6: aggiunto RF3.5 (menu e tavolozze). v1.7: aggiunti RF3.6 (liste strutturate) e RF9 (allineamento a upstream 1.2.0, Apple TV diretto). Sostituisce la v1.0: Harmony e IR rientrano nell'ambito; aggiunte le versioni con nome (RF2.11–RF2.13). Lingua del documento: italiano. Traduzione inglese: [SPEC.en.md](SPEC.en.md).
+Stato: approvato dal richiedente. v1.3: aggiunto RF6.12 (modalità solo navigazione). v1.4: aggiunto RF7 (icone e catalogo entità). v1.5: aggiunto RF8 (più hub Harmony e destinazioni IR). v1.6: aggiunto RF3.5 (menu e tavolozze). v1.7: aggiunti RF3.6 (liste strutturate) e RF9 (allineamento a upstream 1.2.0, Apple TV diretto). v1.8: RF9.6–RF9.7 (upstream 1.2.1-beta e ricontrollo 1.2.0). Sostituisce la v1.0: Harmony e IR rientrano nell'ambito; aggiunte le versioni con nome (RF2.11–RF2.13). Lingua del documento: italiano. Traduzione inglese: [SPEC.en.md](SPEC.en.md).
 
 ## 1. Scopo
 
@@ -117,7 +117,9 @@ Add-on di Home Assistant con pannello Ingress che gestisce le configurazioni (`d
 - RF9.2 Le entità `media_player.appletv_*` delle Apple TV abbinate sono valide anche se non esistono in HA.
 - RF9.3 `apple_tv_remote` supporta entrambi i modi: diretto (`appleTv`) e Harmony (`deviceId`/`hub`); l'editor offre «Controllo tramite». Se sono impostati entrambi vale `appleTv` (avviso).
 - RF9.4 Prima del push le voci `appletv_<localId>` vengono aggiunte al catalogo `haDevices` come versione `sync-import`, con la stessa logica del telecomando, così la verifica del push resta coerente.
-- RF9.5 Il controllo diretto Apple TV non è eseguibile dall'add-on: nel simulatore è disabilitato con il motivo.
+- RF9.5 Il controllo diretto Apple TV non è eseguibile dall'add-on: nel simulatore è disabilitato con il motivo. Vale per `astrion_appletv.*` e per qualsiasi servizio sull'entità di una Apple TV abbinata, che il telecomando gestisce localmente.
+- RF9.6 (1.2.1-beta) Ogni pulsante di `button_grid` e riquadro di `scene_grid` può avere un blocco `long_press` con gli stessi campi azione; editor con form dedicato, validazione delle entità interne, copia con riscrittura dei riferimenti, simulatore con pressione lunga (hub di riserva = quello del riquadro).
+- RF9.7 `media_player.media_controls`/`volume_controls` sono liste separate da virgola (stringa vuota = nessun controllo, chiave assente = predefinito): editor a caselle, simulatore fedele. `openWhenState` vale `"on"` se assente.
 
 ## 6. Requisiti non funzionali
 

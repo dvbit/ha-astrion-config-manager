@@ -14,6 +14,7 @@
  * - RF6.12 "navigation only" switch: actions are listed, not executed.
  * - RF9    direct Apple TV (1.2.0, appleTv / astrion_appletv.*) cannot be
  *          driven by the add-on: shown disabled with the reason.
+ * - RF9.6  (1.2.1-beta) grid tiles' "long_press" block fires on hold.
  * - RF8    several Harmony hubs (action "hub" = localId, else first hub) and
  *          IR targets per device (local -> remote.* entity, or an extender).
  */
@@ -135,7 +136,10 @@ class Simulator {
   }
   /* Reason why a step cannot run (RF6.7/RF6.8/RF8), or null. */
   blocked(steps) {
-    if (steps.some((s) => s.kind === "service" && String(s.service).startsWith("astrion_appletv."))) return t("sim_appletv_direct");
+    // RF9.5: astrion_appletv.* and ANY call on a paired TV's entity run on the remote only
+    const tvs = new Set((this.remote.apple_tvs || []).map((tv) => tv.entityId));
+    if (steps.some((s) => s.kind === "service" && (String(s.service).startsWith("astrion_appletv.")
+      || [].concat(s.entity_id || []).some((e) => tvs.has(e))))) return t("sim_appletv_direct");
     if (steps.some((s) => s.kind.startsWith("harmony")) && !this.hubFor(null)) return t("sim_no_harmony");
     for (const s of steps.filter((x) => x.kind === "ir")) {
       const tg = this.irTarget(s.device);
@@ -172,7 +176,8 @@ class Simulator {
     this.pages().forEach((p, i) => {
       if (!p.openWhenEntity) return;
       const s = this.state(p.openWhenEntity);
-      const opens = p.openWhenState ? s === p.openWhenState : this.isOn(p.openWhenEntity);
+      // DashboardLoader: openWhenState defaults to "on" (literal state match)
+      const opens = s === (p.openWhenState || "on");
       const closes = p.closeWhenState ? s === p.closeWhenState : !opens;
       if (closes) {
         this.autoOpened.delete(p.openWhenEntity);
@@ -225,6 +230,22 @@ class Simulator {
       case "activity": return `${t("activities")}: ${st.id}`;
       default: return st.kind;
     }
+  }
+
+  /* 1.2.1-beta GridLongPress.fireGridLongPress: steps of a "long_press" block.
+   * entity_id alone -> <domain>.turn_on; hub falls back to the tile's own. */
+  longPressOf(tile) {
+    const lp = tile && tile.long_press;
+    if (!lp || typeof lp !== "object" || Array.isArray(lp) || !Object.keys(lp).length) return null;
+    const hub = lp.hub || tile.hub;
+    const steps = [];
+    if (lp.service && String(lp.service).includes(".")) steps.push({ kind: "service", service: lp.service, entity_id: lp.entity_id, data: lp.data });
+    else if (lp.entity_id) steps.push({ kind: "service", service: `${String(lp.entity_id).split(".")[0]}.turn_on`, entity_id: lp.entity_id });
+    if (lp.activityId) steps.push({ kind: "harmony_activity", activity: lp.activityId, hub });
+    if (lp.harmonyDevice && lp.harmonyCommand) steps.push({ kind: "harmony_command", device: lp.harmonyDevice, command: lp.harmonyCommand, hub });
+    if (lp.irDevice && lp.irCommand) steps.push({ kind: "ir", device: lp.irDevice, command: lp.irCommand });
+    if (lp.activity) steps.push({ kind: "activity", id: lp.activity });
+    return { steps, nav: this.navOf(lp, true) };
   }
 
   /* Upstream ButtonGridCard.fire / SceneGridCard tap -> steps. */
@@ -334,6 +355,7 @@ class Simulator {
   gestures(screen) {
     let g = null;
     screen.addEventListener("pointerdown", (e) => {
+      this.suppressClick = false; // a new press: forget any swallowed click
       if (e.target.closest("input")) return;
       const pg = screen.querySelector(".sim-page:not(.in-popup)");
       const atBottom = !pg || pg.scrollTop + pg.clientHeight >= pg.scrollHeight - 2;
@@ -353,7 +375,12 @@ class Simulator {
         // swallow the click that may follow this pointerup, and only that one
         this.suppressClick = true;
         setTimeout(() => { this.suppressClick = false; }, 60);
-      } else if (this.pending) { this.pending = false; this.render(); }
+      } else if (this.pending) {
+        // Render the deferred live update only after the browser has delivered
+        // the click of this tap: rendering now would replace the tile under the
+        // pointer and the tap would be lost.
+        setTimeout(() => { if (!this.dragging && this.pending) { this.pending = false; this.render(); } }, 0);
+      }
     };
     screen.addEventListener("pointerup", (e) => end(e, false));
     screen.addEventListener("pointercancel", (e) => end(e, true)); // browser took over (native scroll)
@@ -396,14 +423,26 @@ class Simulator {
   }
 
   /* Generic tile used by most cards. */
-  tile(icon, label, sub, active, steps, nav, extra) {
+  tile(icon, label, sub, active, steps, nav, extra, long) {
     const why = steps ? this.blocked(steps) : null;
-    const t0 = el("button", { class: "sim-tile" + (active ? " active" : "") + (why ? " blocked" : ""), title: why || null,
+    const t0 = el("button", { class: "sim-tile" + (active ? " active" : "") + (why ? " blocked" : "") + (long ? " has-long" : ""),
+      title: [why, long ? t("sim_long_hint") : null].filter(Boolean).join(" · ") || null,
       onclick: () => (steps || nav) && this.run(steps || [], nav) },
     icon && icon.startsWith && icon.startsWith("IMG:") ? iconImg(this.rid, icon.slice(4), "sim-ico-img") : el("span", { class: "sim-ico", text: icon }),
     el("span", { class: "sim-lbl", text: label || "" }),
     sub != null && sub !== "" ? el("span", { class: "sim-sub", text: sub }) : null, why ? el("span", { class: "sim-why", text: "⛔ " + why }) : null);
     if (extra) t0.append(extra);
+    if (long) {
+      // hold = long_press block; the click that follows the hold is swallowed
+      let timer = null;
+      t0.addEventListener("pointerdown", () => {
+        timer = setTimeout(() => { timer = null; this.suppressClick = true; this.run(long.steps, long.nav); }, LONG_PRESS_MS);
+      });
+      const cancel = () => { if (timer) { clearTimeout(timer); timer = null; } };
+      t0.addEventListener("pointerup", cancel);
+      t0.addEventListener("pointerleave", cancel);
+      t0.addEventListener("pointercancel", cancel);
+    }
     return t0;
   }
   slider(value, min, max, onChange) {
@@ -487,10 +526,24 @@ class Simulator {
     return this.card(`${iconFor(o.icon || "speaker", id)} ${this.name(o, id)} · ${this.state(id) || "?"}`,
       pic ? el("img", { class: "sim-art", src: pic, alt: "" }) : null,
       title ? el("div", { text: title }) : null, artist ? el("div", { class: "sim-muted", text: artist }) : null,
-      o.media_controls === false ? null : el("div", { class: "row" }, this.ctl("⏮", s("media_previous_track")), this.ctl(this.state(id) === "playing" ? "⏸" : "▶", s("media_play_pause")), this.ctl("⏭", s("media_next_track"))),
-      o.volume_controls === false ? null : el("div", { class: "row" }, this.ctl("🔉", s("volume_down")),
-        o.show_volume_level !== false && vol != null ? el("span", { text: `${Math.round(vol * 100)}%` }) : null,
-        this.ctl("🔊", s("volume_up")), this.ctl("🔇", s("volume_mute", { is_volume_muted: !this.attr(id, "is_volume_muted") }))));
+      // MediaPlayerCard: comma lists, absent = default, "" = none
+      ...(() => {
+        const list = (v, d) => (typeof v === "string" ? v : d).split(",").map((x) => x.trim()).filter(Boolean);
+        const mc = list(o.media_controls, "previous,play_pause,next");
+        const vc = list(o.volume_controls, "mute,buttons");
+        const btn = { on_off: this.ctl("⏻", s("toggle")), shuffle: this.ctl("🔀", s("shuffle_set", { shuffle: !this.attr(id, "shuffle") })),
+          previous: this.ctl("⏮", s("media_previous_track")), play_pause: this.ctl(this.state(id) === "playing" ? "⏸" : "▶", s("media_play_pause")),
+          next: this.ctl("⏭", s("media_next_track")), repeat: this.ctl("🔁", s("repeat_set", { repeat: this.attr(id, "repeat") === "off" ? "all" : "off" })) };
+        const rows = [];
+        if (mc.length) rows.push(el("div", { class: "row" }, ...mc.filter((k) => btn[k]).map((k) => btn[k])));
+        const vrow = [];
+        if (vc.includes("mute")) vrow.push(this.ctl("🔇", s("volume_mute", { is_volume_muted: !this.attr(id, "is_volume_muted") })));
+        if (vc.includes("buttons")) vrow.push(this.ctl("🔉", s("volume_down")), this.ctl("🔊", s("volume_up")));
+        if (o.show_volume_level !== false && vol != null && vrow.length) vrow.push(el("span", { text: `${Math.round(vol * 100)}%` }));
+        if (vrow.length) rows.push(el("div", { class: "row" }, ...vrow));
+        if (vc.includes("set")) rows.push(this.slider(vol != null ? Math.round(vol * 100) : 0, 0, 100, (v) => this.run(s("volume_set", { volume_level: v / 100 }))));
+        return rows;
+      })());
   }
   card_select(o) {
     const id = o.entity_id; const opts = this.attr(id, "options") || [];
@@ -517,7 +570,7 @@ class Simulator {
     const cols = o.columns || 3;
     return el("div", { class: "sim-grid", style: `grid-template-columns:repeat(${cols},1fr)` }, ...(o.buttons || []).map((b) => {
       const act = b.state_entity && [].concat(b.state_value || []).includes(this.state(b.state_entity));
-      return this.tile(iconFor(b.icon, b.entity_id, true), b.name, null, act, this.stepsOf(b, false), this.navOf(b, false));
+      return this.tile(iconFor(b.icon, b.entity_id, true), b.name, null, act, this.stepsOf(b, false), this.navOf(b, false), null, this.longPressOf(b));
     }));
   }
   card_scene_grid(o) {
@@ -525,7 +578,7 @@ class Simulator {
     return el("div", { class: "sim-grid", style: `grid-template-columns:repeat(${cols},1fr)` }, ...(o.scenes || []).map((sc) => {
       const act = (sc.activity && Object.values(this.active).includes(sc.activity))
         || (sc.state_entity && [].concat(sc.state_value || []).includes(this.state(sc.state_entity)));
-      const tl = this.tile(iconFor(sc.icon, sc.entity_id, true), o.show_labels === false ? "" : sc.name, null, act, this.stepsOf(sc, true), this.navOf(sc, true));
+      const tl = this.tile(iconFor(sc.icon, sc.entity_id, true), o.show_labels === false ? "" : sc.name, null, act, this.stepsOf(sc, true), this.navOf(sc, true), null, this.longPressOf(sc));
       if (sc.color) tl.style.background = sc.color;
       return tl;
     }));
