@@ -1,6 +1,6 @@
-# Requisito — Astrion Config Manager (add-on HA) v1.8
+# Requisito — Astrion Config Manager (add-on HA) v1.9
 
-Stato: approvato dal richiedente. v1.3: aggiunto RF6.12 (modalità solo navigazione). v1.4: aggiunto RF7 (icone e catalogo entità). v1.5: aggiunto RF8 (più hub Harmony e destinazioni IR). v1.6: aggiunto RF3.5 (menu e tavolozze). v1.7: aggiunti RF3.6 (liste strutturate) e RF9 (allineamento a upstream 1.2.0, Apple TV diretto). v1.8: RF9.6–RF9.7 (upstream 1.2.1-beta e ricontrollo 1.2.0). Sostituisce la v1.0: Harmony e IR rientrano nell'ambito; aggiunte le versioni con nome (RF2.11–RF2.13). Lingua del documento: italiano. Traduzione inglese: [SPEC.en.md](SPEC.en.md).
+Stato: approvato dal richiedente. v1.3: aggiunto RF6.12 (modalità solo navigazione). v1.4: aggiunto RF7 (icone e catalogo entità). v1.5: aggiunto RF8 (più hub Harmony e destinazioni IR). v1.6: aggiunto RF3.5 (menu e tavolozze). v1.7: aggiunti RF3.6 (liste strutturate) e RF9 (allineamento a upstream 1.2.0, Apple TV diretto). v1.8: RF9.6–RF9.7 (upstream 1.2.1-beta e ricontrollo 1.2.0). v1.9: RF10 (upstream 1.2.2–1.2.7-beta). Sostituisce la v1.0: Harmony e IR rientrano nell'ambito; aggiunte le versioni con nome (RF2.11–RF2.13). Lingua del documento: italiano. Traduzione inglese: [SPEC.en.md](SPEC.en.md).
 
 ## 1. Scopo
 
@@ -12,7 +12,7 @@ Add-on di Home Assistant con pannello Ingress che gestisce le configurazioni (`d
 
 ## 3. Riferimenti
 
-- Schema di riferimento: `dashboard.json` secondo la release più recente del repo al momento dello sviluppo (ultima osservata: 1.2.0). Comportamento di card e azioni: sorgenti Kotlin (`cards/impl/`, `config/DashboardLoader.kt`) e editor web (`docs/index.html`, `cards.js`).
+- Schema di riferimento: `dashboard.json` secondo la release più recente del repo al momento dello sviluppo (ultima osservata: 1.2.0 stabile, 1.2.7-beta sul ramo `dev`). Comportamento di card e azioni: sorgenti Kotlin (`cards/impl/`, `config/DashboardLoader.kt`) e editor web (`docs/index.html`, `cards.js`).
 - Telecomando: il dispositivo non espone un'API. L'add-on esegue le stesse richieste HTTP del browser sulla pagina di configurazione `http://<host>:<porta>` (download e upload di `dashboard.json`), ricavate dai sorgenti `web/` del repo. L'editing avviene solo nell'interfaccia web dell'add-on.
 - Home Assistant: API WebSocket tramite token Supervisor dell'add-on; nessun token inserito dall'utente.
 - Hub Harmony: protocollo locale dell'Hub usato dal client Harmony dell'app (sorgenti Kotlin del repo).
@@ -95,7 +95,7 @@ Add-on di Home Assistant con pannello Ingress che gestisce le configurazioni (`d
 ### RF7 — Icone e catalogo entità
 
 - RF7.1 Libreria icone condivisa nell'add-on (PNG, JPEG, WebP, max 2 MB), inclusa nei backup HA. Nomi file normalizzati con la stessa regola del telecomando.
-- RF7.2 L'eliminazione di un'icona la rimuove solo dalla libreria: il telecomando non offre cancellazione e conserva la sua copia.
+- RF7.2 Eliminare un'icona la toglie dalla libreria; dall'app 1.2.7 si può eliminare anche sui telecomandi (RF10.11).
 - RF7.3 Al push, le icone usate dalla testa e assenti sul telecomando vengono caricate dalla libreria prima del file. Le icone presenti su un telecomando possono essere importate nella libreria.
 - RF7.4 Ogni campo icona dell'editor ha anteprima e selettore (libreria + icone del telecomando); gli editor JSON permettono di inserire un percorso icona. Il simulatore mostra le icone reali. Un'icona assente sia in libreria sia sul telecomando è un errore che blocca il push.
 - RF7.5 Form per il catalogo `haDevices` (nome, tipo, entità HA filtrata per tipo). Le voci del catalogo sono proposte nei campi entità dell'editor. Un'entità del catalogo inesistente in HA blocca il push.
@@ -120,6 +120,23 @@ Add-on di Home Assistant con pannello Ingress che gestisce le configurazioni (`d
 - RF9.5 Il controllo diretto Apple TV non è eseguibile dall'add-on: nel simulatore è disabilitato con il motivo. Vale per `astrion_appletv.*` e per qualsiasi servizio sull'entità di una Apple TV abbinata, che il telecomando gestisce localmente.
 - RF9.6 (1.2.1-beta) Ogni pulsante di `button_grid` e riquadro di `scene_grid` può avere un blocco `long_press` con gli stessi campi azione; editor con form dedicato, validazione delle entità interne, copia con riscrittura dei riferimenti, simulatore con pressione lunga (hub di riserva = quello del riquadro).
 - RF9.7 `media_player.media_controls`/`volume_controls` sono liste separate da virgola (stringa vuota = nessun controllo, chiave assente = predefinito): editor a caselle, simulatore fedele. `openWhenState` vale `"on"` se assente.
+
+### RF10 — Allineamento a upstream 1.2.2–1.2.7-beta
+
+Riferimento: astrion-custom-dashboard ramo `dev`, 1.2.7-beta (ultima stabile 1.2.0). Ogni chiave è facoltativa; un'app più vecchia la ignora.
+
+- RF10.1 Blocco `dock` (mode charging/clock/dashboard, idle_seconds, brightness, night_brightness, time_format 12/24, weather_entity, media_entities, show_battery) e blocco `power` (motion_wake_minutes, screen_off_filter_seconds, screen_off_entities, dock_debounce_seconds, screen_timeout_seconds): sezioni "Schermo dock" e "Standby e batteria" in Globale. Errori di tipo, intervallo e valore sono avvisi (il telecomando ignora il valore); le entità contenute sono verificate come le altre.
+- RF10.2 `hideMode` della pagina (`dots` predefinito, `full`): menu. Con `full` e Activity spenta il simulatore salta la pagina negli swipe e la lascia (verso il genitore, altrimenti la pagina visibile più vicina) quando l'Activity si ferma. Con `dots` la pagina resta raggiungibile con lo swipe e si nasconde solo il pallino. `hideMode` senza `hiddenUnlessActivity` è un avviso.
+- RF10.3 `stopActivity` (una stanza, o `*` per tutte) su tile, pulsanti, `long_press` e hotkey: menu delle stanze (stanze delle Activity e delle tile `track`). Stanza sconosciuta = avviso. Hotkey `event`, `openOverlay`, `openCurrentActivityRoom`, `track`/`room`/`devices`. I tasti fisici sono mostrati come "Menu (MAIN)".
+- RF10.4 `apple_tv_remote`: `layout` classic/compact/full, `entity`, `showArtwork`/`showProgress`/`showSkip`, lista `apps` (source, label, icon, color), 14 pulsanti del catalogo upstream (predefiniti compact: Menu, −10 s, +10 s, Home). Il simulatore rende i tre layout; le app si avviano con `media_player.select_source` su `entity` (altrimenti l'Apple TV diretto).
+- RF10.5 Le Activity composte seguono l'ActivityPlanner upstream: con `profile` nell'ir-database (alimentazione discrete/toggle/none, tempi, ripetizioni, ingressi con nome come sequenze di tasti) avvio stile Harmony (spegne i dispositivi della stanza non usati, accensioni scaglionate, ingressi quando pronti e solo se cambiano); altrimenti l'ordine originale per dispositivo. Il simulatore tiene una memoria degli stati per telecomando (acceso/spento, ingresso, Activity attive, stanze tracciate) nei dati dell'add-on; è la convinzione dell'add-on, non del telecomando, e si azzera con "Azzera stati dispositivi".
+- RF10.6 Ricerca IR come l'app: id comando tolleranti (maiuscole, spazi, `_`, `-`), nomi modello con o senza " (Harmony)", riparazione dei codici Pronto spezzati tra `pronto`/`pronto_repeat`, `repeats` con il burst di ripetizione (max 1,9 s).
+- RF10.7 Esecuzione reale di `stopActivity` (stop composto o PowerOff Harmony dell'hub tracciato; `*` = tutte le stanze attive) e dell'`event` delle hotkey (`astrion_button` sul bus di HA con remote_id, remote_name, event, key, long, page).
+- RF10.8 Interruttore "Sulla base" nel simulatore: anteprima dello schermo dock (charging = attenuato quasi a zero, dashboard = attenuato a `brightness`, clock = orologio con data, meteo, batteria e in riproduzione; notte = `night_brightness`, ambra).
+- RF10.9 Identità del telecomando da `GET /info` (nome, modello, versione app), sola lettura, mostrata nell'elenco; due voci per lo stesso telecomando fisico sono segnalate.
+- RF10.10 L'add-on non cambia il nome del telecomando.
+- RF10.11 Eliminando un'icona si può eliminarla anche sui telecomandi che la contengono (`DELETE /icons/<nome>`); i telecomandi la cui testa la usa ancora non sono selezionabili.
+- RF10.12 Il banner di disallineamento elenca le chiavi cambiate; se sono cambiate solo chiavi scritte dalle Impostazioni del telecomando (`dock.mode`, `power.screen_timeout_seconds`) lo segnala.
 
 ## 6. Requisiti non funzionali
 

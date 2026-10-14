@@ -15,6 +15,10 @@
  * - RF9    direct Apple TV (1.2.0, appleTv / astrion_appletv.*) cannot be
  *          driven by the add-on: shown disabled with the reason.
  * - RF9.6  (1.2.1-beta) grid tiles' "long_press" block fires on hold.
+ * - RF10   (1.2.2-1.2.7-beta) page hideMode "full" (skipped on swipes, left
+ *          when its Activity stops), stopActivity / track / event steps,
+ *          Apple TV layouts + apps, "Docked" preview of the dock screen,
+ *          device-state memory (reset button).
  * - RF8    several Harmony hubs (action "hub" = localId, else first hub) and
  *          IR targets per device (local -> remote.* entity, or an extender).
  */
@@ -72,10 +76,13 @@ class Simulator {
     this.pending = false;
     this.dragging = false;        // no re-render while a gesture is in progress
     this.scroll = {};             // page index -> scrollTop, kept across re-renders
+    this.devStates = {};          // RF10.5 device-state memory (backend belief)
+    this.docked = false;          // RF10.8 dock screen preview
+    this.atvPlaying = {};         // AppleTvRemoteCard Harmony play/pause guess
     this.navOnly = false;         // RF6.12, remembered per browser
     try { this.navOnly = window.localStorage.getItem("acm-sim-nav-only") === "1"; } catch (e) { /* storage unavailable */ }
     this.connect();
-    api("GET", `api/remotes/${this.rid}/sim/active`).then((a) => { this.active = a; this.render(); }).catch(() => {});
+    api("GET", `api/remotes/${this.rid}/sim/active`).then((a) => { this.setActive(a.active); this.devStates = a.devices || {}; this.render(); }).catch(() => {});
   }
 
   /* ---------- lifecycle ---------- */
@@ -156,11 +163,37 @@ class Simulator {
     if (mode === "popup") this.popup = { page: idx }; else { this.cur = idx; this.popup = null; }
     this.render();
   }
+  /* HiddenPages.isFullyHidden: hideMode "full" page whose Activity is not running. */
+  fullyHidden(p, act) {
+    return !!(p && p.hiddenUnlessActivity && p.hideMode === "full" && !(act || this.activeIds()).has(p.hiddenUnlessActivity));
+  }
+  /* Pages reachable by swiping. "dots" (default): the page stays in the pager,
+   * only its dot is hidden; "full": skipped by swipes (RF10.2). */
   siblings() {
     const pages = this.pages(); const cur = pages[this.cur] || {};
     const act = this.activeIds();
     return pages.map((p, i) => [p, i]).filter(([p, i]) => (p.parent || null) === (cur.parent || null)
-      && (i === this.cur || !p.hiddenUnlessActivity || act.has(p.hiddenUnlessActivity))).map(([, i]) => i);
+      && (i === this.cur || !this.fullyHidden(p, act))).map(([, i]) => i);
+  }
+  /* Dashboard.isDotVisible */
+  dotPages() {
+    const act = this.activeIds();
+    return this.siblings().filter((i) => { const p = this.pages()[i]; return i === this.cur || !p.hiddenUnlessActivity || act.has(p.hiddenUnlessActivity); });
+  }
+  /* New runtime state; HiddenPageExitEffect: leave a "full" page whose
+   * Activity just stopped (to its parent, else the nearest visible page). */
+  setActive(active) {
+    const before = this.activeIds();
+    this.active = active || {};
+    const after = this.activeIds();
+    const pages = this.pages(); const p = pages[this.cur];
+    if (!p || p.hideMode !== "full" || !p.hiddenUnlessActivity) return;
+    if (!before.has(p.hiddenUnlessActivity) || after.has(p.hiddenUnlessActivity)) return;
+    const par = p.parent ? this.pageIndex(p.parent) : -1;
+    if (par >= 0 && !this.fullyHidden(pages[par], after)) { this.cur = par; return; }
+    const near = (step) => { for (let i = this.cur + step; i >= 0 && i < pages.length; i += step) if (!this.fullyHidden(pages[i], after)) return i; return null; };
+    const prev = near(-1); const next = near(1);
+    this.cur = prev ?? next ?? 0;
   }
   swipe(dir) {
     const sib = this.siblings(); const pos = sib.indexOf(this.cur);
@@ -194,11 +227,17 @@ class Simulator {
     if (this.navOnly) {
       // RF6.12: nothing is sent to HA/Hub/IR; the composed Activity runtime is
       // updated locally so hiddenUnlessActivity pages still behave.
+      const next = { ...this.active };
       for (const st of steps) {
         const act = st.kind === "activity" && (this.doc.activities || []).find((a) => a.id === st.id);
-        if (act) this.active[act.room] = act.id;
-        if (st.kind === "activity_stop") delete this.active[st.room];
+        if (act) next[act.room] = act.id;
+        if (st.kind === "track") next[st.room] = st.id;
+        if (st.kind === "activity_stop") {
+          if (String(st.room).trim() === "*") Object.keys(next).forEach((r) => delete next[r]);
+          else delete next[String(st.room).trim()];
+        }
       }
+      this.setActive(next);
       if (steps.length) toast(t("sim_skipped", { list: steps.map((x) => this.describe(x)).join(" · ") }));
       if (nav) nav();
       return this.render();
@@ -208,7 +247,8 @@ class Simulator {
     if (steps.length) {
       try {
         const res = await api("POST", `api/remotes/${this.rid}/sim/action`, { steps });
-        this.active = res.active;
+        this.setActive(res.active);
+        if (res.devices) this.devStates = res.devices;
         const bad = res.results.filter((r) => !r.ok);
         if (bad.length) toast(bad.map((r) => `${t("sim_err_" + r.error)}${r.detail ? ` (${r.detail})` : ""}`).join(" · "), true);
       } catch (e) { await handleError(e); }
@@ -228,6 +268,9 @@ class Simulator {
         return `IR ${st.device}/${st.command} → ${tg.kind === "local" ? (this.remote.ir_entity || t("local")) : ((tg.ext && tg.ext.name) || tg.id)}`;
       }
       case "activity": return `${t("activities")}: ${st.id}`;
+      case "activity_stop": return `${t("sim_stop")}: ${st.room === "*" ? t("all_rooms") : st.room}`;
+      case "track": return `${t("sim_track")}: ${st.room} → ${st.id}`;
+      case "event": return `astrion_button: ${st.event} (${st.key}${st.long ? ", long" : ""})`;
       default: return st.kind;
     }
   }
@@ -243,6 +286,7 @@ class Simulator {
     else if (lp.entity_id) steps.push({ kind: "service", service: `${String(lp.entity_id).split(".")[0]}.turn_on`, entity_id: lp.entity_id });
     if (lp.activityId) steps.push({ kind: "harmony_activity", activity: lp.activityId, hub });
     if (lp.harmonyDevice && lp.harmonyCommand) steps.push({ kind: "harmony_command", device: lp.harmonyDevice, command: lp.harmonyCommand, hub });
+    if (lp.stopActivity) steps.push({ kind: "activity_stop", room: lp.stopActivity });
     if (lp.irDevice && lp.irCommand) steps.push({ kind: "ir", device: lp.irDevice, command: lp.irCommand });
     if (lp.activity) steps.push({ kind: "activity", id: lp.activity });
     return { steps, nav: this.navOf(lp, true) };
@@ -251,13 +295,26 @@ class Simulator {
   /* Upstream ButtonGridCard.fire / SceneGridCard tap -> steps. */
   stepsOf(o, scene) {
     const steps = [];
+    const stop = o.stopActivity ? { kind: "activity_stop", room: o.stopActivity } : null;
     if (scene && o.entity_id && !o.service) steps.push({ kind: "service", service: `${o.entity_id.split(".")[0]}.turn_on`, entity_id: o.entity_id });
     if (o.service) steps.push({ kind: "service", service: o.service, entity_id: o.entity_id || o.entityId, data: o.data });
+    if (scene && o.activityId) steps.push({ kind: "harmony_activity", activity: o.activityId, hub: o.hub });
     if (o.harmonyDevice && o.harmonyCommand) steps.push({ kind: "harmony_command", device: o.harmonyDevice, command: o.harmonyCommand, hub: o.hub });
-    if (o.activityId) steps.push({ kind: "harmony_activity", activity: o.activityId, hub: o.hub });
+    if (!scene && o.activityId) steps.push({ kind: "harmony_activity", activity: o.activityId, hub: o.hub });
+    if (!scene && stop) steps.push(stop);
     if (o.irDevice && o.irCommand) steps.push({ kind: "ir", device: o.irDevice, command: o.irCommand });
+    if (scene && stop) steps.push(stop);
     if (scene && o.activity) steps.push({ kind: "activity", id: o.activity });
+    const tr = scene && this.trackOf(o);
+    if (tr) steps.push(tr);
     return steps;
+  }
+  /* ActivityRuntime.activityFrom: a "track": true + "room" tile marks its room active. */
+  trackOf(o) {
+    if (o.track !== true || typeof o.room !== "string" || !o.room.trim()) return null;
+    const name = o.name || o.entity_id || "Activity";
+    const id = o.entity_id || o.activityId || String(name).toLowerCase().replace(/[^a-z0-9]+/g, "_");
+    return { kind: "track", room: o.room, id, harmony: o.activityId, hub: o.hub, devices: Array.isArray(o.devices) ? o.devices : [] };
   }
   navOf(o, scene) {
     return () => {
@@ -281,11 +338,17 @@ class Simulator {
       if (!long && key === "BACK" && this.popup) { this.popup = null; return this.render(); }
       return toast(`${key}: ${t("sim_no_hotkey")}`);
     }
+    // MainActivity.runActivityHotkey: event, overlay, current Activity room, Off
+    if (hk.event) {
+      const pg = this.pages()[this.cur];
+      return this.run([{ kind: "event", event: hk.event, key, long: !!long, page: (pg && pg.name) || "" }]);
+    }
     if (hk.openOverlay) { this.overlay = String(hk.openOverlay).toLowerCase(); return this.render(); }
     if (hk.openCurrentActivityRoom) {
       const act = (this.doc.activities || []).find((a) => a.id === this.active[hk.openCurrentActivityRoom]);
       return act && act.page ? this.goto(act.page) : toast(t("sim_no_activity"));
     }
+    if (hk.stopActivity) return this.run([{ kind: "activity_stop", room: hk.stopActivity }]);
     if (hk.page) return this.goto(hk.page);
     const steps = [];
     if (hk.harmonyActivity) steps.push({ kind: "harmony_activity", activity: hk.harmonyActivity, hub: hk.hub });
@@ -318,6 +381,7 @@ class Simulator {
     screen.append(this.dots());
     if (this.popup) screen.append(this.renderPopup());
     if (this.overlay) screen.append(this.renderOverlay());
+    if (this.docked) screen.append(this.renderDock());
     this.gestures(screen);
     const liveBadge = el("span", { class: `badge ${this.live === "ok" ? "in_sync" : this.live === "error" ? "unreachable" : ""}`,
       text: this.live === "ok" ? t("sim_live_ok") : this.live === "error" ? t("sim_live_err") : t("st_unknown") });
@@ -328,14 +392,24 @@ class Simulator {
       try { window.localStorage.setItem("acm-sim-nav-only", this.navOnly ? "1" : "0"); } catch (e) { /* storage unavailable */ }
       this.render();
     };
+    // RF10.8: preview of the dock screen (what the remote shows once idle on its dock)
+    const dk = el("input", { type: "checkbox" });
+    dk.checked = this.docked;
+    dk.onchange = () => { this.docked = dk.checked; this.render(); };
+    // RF10.5: forget the device states / active Activities the simulator believes in
+    const reset = el("button", { text: t("sim_reset_states"), title: t("sim_reset_hint"), onclick: async () => {
+      if (!confirm(t("sim_reset_hint"))) return;
+      try { const r = await api("POST", `api/remotes/${this.rid}/sim/reset`); this.setActive(r.active); this.devStates = r.devices; this.render(); toast(t("sim_reset_done")); }
+      catch (e) { await handleError(e); }
+    } });
     this.root.replaceChildren(
       el("div", { class: "card banner row sim-real" + (this.navOnly ? " nav-only" : "") },
         el("strong", { text: this.navOnly ? "🧭 " + t("sim_nav_banner") : "⚡ " + t("sim_real") }), el("span", { class: "spacer" }),
-        el("label", { class: "row" }, sw, t("sim_nav_only")), liveBadge),
+        el("label", { class: "row" }, sw, t("sim_nav_only")), el("label", { class: "row" }, dk, t("sim_docked")), reset, liveBadge),
       el("div", { class: "sim-layout" }, el("div", { class: "sim-col" }, wrap,
         el("div", { class: "row sim-nav" },
           el("button", { text: "◀", onclick: () => this.swipe(-1) }), el("button", { text: "▲ " + t("sim_linked"), onclick: () => this.swipeUp() }),
-          el("button", { text: "▶", onclick: () => this.swipe(1) }))), this.renderKeys()));
+          el("button", { text: "▶", onclick: () => this.swipe(1) })), this.renderDevStates()), this.renderKeys()));
     const newPage = screen.querySelector(".sim-page:not(.in-popup)");
     if (newPage) newPage.scrollTop = this.scroll[this.cur] || 0;
     const newPop = screen.querySelector(".sim-popup");
@@ -343,8 +417,7 @@ class Simulator {
   }
 
   dots() {
-    const sib = this.siblings();
-    return el("div", { class: "sim-dots" }, ...sib.map((i) => el("span", { class: i === this.cur ? "on" : "" })));
+    return el("div", { class: "sim-dots" }, ...this.dotPages().map((i) => el("span", { class: i === this.cur ? "on" : "" })));
   }
 
   /* Swipes, as on the remote: horizontal = sibling pages, up = linkedPage.
@@ -576,7 +649,8 @@ class Simulator {
   card_scene_grid(o) {
     const cols = o.columns || 3;
     return el("div", { class: "sim-grid", style: `grid-template-columns:repeat(${cols},1fr)` }, ...(o.scenes || []).map((sc) => {
-      const act = (sc.activity && Object.values(this.active).includes(sc.activity))
+      const tr = this.trackOf(sc);
+      const act = (sc.activity && Object.values(this.active).includes(sc.activity)) || (tr && this.active[tr.room] === tr.id)
         || (sc.state_entity && [].concat(sc.state_value || []).includes(this.state(sc.state_entity)));
       const tl = this.tile(iconFor(sc.icon, sc.entity_id, true), o.show_labels === false ? "" : sc.name, null, act, this.stepsOf(sc, true), this.navOf(sc, true), null, this.longPressOf(sc));
       if (sc.color) tl.style.background = sc.color;
@@ -595,20 +669,72 @@ class Simulator {
         ? [{ kind: "service", service: a.service, entity_id: a.entity_id, data: a.data }]
         : [{ kind: "service", service: "media_player.play_media", entity_id: media, data: { media_content_type: "app", media_content_id: a.app } }]))));
   }
-  /* AppleTvRemoteCard (1.2.0): appleTv (direct, wins) or Harmony deviceId/hub;
-   * "buttons" picks the extra row (default Menu, Home). */
+  /* AppleTvRemoteCard (1.2.0 + 1.2.7-beta layouts): appleTv (direct, wins) or
+   * Harmony deviceId/hub. "layout" classic | compact | full; now-playing and
+   * apps use "entity" (else the direct appleTv) via media_player.select_source;
+   * "buttons" from ExtraButtons.CATALOG (default Menu, Home; compact adds ±10 s). */
   card_apple_tv_remote(o) {
     const direct = !!o.appleTv;
+    if (!direct && !o.deviceId) return this.card(" Apple TV", el("div", { class: "sim-muted", text: t("sim_not_simulable") }));
     const send = (cmd) => direct
       ? [{ kind: "service", service: "astrion_appletv.send_command", entity_id: o.appleTv, data: { command: cmd } }]
       : [{ kind: "harmony_command", device: o.deviceId, command: cmd, hub: o.hub }];
-    const labels = { Menu: "☰ Menu", Home: "Home", Siri: "Siri", Screensaver: "Screensaver", Guide: "Guide",
-      VolumeUp: "Vol +", VolumeDown: "Vol −", ControlCenter: "Control Center" };
-    const extra = (Array.isArray(o.buttons) && o.buttons.length ? o.buttons : ["Menu", "Home"]);
-    return this.card(` Apple TV${direct ? ` · ${this.name({}, o.appleTv)}` : ""}`,
-      this.dpad((k) => send({ up: "DirectionUp", down: "DirectionDown", left: "DirectionLeft", right: "DirectionRight", center: "Select" }[k])),
-      el("div", { class: "row" }, ...extra.map((b) => this.ctl(labels[b] || b, send(b)))),
-      el("div", { class: "row" }, this.ctl("⏯", send(direct ? "PlayPause" : "Play"))),
+    const media = o.entity || o.appleTv || null;
+    const layout = ["compact", "full"].includes(o.layout) ? o.layout : "classic";
+    const CAT = { Menu: "☰ Menu", Home: "⌂ Home", SeekBackward: "−10 s", SeekForward: "+10 s", Rewind: "⏪", FastForward: "⏩",
+      Previous: "⏮", Next: "⏭", Siri: "🎤 Siri", Screensaver: "Screensaver", Guide: "Guide", VolumeUp: "Vol +", VolumeDown: "Vol −", ControlCenter: "Control Center" };
+    const label = (id) => CAT[Object.keys(CAT).find((k) => k.toLowerCase() === String(id).toLowerCase())] || id;
+    const buttons = (dflt) => (Array.isArray(o.buttons) && o.buttons.length ? o.buttons : dflt);
+    const showArt = o.showArtwork !== false; const showProg = o.showProgress !== false;
+    const showSkip = o.showSkip !== false && direct;
+    const key = o.deviceId || o.appleTv;
+    const playing = media && this.st(media) ? this.state(media) === "playing" : !!this.atvPlaying[key];
+    // Harmony: separate Play/Pause codes, the card keeps its own guess
+    const playPause = () => {
+      const lbl = playing ? "⏸" : "▶";
+      if (direct) return this.ctl(lbl, send("PlayPause"));
+      const b = this.ctl(lbl, send(playing ? "Pause" : "Play"));
+      b.addEventListener("click", () => { this.atvPlaying[key] = !playing; });
+      return b;
+    };
+    const apps = media && Array.isArray(o.apps) ? o.apps.filter((a) => a && typeof a === "object" && a.source) : [];
+    const appRow = (max, labels) => (apps.length ? el("div", { class: "row sim-atv-apps" }, ...apps.slice(0, max).map((a) => {
+      const b = this.ctl(labels ? (a.label || a.source) : String(a.label || a.source).slice(0, 2).toUpperCase(),
+        [{ kind: "service", service: "media_player.select_source", entity_id: media, data: { source: a.source } }], this.attr(media, "source") === a.source);
+      if (a.color) b.style.background = a.color;
+      b.title = a.label || a.source;
+      return b;
+    })) : null);
+    const nowPlaying = (big) => {
+      if (!media || !this.st(media)) return null;
+      const pic = showArt ? this.attr(media, "entity_picture") : null;
+      const dur = this.attr(media, "media_duration"); const pos = this.attr(media, "media_position");
+      return el("div", { class: "sim-atv-np" + (big ? " big" : "") }, pic ? el("img", { class: "sim-art", src: pic, alt: "" }) : null,
+        el("div", {}, el("strong", { text: this.attr(media, "media_title") || this.state(media) || "" }),
+          el("div", { class: "sim-muted", text: this.attr(media, "app_name") || this.attr(media, "source") || "" }),
+          showProg && dur ? el("progress", { max: dur, value: pos || 0 }) : null),
+        big ? null : playPause());
+    };
+    const pad = this.dpad((k) => send({ up: "DirectionUp", down: "DirectionDown", left: "DirectionLeft", right: "DirectionRight", center: "Select" }[k]));
+    const row = (ids) => el("div", { class: "row" }, ...ids.map((b) => this.ctl(label(b), send(b))));
+    const kids = [];
+    if (layout === "classic") {
+      kids.push(pad, row(buttons(["Menu", "Home"])), el("div", { class: "row" }, playPause()), appRow(5, false));
+    } else if (layout === "compact") {
+      const strip = showArt || showProg ? nowPlaying(false) : null;
+      kids.push(strip, pad, row(buttons(["Menu", "SeekBackward", "SeekForward", "Home"])), strip ? null : el("div", { class: "row" }, playPause()), appRow(6, false));
+    } else {
+      const btns = buttons(["Menu", "Home"]);
+      const side = btns.slice(2, 8);
+      kids.push(nowPlaying(true),
+        el("div", { class: "row" }, btns[0] ? this.ctl(label(btns[0]), send(btns[0])) : null,
+          showSkip ? this.ctl("−10 s", send("SeekBackward")) : null, playPause(),
+          showSkip ? this.ctl("+10 s", send("SeekForward")) : null, btns[1] ? this.ctl(label(btns[1]), send(btns[1])) : null),
+        appRow(5, true),
+        side.length ? el("div", { class: "row sim-atv-sides" }, el("div", { class: "sim-col" }, ...side.filter((_, i) => i % 2 === 0).map((b) => this.ctl(label(b), send(b)))),
+          pad, el("div", { class: "sim-col" }, ...side.filter((_, i) => i % 2 === 1).map((b) => this.ctl(label(b), send(b))))) : pad);
+    }
+    return this.card(` Apple TV${direct ? ` · ${this.name({}, o.appleTv)}` : ""} · ${layout}`, ...kids,
       direct ? el("div", { class: "sim-why", text: "⛔ " + t("sim_appletv_direct") }) : null);
   }
   dpad(stepsFor) {
@@ -665,6 +791,57 @@ class Simulator {
   }
   card_row(o) {
     return el("div", { class: "sim-row" }, ...(o.cards || []).map((c) => this.renderCard(c)));
+  }
+
+  /* RF10.5: what the simulator believes about each device (DeviceStateStore). */
+  renderDevStates() {
+    const names = Object.fromEntries([...(this.doc.irDevices || []), ...(this.doc.haDevices || [])]
+      .filter((d) => d && (d.id || d.entityId)).map((d) => [d.id || d.entityId, d.name || d.id || d.entityId]));
+    const rows = Object.entries(this.devStates || {}).filter(([, v]) => v && (v.on != null || v.input));
+    if (!rows.length) return null;
+    return el("div", { class: "card sim-devstates" }, el("strong", { text: t("sim_dev_states") }),
+      ...rows.map(([id, v]) => el("div", { class: "row" }, el("span", { text: names[id] || id }), el("span", { class: "spacer" }),
+        el("span", { class: "sim-muted", text: `${v.on === true ? t("sim_on") : v.on === false ? t("sim_off") : "?"}${v.input ? " · " + v.input : ""}` }))));
+  }
+
+  /* RF10.8 dock screen (ChargeDockMonitor / DockClockScreen, 1.2.7-beta):
+   * charging = dashboard dimmed to near zero; dashboard = dashboard dimmed to
+   * "brightness"; clock = black face with clock, date, weather, battery and
+   * now playing. Night (sun.sun below the horizon, else 21:00-07:00) uses
+   * night_brightness and, for the clock, dim amber. A tap leaves the preview. */
+  renderDock() {
+    const d = (this.doc && typeof this.doc.dock === "object" && this.doc.dock) || {};
+    const mode = ["clock", "dashboard"].includes(d.mode) ? d.mode : "charging";
+    const sun = this.state("sun.sun");
+    const hour = new Date().getHours();
+    const night = sun ? sun === "below_horizon" : hour >= 21 || hour < 7;
+    const bri = night ? (typeof d.night_brightness === "number" ? d.night_brightness : 0.05) : (typeof d.brightness === "number" ? d.brightness : 0.2);
+    const leave = () => { this.docked = false; this.render(); };
+    if (mode !== "clock") {
+      const level = mode === "charging" ? 0.02 : Math.min(1, Math.max(0.01, bri));
+      return el("div", { class: "sim-dock-dim", style: `background:rgba(0,0,0,${1 - level})`, title: `${t("sim_docked")}: ${mode}`, onclick: leave },
+        el("span", { class: "sim-dock-tag", text: `${t("sim_docked")} · ${mode} · ${Math.round(level * 100)}%` }));
+    }
+    const now = new Date();
+    const h12 = d.time_format === 12 ? true : d.time_format === 24 ? false : undefined;
+    const sym = { sunny: "☀", clear: "☀", "clear-night": "☾", partlycloudy: "⛅", cloudy: "☁", fog: "☁", rainy: "☂", pouring: "☂",
+      "lightning-rainy": "☂", lightning: "⚡", snowy: "❄", "snowy-rainy": "❄", hail: "❄" };
+    const w = d.weather_entity && this.st(d.weather_entity);
+    const temp = w ? this.attr(d.weather_entity, "temperature") : null;
+    const weather = w ? [sym[w.state], temp != null ? `${Math.round(temp)}°` : w.state].filter(Boolean).join(" ") : null;
+    const list = Array.isArray(d.media_entities) ? d.media_entities : [];
+    const np = (list.length ? list.filter((id) => ["playing", "paused"].includes(this.state(id))) : Object.keys(this.states).filter((id) => id.startsWith("media_player.") && this.state(id) === "playing"))
+      .find((id) => this.attr(id, "media_title"));
+    const info = [weather, d.show_battery === false ? null : "🔋 --%"].filter(Boolean).join(" · ");
+    // backlight level shown as the face's opacity (kept readable); the black background stays opaque
+    const face = el("div", { class: "sim-dock-face", style: `opacity:${Math.max(0.35, Math.min(1, bri * 4))}` },
+      el("div", { class: "sim-dock-time", text: now.toLocaleTimeString(LANG, { hour: "2-digit", minute: "2-digit", hour12: h12 }) }),
+      el("div", { text: now.toLocaleDateString(LANG, { weekday: "long", day: "numeric", month: "long" }) }),
+      info ? el("div", { class: "sim-muted", text: info }) : null,
+      np ? el("div", { class: "sim-dock-np" }, el("strong", { text: this.attr(np, "media_title") }),
+        el("div", { class: "sim-muted", text: [this.attr(np, "media_series_title"), this.attr(np, "media_artist")].filter(Boolean).join(" · ") })) : null);
+    return el("div", { class: "sim-dock-clock" + (night ? " night" : ""), onclick: leave }, face,
+      el("span", { class: "sim-dock-tag", text: `${t("sim_docked")} · clock · ${Math.round(bri * 100)}%` }));
   }
 
   /* RF6.9: physical keys of the HA100 (click = short, hold = long). */

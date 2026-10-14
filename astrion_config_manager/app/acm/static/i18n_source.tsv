@@ -240,3 +240,43 @@ v_item_not_object	Plain value: the remote only reads {"entity_id", "name"} rows 
 long_press_enable	Long-press action (hold)	Azione a pressione lunga (tieni premuto)	Action sur appui long (maintenir)	Acción al mantener pulsado	Aktion bei langem Drücken (halten)
 long_press_hint	Fired when the tile is held instead of tapped. Same fields as the tile; hub falls back to the tile's own.	Eseguita quando il riquadro viene tenuto premuto invece che toccato. Stessi campi del riquadro; l'hub, se vuoto, è quello del riquadro.	Déclenchée quand la tuile est maintenue au lieu d'être touchée. Mêmes champs que la tuile ; le hub vide reprend celui de la tuile.	Se ejecuta al mantener pulsado el mosaico en lugar de tocarlo. Mismos campos que el mosaico; el hub vacío usa el del mosaico.	Wird ausgelöst, wenn die Kachel gehalten statt angetippt wird. Gleiche Felder wie die Kachel; ein leerer Hub übernimmt den der Kachel.
 sim_long_hint	hold for the long-press action	tieni premuto per l'azione lunga	maintenir pour l'action longue	mantener para la acción larga	halten für die lange Aktion
+dock_screen	Dock screen	Schermo dock	Écran du dock	Pantalla de la base	Dock-Bildschirm
+power_battery	Standby & battery	Standby e batteria	Veille et batterie	Reposo y batería	Standby & Akku
+dock_hint	What the remote shows once idle on its dock (app 1.2.7+). Empty = remote defaults; the mode can also be changed from the remote's Settings.	Cosa mostra il telecomando quando resta inattivo sulla base (app 1.2.7+). Vuoto = valori predefiniti; la modalità si può cambiare anche dalle Impostazioni del telecomando.	Ce qu'affiche la télécommande au repos sur son dock (app 1.2.7+). Vide = valeurs par défaut ; le mode peut aussi être changé dans les Réglages de la télécommande.	Lo que muestra el mando inactivo en su base (app 1.2.7+). Vacío = valores predeterminados; el modo también se cambia desde los Ajustes del mando.	Was die Fernbedienung im Leerlauf im Dock zeigt (App 1.2.7+). Leer = Standardwerte; der Modus lässt sich auch in den Einstellungen der Fernbedienung ändern.
+power_hint	Screen-off, motion wake and dock detection (app 1.2.7+). -1 disables a timer. Empty = remote defaults.	Spegnimento schermo, risveglio al movimento e rilevamento base (app 1.2.7+). -1 disattiva un timer. Vuoto = valori predefiniti.	Extinction de l'écran, réveil au mouvement et détection du dock (app 1.2.7+). -1 désactive un minuteur. Vide = valeurs par défaut.	Apagado de pantalla, activación por movimiento y detección de base (app 1.2.7+). -1 desactiva un temporizador. Vacío = valores predeterminados.	Bildschirm aus, Aufwecken bei Bewegung und Dock-Erkennung (App 1.2.7+). -1 deaktiviert einen Timer. Leer = Standardwerte.
+all_rooms	* (every room)	* (tutte le stanze)	* (toutes les pièces)	* (todas las estancias)	* (alle Räume)
+key_BACK	Back	Indietro	Retour	Atrás	Zurück
+key_HOME	Home	Home	Accueil	Inicio	Home
+key_POWER	Power	Accensione	Alimentation	Encendido	Ein/Aus
+key_VOLUME_UP	Volume +	Volume +	Volume +	Volumen +	Lautstärke +
+key_VOLUME_DOWN	Volume -	Volume -	Volume -	Volumen -	Lautstärke -
+key_PAGE_UP	Previous page	Pagina precedente	Page précédente	Página anterior	Vorherige Seite
+key_PAGE_DOWN	Next page	Pagina successiva	Page suivante	Página siguiente	Nächste Seite
+key_MUTE	Mute	Muto	Muet	Silencio	Stumm
+key_VOICE	Microphone	Microfono	Microphone	Micrófono	Mikrofon
+key_MAIN	Menu	Menu	Menu	Menú	Menü
+key_REWIND	Rewind	Riavvolgi	Retour rapide	Rebobinar	Zurückspulen
+key_PLAY	Play / Pause	Play / Pausa	Lecture / Pause	Reproducir / Pausa	Wiedergabe / Pause
+key_STOP	Stop	Stop	Stop	Detener	Stopp
+key_FASTFORWARD	Fast-forward	Avanti veloce	Avance rapide	Avance rápido	Vorspulen
+v_value_range	Out of range ({value}; {min}–{max}): ignored by the remote	Fuori intervallo ({value}; {min}–{max}): ignorato dal telecomando	Hors plage ({value} ; {min}–{max}) : ignoré par la télécommande	Fuera de rango ({value}; {min}–{max}): el mando lo ignora	Außerhalb des Bereichs ({value}; {min}–{max}): von der Fernbedienung ignoriert
+v_hide_mode_unused	hideMode has no effect without hiddenUnlessActivity	hideMode non ha effetto senza hiddenUnlessActivity	hideMode est sans effet sans hiddenUnlessActivity	hideMode no tiene efecto sin hiddenUnlessActivity	hideMode wirkt nicht ohne hiddenUnlessActivity
+v_room_unknown	Room "{room}" has no Activity or tracked tile: nothing to stop	La stanza "{room}" non ha Activity né tile tracciate: niente da fermare	La pièce « {room} » n'a ni Activité ni tuile suivie : rien à arrêter	La estancia «{room}» no tiene Actividad ni mosaico seguido: nada que detener	Raum „{room}“ hat keine Aktivität und keine verfolgte Kachel: nichts zu stoppen
+identity_duplicate	Same physical remote as: {names}	Stesso telecomando fisico di: {names}	Même télécommande physique que : {names}	El mismo mando físico que: {names}	Dieselbe physische Fernbedienung wie: {names}
+drift_changes	{n} key(s) changed:	{n} chiave/i modificata/e:	{n} clé(s) modifiée(s) :	{n} clave(s) modificada(s):	{n} Schlüssel geändert:
+drift_settings_only	Only keys written by the remote's own Settings screen (dock mode, screen timeout): importing keeps them.	Solo chiavi scritte dalle Impostazioni del telecomando (modalità dock, timeout schermo): importando vengono mantenute.	Seulement des clés écrites par les Réglages de la télécommande (mode dock, délai d'écran) : l'import les conserve.	Solo claves escritas por los Ajustes del mando (modo de base, tiempo de pantalla): al importar se conservan.	Nur Schlüssel aus den Einstellungen der Fernbedienung (Dock-Modus, Bildschirm-Timeout): Import übernimmt sie.
+icon_in_use	still used by its dashboard	ancora usata dalla sua dashboard	encore utilisée par son tableau de bord	aún la usa su panel	wird vom Dashboard noch verwendet
+icon_not_on_remote	not on this remote	non presente sul telecomando	absente de la télécommande	no está en el mando	nicht auf der Fernbedienung
+icon_remote_unknown	remote unreachable	telecomando non raggiungibile	télécommande injoignable	mando inaccesible	Fernbedienung nicht erreichbar
+icon_from_library	Delete from the add-on library	Elimina dalla libreria dell'add-on	Supprimer de la bibliothèque de l'add-on	Eliminar de la biblioteca del complemento	Aus der Add-on-Bibliothek löschen
+icon_from_remotes	Also delete it from these remotes (app 1.2.7+):	Eliminala anche da questi telecomandi (app 1.2.7+):	La supprimer aussi de ces télécommandes (app 1.2.7+) :	Eliminarlo también de estos mandos (app 1.2.7+):	Auch von diesen Fernbedienungen löschen (App 1.2.7+):
+icon_delete_partial	Not deleted on: {names}	Non eliminata su: {names}	Non supprimée sur : {names}	No eliminado en: {names}	Nicht gelöscht auf: {names}
+icon_deleted	Icon deleted	Icona eliminata	Icône supprimée	Icono eliminado	Symbol gelöscht
+sim_stop	Stop Activity	Ferma Activity	Arrêter l'Activité	Detener Actividad	Aktivität stoppen
+sim_track	Tracked	Tracciata	Suivie	Seguida	Verfolgt
+sim_docked	Docked	Sulla base	Sur le dock	En la base	Im Dock
+sim_reset_states	Reset device states	Azzera stati dispositivi	Réinitialiser les états	Restablecer estados	Gerätezustände zurücksetzen
+sim_reset_hint	Forget which devices the simulator believes are on, their inputs and the running Activities.	Dimentica quali dispositivi il simulatore ritiene accesi, i loro ingressi e le Activity in corso.	Oublier quels appareils le simulateur croit allumés, leurs entrées et les Activités en cours.	Olvidar qué dispositivos cree encendidos el simulador, sus entradas y las Actividades en curso.	Vergessen, welche Geräte der Simulator für eingeschaltet hält, ihre Eingänge und laufende Aktivitäten.
+sim_reset_done	Device states cleared	Stati dispositivi azzerati	États réinitialisés	Estados restablecidos	Gerätezustände zurückgesetzt
+sim_dev_states	Device states (simulator)	Stati dispositivi (simulatore)	États des appareils (simulateur)	Estados de dispositivos (simulador)	Gerätezustände (Simulator)
+sim_err_activity_source_invalid	Activity device source not supported	Sorgente del dispositivo dell'Activity non supportata	Source d'appareil de l'Activité non prise en charge	Fuente de dispositivo de la Actividad no admitida	Gerätequelle der Aktivität nicht unterstützt

@@ -47,6 +47,7 @@ class FakeDevice:
         self.uploads = 0
         self.icons = {"onboard.png": PNG}
         self.devices_cfg = None
+        self.info = None
 
     def app(self):
         async def get(_):
@@ -79,6 +80,18 @@ class FakeDevice:
                 return web.Response(status=404)
             return web.Response(body=self.icons[request.match_info["n"]], content_type="image/png")
 
+        async def info(_):
+            if self.info is None:
+                return web.Response(status=404)
+            return web.json_response(self.info)
+
+        async def icon_del(request):
+            n = request.match_info["n"]
+            if n not in self.icons:
+                return web.json_response({"error": "No icon"}, status=404)
+            del self.icons[n]
+            return web.json_response({"status": "ok", "deleted": n})
+
         async def devices_config(_):
             if self.devices_cfg is None:
                 return web.Response(status=404)
@@ -86,6 +99,8 @@ class FakeDevice:
 
         app = web.Application()
         app.router.add_get("/devices-config", devices_config)
+        app.router.add_get("/info", info)
+        app.router.add_delete("/icons/{n}", icon_del)
         app.router.add_get("/icons-list", icons_list)
         app.router.add_post("/icons", icon_post)
         app.router.add_get("/icons/{n}", icon_get)
@@ -258,7 +273,14 @@ async def test_c5_drift_detected_no_action(env):
     doc["pages"][0]["name"] = "Edited online"
     env.devices["a"].text = json.dumps(doc)
     drift = await (await env.get("/api/drift")).json()
-    assert drift == [{"id": rid, "status": "drift", "last_push_version": None}]
+    assert drift == [
+        {
+            "id": rid,
+            "status": "drift",
+            "last_push_version": None,
+            "changes": {"paths": ["/pages/0/name"], "count": 1, "settings_only": False},
+        }
+    ]
     assert (await state(env, rid))["remote"]["head"] == 1  # nothing automatic
     # import as version -> sync-import, baseline updated
     r = await (await env.post(f"/api/remotes/{rid}/pull", json={"head": 1})).json()
@@ -631,3 +653,52 @@ async def test_copy_rewrites_page_in_long_press(env):
     ).json()
     lp = body["state"]["pages"][-1]["cards"][-1]["options"]["scenes"][0]["long_press"]
     assert lp["page"] == "Home 2" and lp["irDevice"] == "tv_2"
+
+
+# ---------------------------------------------------------------- RF10 (1.2.7-beta)
+
+
+async def test_rf10_identity_and_duplicates(env):
+    ident = {"id": "astrion-1234", "name": "Living room", "model": "HA100", "version": "1.2.7-beta", "webhook": True}
+    env.devices["a"].devices_cfg = {"harmonyHubs": [], "extenders": [], "appleTvs": []}
+    env.devices["a"].info = ident
+    a = await register(env, "a", "One")
+    assert a["identity"]["id"] == "astrion-1234" and a["identity"]["version"] == "1.2.7-beta"
+    # same physical remote registered again under another name -> both flagged
+    srv = env.servers["a"]
+    resp = await env.post(
+        "/api/remotes",
+        json={"name": "Two", "host": srv.host, "port": srv.port, "width": 1, "height": 1, "orientation": "portrait"},
+    )
+    assert resp.status == 201
+    listed = await (await env.get("/api/remotes")).json()
+    assert sorted(r["duplicate_of"] for r in listed) == [["One"], ["Two"]]
+
+
+async def test_rf10_icon_delete_on_remotes(env):
+    a = (await register(env, "a", "A"))["id"]
+    b = (await register(env, "b", "B"))["id"]
+    form = __import__("aiohttp").FormData()
+    form.add_field("file", PNG, filename="x.png", content_type="image/png")
+    await env.post("/api/icons", data=form)
+    env.devices["a"].icons["x.png"] = PNG
+    env.devices["b"].icons["x.png"] = PNG
+    # remote B uses it -> never deleted there
+    card = {"type": "button_grid", "options": {"buttons": [{"name": "X", "icon": "/sdcard/astrion/icons/x.png"}]}}
+    await edit(env, b, lambda d: d["pages"][0]["cards"].append(card))
+    usage = {u["name"]: u for u in await (await env.get("/api/icons/x.png/usage")).json()}
+    assert usage["A"] == {"id": a, "name": "A", "used": False, "on_remote": True}
+    assert usage["B"]["used"] is True
+    res = await (await env.delete(f"/api/icons/x.png?remotes={a},{b}")).json()
+    assert {r["name"]: r["result"] for r in res["remotes"]} == {"A": "deleted", "B": "in_use"}
+    assert "x.png" not in env.devices["a"].icons and "x.png" in env.devices["b"].icons
+    assert all(i["name"] != "x.png" for i in await (await env.get("/api/icons")).json())
+
+
+async def test_rf10_drift_from_remote_settings(env):
+    rid = (await register(env, "a", "R"))["id"]
+    doc = json.loads(env.devices["a"].text)
+    doc["dock"] = {"mode": "clock"}
+    env.devices["a"].text = json.dumps(doc)
+    drift = await (await env.get(f"/api/remotes/{rid}/drift")).json()
+    assert drift["status"] == "drift" and drift["changes"]["settings_only"] is True

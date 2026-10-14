@@ -7,7 +7,9 @@ the user never enters a token.  Outside the Supervisor (development) the
 
 * RF4.2  list of existing entity ids (validation);
 * RF6.4  live states for the simulator (``get_states`` + ``state_changed``);
-* RF6.5  real service calls (``call_service``).
+* RF6.5  real service calls (``call_service``);
+* RF10.7 ``fire_event`` for the hotkey ``event`` action (HA requires an admin
+  token; the Supervisor token is one).
 """
 
 from __future__ import annotations
@@ -90,6 +92,11 @@ class HAClient:
             payload["target"] = {"entity_id": entity_id}
         _LOGGER.info("HA call %s.%s %s %s", domain, service, entity_id or "", data or "")
         await self._call(payload)
+
+    async def fire_event(self, event_type: str, data: dict[str, Any]) -> None:
+        """RF10.7: fire ``event_type`` on HA's event bus (WebSocket ``fire_event``)."""
+        _LOGGER.info("HA event %s %s", event_type, data)
+        await self._call({"type": "fire_event", "event_type": event_type, "event_data": data})
 
     async def live(self) -> AsyncIterator[dict[str, Any]]:
         """RF6.4: yield all states once, then every ``state_changed`` new state.

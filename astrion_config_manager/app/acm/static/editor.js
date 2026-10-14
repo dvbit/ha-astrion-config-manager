@@ -16,6 +16,9 @@
  * - RF3.6  list options (buttons, scenes, apps, monitor entities, speakers,
  *          picture elements) are item forms; row.cards nests full card forms.
  * - RF9    apple_tv_remote: "control via" Apple TV (direct, 1.2.0) or Harmony.
+ * - RF10   (upstream 1.2.2-1.2.7-beta) dock / power sections, page hideMode,
+ *          stopActivity room pickers, hotkey event / openOverlay / current
+ *          Activity, apple_tv_remote layouts + apps; keys shown "Menu (MAIN)".
  * - RF3.5  fixed-value fields are dropdowns and colour fields have a palette
  *          (field_hints.json, from the upstream builder and renderers);
  *          the theme is a form of colours; JSON editors can insert a colour.
@@ -47,13 +50,16 @@ const PAGE_FIELDS = [
   ["name", "text"], ["parent", "page"], ["parentKey", "hwkey"], ["linkedPage", "page"],
   ["linkedPageMode", "select", OPEN_MODES], ["openWhenEntity", "entity"], ["openWhenState", "text"],
   ["closeWhenState", "text"], ["openMode", "select", OPEN_MODES], ["popupWidth", "float"],
-  ["popupHeight", "float"], ["popupPosition", "select", POPUP_POSITIONS], ["hiddenUnlessActivity", "text"],
+  ["popupHeight", "float"], ["popupPosition", "select", POPUP_POSITIONS], ["hiddenUnlessActivity", "activity"],
+  ["hideMode", "enum", { values: ["dots", "full"], default: "dots" }],
 ];
 const PAGE_OWN = new Set(["cards", "hotkeys", "longHotkeys", ...PAGE_FIELDS.map((f) => f[0])]);
 const HOTKEY_FIELDS = [
   ["key", "hwkey"], ["page", "page"], ["service", "text"], ["entityId", "entity"], ["data", "json"],
   ["harmonyDevice", "text"], ["harmonyCommand", "text"], ["harmonyActivity", "text"], ["hub", "text"],
-  ["irDevice", "irdev"], ["irCommand", "text"], ["track", "bool"],
+  ["irDevice", "irdev"], ["irCommand", "text"], ["track", "bool"], ["room", "text"], ["devices", "lines"],
+  ["openOverlay", "enum", { values: ["settings", "activities"], default: "-" }],
+  ["openCurrentActivityRoom", "room"], ["stopActivity", "room", { all: true }], ["event", "text"],
 ];
 const IR_FIELDS = [["id", "text"], ["name", "text"]];
 /* haDevices catalog types (remote's devices.html "Add device" form). */
@@ -172,7 +178,22 @@ class Editor {
       }
       case "color": return this.wrap(key, this.colorInput(val, has, set, opts && opts.default), path);
       case "page": input = sel(this.pages().map((p) => p.name).filter(Boolean), val); break;
-      case "hwkey": input = sel(this.hwKeys, val); break;
+      case "hwkey": {
+        // "Menu (MAIN)": name printed on the remote, then the id (upstream hwKeyLabel)
+        input = sel(this.hwKeys, val);
+        for (const o of input.options) {
+          const name = o.value && t("key_" + o.value);
+          if (name && name !== "key_" + o.value) o.textContent = `${name} (${o.value})`;
+        }
+        break;
+      }
+      case "room": {
+        // rooms of the composed Activities and of tracked tiles/hotkeys; "*" = every room (stopActivity)
+        const rooms = [...new Set([...(this.doc.activities || []).map((a) => a.room), ...this.trackedRooms()].filter(Boolean))].sort();
+        input = sel(rooms, val);
+        if (opts && opts.all) input.insertBefore(el("option", { value: "*", text: t("all_rooms"), selected: val === "*" }), input.options[1]);
+        break;
+      }
       case "irdev": input = sel((this.doc.irDevices || []).map((d) => d.id).filter(Boolean), val); break;
       case "lines":
         input = el("textarea", { rows: 3 });
@@ -241,6 +262,20 @@ class Editor {
     txt.onchange = () => set(txt.value.trim() === "" ? undefined : txt.value.trim());
     const clear = el("button", { class: "icon", text: "✕", title: t("delete"), onclick: () => set(undefined), disabled: !has });
     return el("div", { class: "row color-row" }, pick, txt, clear);
+  }
+
+  /* Rooms named by track+room tiles and hotkeys (ActivityRuntime.scan). */
+  trackedRooms() {
+    const rooms = [];
+    const walk = (n) => {
+      if (Array.isArray(n)) n.forEach(walk);
+      else if (n && typeof n === "object") {
+        if (n.track === true && typeof n.room === "string") rooms.push(n.room);
+        Object.values(n).forEach(walk);
+      }
+    };
+    walk(this.doc);
+    return rooms;
   }
 
   /* RF3.6: ordered list of objects edited with item forms (one version per change). */
@@ -508,7 +543,7 @@ class Editor {
     if (m) this.sel = m[2] !== undefined ? { kind: "card", p: +m[1], c: +m[2] } : { kind: "page", p: +m[1] };
     else {
       const g = path.split("/")[1];
-      this.sel = ["hotkeys", "longHotkeys", "irDevices", "haDevices", "activities", "theme"].includes(g) ? { kind: "global", g } : { kind: "raw" };
+      this.sel = ["hotkeys", "longHotkeys", "irDevices", "haDevices", "activities", "theme", "dock", "power"].includes(g) ? { kind: "global", g } : { kind: "raw" };
     }
     this.render();
     const target = this.root.querySelector(`[data-path="${CSS.escape(path)}"]`);
@@ -537,7 +572,7 @@ class Editor {
         onclick: () => this.change((d) => d.pages.push({ name: `${t("page")} ${d.pages.length + 1}`, cards: [] })) }));
       tree.append(el("h3", { text: t("global") }));
       for (const [g, label] of [["hotkeys", "hotkeys"], ["longHotkeys", "long_hotkeys"], ["irDevices", "ir_devices"],
-        ["haDevices", "ha_devices"], ["activities", "activities"], ["theme", "theme"]]) {
+        ["haDevices", "ha_devices"], ["activities", "activities"], ["theme", "theme"], ["dock", "dock_screen"], ["power", "power_battery"]]) {
         tree.append(item(t(label), { kind: "global", g }, s.kind === "global" && s.g === g, this.issuesAt("/" + g).length));
       }
     }
@@ -652,7 +687,12 @@ class Editor {
       const it = items[`${card.type}.${k}`];
       if (it === "cards") return [k, "cards", f];
       if (it) return [k, "items", it];
-      if (multi[k]) return [k, "multi", multi[k]];
+      if (multi[k]) {
+        // AppleTvRemoteCard: the compact layout has its own default button row
+        const m = { ...multi[k] };
+        if (opts.layout === "compact" && m.default_compact) m.default = m.default_compact;
+        return [k, "multi", m];
+      }
       const csv = ((hints.csv || {})[card.type] || {})[k];
       if (csv) return [k, "csv", csv];
       if (k === "appleTv") return [k, "appletv", f];
@@ -675,7 +715,8 @@ class Editor {
 
   hotkeyList(items, path, getArr) {
     return this.listEditor(items, path, getArr,
-      (h) => `${h.key || "?"} → ${h.service || h.page || h.harmonyActivity || h.harmonyCommand || h.irCommand || ""}`,
+      (h) => `${h.key || "?"} → ${h.event ? "event " + h.event : h.stopActivity ? "⏻ " + h.stopActivity : h.openOverlay ? "overlay " + h.openOverlay
+        : h.openCurrentActivityRoom ? "▶ " + h.openCurrentActivityRoom : h.service || h.page || h.harmonyActivity || h.harmonyCommand || h.irCommand || ""}`,
       (h, ip, get) => this.form(h, HOTKEY_FIELDS, ip, get),
       () => ({ key: "MAIN" }));
   }
@@ -710,6 +751,13 @@ class Editor {
         (a) => `${a.name || a.id || "?"} (${a.room || ""})`,
         (a, ip, get) => this.form(a, ACTIVITY_FIELDS, ip, get),
         () => ({ id: `activity_${(this.doc.activities || []).length + 1}`, room: "room", devices: [{ deviceId: "", source: "ir" }] })));
+    } else if (g === "dock" || g === "power") {
+      // RF10.1: DashboardLoader.parseDock / parsePower; every key optional
+      const specs = ((this.hints && this.hints[g]) || []).map(([k, kind, o]) => [k, kind, o]);
+      panel.append(el("h2", { text: t(g === "dock" ? "dock_screen" : "power_battery") }),
+        el("p", { class: "muted", text: t(g === "dock" ? "dock_hint" : "power_hint") }),
+        this.form(this.doc[g] && typeof this.doc[g] === "object" ? this.doc[g] : {}, specs, "/" + g,
+          (d) => { if (!d[g] || typeof d[g] !== "object") d[g] = {}; return d[g]; }));
     } else if (g === "theme") {
       // RF3.5: ThemeConfig colours (config/AppConfig.kt) with palettes
       const th = this.doc.theme || {};

@@ -1,5 +1,36 @@
 # Changelog
 
+## 2.10.0 - 2026-10-14
+
+Aligned with astrion-custom-dashboard **1.2.7-beta** (`dev` branch; latest
+stable still 1.2.0); spec v1.9 (RF10).
+
+- Editor: "Dock screen" (`dock`) and "Standby & battery" (`power`) sections,
+  with range/value warnings and entity checks (RF10.1).
+- Pages: `hideMode` dropdown (`dots` / `full`); simulator skips `full` pages on
+  swipes and leaves them when their Activity stops; `dots` pages stay swipeable
+  with no dot, as upstream (RF10.2).
+- `stopActivity` (room or `*`) on tiles, buttons, long_press and hotkeys with a
+  room dropdown; hotkey `event`, `openOverlay`, `openCurrentActivityRoom`;
+  hardware keys shown as "Menu (MAIN)" (RF10.3).
+- `apple_tv_remote`: layouts classic/compact/full, `entity`, artwork/progress/
+  skip switches, `apps` list editor, 14 buttons; simulator renders the layouts
+  and launches apps with `media_player.select_source` (RF10.4).
+- Composed Activities: port of the upstream ActivityPlanner (ir-database
+  profiles, Harmony-style start) with a per-remote device-state memory and a
+  "Reset device states" button (RF10.5).
+- IR lookup as the app: loose command ids, "(Harmony)" model suffix, split
+  Pronto repair, `repeats` with the repeat burst (RF10.6).
+- Real execution of `stopActivity` (composed stop / Harmony PowerOff) and of
+  hotkey events (`astrion_button` on HA's bus) (RF10.7).
+- Simulator "Docked" switch: dock screen preview (RF10.8).
+- Remote identity from `/info` in the list; duplicates flagged (RF10.9).
+- Icons: deletion also on the remotes that don't use them (RF10.11).
+- Drift banner lists the changed keys and flags changes made from the remote's
+  own Settings screen (RF10.12).
+- Tooling: `tools/gen_i18n.py` regenerates the UI strings from
+  `static/i18n_source.tsv`.
+
 ## 2.9.0 - 2026-10-08
 
 Aligned with astrion-custom-dashboard **1.2.1-beta**, and re-checked against

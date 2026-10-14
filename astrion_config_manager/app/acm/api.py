@@ -19,6 +19,7 @@ from typing import Any
 from urllib.parse import unquote
 
 import aiohttp
+import jsonpatch
 from aiohttp import web
 
 from . import __version__, copying
@@ -192,6 +193,58 @@ async def _refresh_devices(app: web.Application, rid: str) -> None:
         _LOGGER.warning("Cannot read hubs/extenders of '%s': %s %s", meta["name"], err.code, err.detail)
         return
     store.set_devices(rid, cfg["harmony_hubs"], cfg["extenders"], cfg["apple_tvs"])
+    try:
+        store.set_identity(rid, await _device(app, meta).info())  # RF10.9
+    except DeviceError as err:
+        _LOGGER.info("Identity of '%s' unavailable: %s", meta["name"], err.code)
+
+
+def _duplicates(remotes: list[dict[str, Any]]) -> None:
+    """RF10.9: mark remotes registered twice (same identity id)."""
+    by_id: dict[str, list[dict[str, Any]]] = {}
+    for r in remotes:
+        ident = (r.get("identity") or {}).get("id")
+        if ident:
+            by_id.setdefault(ident, []).append(r)
+    for group in by_id.values():
+        for r in group:
+            r["duplicate_of"] = [o["name"] for o in group if o is not r]
+
+
+SETTINGS_PATHS = ("/dock/mode", "/power/screen_timeout_seconds")
+
+
+def _drift_changes(store: Store, meta: dict[str, Any], device_doc: Any) -> dict[str, Any]:
+    """RF10.12: what differs between the device and the last synced version.
+
+    Paths written by the remote's own Settings (dock mode, screen timeout,
+    1.2.4/1.2.5-beta) are flagged so the banner can say so.
+    """
+    hist = store.history(meta["id"])
+    ref = meta.get("baseline_version") or hist.head
+    try:
+        base = hist.state(min(ref, hist.head))
+    except StoreError:
+        base = hist.state(hist.head)
+    paths: list[str] = []
+
+    def leaves(prefix: str, value: Any) -> None:  # an added block -> its leaf paths
+        if isinstance(value, dict) and value:
+            for key, val in value.items():
+                leaves(f"{prefix}/{str(key).replace('~', '~0').replace('/', '~1')}", val)
+        else:
+            paths.append(prefix)
+
+    for op in jsonpatch.make_patch(base, device_doc).patch:
+        if op["op"] in ("add", "replace"):
+            leaves(op["path"], op.get("value"))
+        else:
+            paths.append(op["path"])
+    return {
+        "paths": paths[:12],
+        "count": len(paths),
+        "settings_only": bool(paths) and all(p.startswith(SETTINGS_PATHS) for p in paths),
+    }
 
 
 def _with_apple_tvs(known: set[str] | None, meta: dict[str, Any] | None) -> set[str] | None:
@@ -251,11 +304,13 @@ async def _drift(app: web.Application, meta: dict[str, Any]) -> dict[str, Any]:
         _LOGGER.info("Drift check '%s': %s (%s)", meta["name"], status, err.detail or err.code)
         return {"status": status, "pulled": None}
     status = DRIFT_IN_SYNC if pulled.hash == meta.get("baseline") else DRIFT_DRIFT
+    changes = None
     if status == DRIFT_DRIFT:
-        _LOGGER.warning("Drift detected on '%s'", meta["name"])
+        changes = _drift_changes(app[K_STORE], meta, pulled.content)
+        _LOGGER.warning("Drift detected on '%s': %s change(s) %s", meta["name"], changes["count"], changes["paths"][:4])
     else:
         _LOGGER.debug("Drift check '%s': in sync", meta["name"])
-    return {"status": status, "pulled": pulled}
+    return {"status": status, "pulled": pulled, "changes": changes}
 
 
 # --------------------------------------------------------------------------
@@ -299,7 +354,9 @@ async def entities(request: web.Request) -> web.Response:
 async def list_remotes(request: web.Request) -> web.Response:
     """RF1.4 / RF5.5: main list or archive view."""
     archived = request.query.get("archived") == "1"
-    return web.json_response(request.app[K_STORE].list_remotes(archived))
+    remotes = request.app[K_STORE].list_remotes(archived)
+    _duplicates(remotes)
+    return web.json_response(remotes)
 
 
 async def create_remote(request: web.Request) -> web.Response:
@@ -472,8 +529,8 @@ async def copy_elements(request: web.Request) -> web.Response:
 # --------------------------------------------------------------------------
 
 
-def _sync_info(meta: dict[str, Any], status: str) -> dict[str, Any]:
-    return {"id": meta["id"], "status": status, "last_push_version": meta.get("last_push_version")}
+def _sync_info(meta: dict[str, Any], status: str, changes: dict[str, Any] | None = None) -> dict[str, Any]:
+    return {"id": meta["id"], "status": status, "last_push_version": meta.get("last_push_version"), "changes": changes}
 
 
 async def drift_all(request: web.Request) -> web.Response:
@@ -481,7 +538,9 @@ async def drift_all(request: web.Request) -> web.Response:
     store = request.app[K_STORE]
     metas = store.list_remotes(archived=False)
     results = await asyncio.gather(*(_drift(request.app, m) for m in metas))
-    return web.json_response([_sync_info(m, r["status"]) for m, r in zip(metas, results, strict=True)])
+    return web.json_response(
+        [_sync_info(m, r["status"], r.get("changes")) for m, r in zip(metas, results, strict=True)]
+    )
 
 
 async def drift_one(request: web.Request) -> web.Response:
@@ -489,7 +548,7 @@ async def drift_one(request: web.Request) -> web.Response:
     rid = request.match_info["rid"]
     meta = request.app[K_STORE].remote_info(rid)
     res = await _drift(request.app, meta)
-    return web.json_response(_sync_info(meta, res["status"]))
+    return web.json_response(_sync_info(meta, res["status"], res.get("changes")))
 
 
 async def pull(request: web.Request) -> web.Response:
@@ -501,7 +560,7 @@ async def pull(request: web.Request) -> web.Response:
         meta = store.remote_info(rid)
         pulled = await _device(request.app, meta).pull()
         ver = store.commit(rid, _int(data.get("head")), pulled.content, _user(request), T_SYNC_IMPORT)
-        store.set_sync(rid, baseline=pulled.hash)
+        store.set_sync(rid, baseline=pulled.hash, baseline_version=store.history(rid).head)
         await _refresh_devices(request.app, rid)  # RF8.1
     _LOGGER.info("Pull '%s': %s", meta["name"], f"v{ver['id']} created" if ver else "no changes")
     return await _after_version(request, rid, ver)
@@ -558,7 +617,9 @@ async def push(request: web.Request) -> web.Response:
         if reread.hash != expected:
             _LOGGER.error("Push '%s' verification failed: device hash differs", meta["name"])
             raise DeviceError("push_verify_failed")
-        store.set_sync(rid, baseline=expected, last_push_version=hist.head, last_push_at=time.time())
+        store.set_sync(
+            rid, baseline=expected, baseline_version=hist.head, last_push_version=hist.head, last_push_at=time.time()
+        )
     _LOGGER.info("Push '%s': v%s sent and verified", meta["name"], hist.head)
     return web.json_response(
         {
@@ -600,10 +661,45 @@ async def icon_get(request: web.Request) -> web.Response:
     return web.Response(body=data, content_type=ctype, headers={"Cache-Control": "no-cache"})
 
 
+async def icon_usage(request: web.Request) -> web.Response:
+    """RF10.11: per remote, whether its head uses the icon and whether it holds a copy."""
+    name = sanitize(request.match_info["name"])
+    store = request.app[K_STORE]
+    out = []
+    for meta in store.list_remotes(archived=False):
+        used = name in collect_refs(store.head_state(meta["id"]))
+        try:
+            on_remote: bool | None = name in await _device_icons(request.app, meta, force=True)
+        except DeviceError:
+            on_remote = None
+        out.append({"id": meta["id"], "name": meta["name"], "used": used, "on_remote": on_remote})
+    return web.json_response(out)
+
+
 async def icon_delete(request: web.Request) -> web.Response:
-    """RF7.2: delete from the library only."""
-    request.app[K_ICONS].delete(request.match_info["name"])
-    return web.json_response({"ok": True})
+    """RF7.2 / RF10.11: delete from the library and, on request, from remotes.
+
+    ``?remotes=id1,id2``: also ``DELETE /icons/<name>`` on those remotes, but
+    never on one whose head still references the icon.
+    """
+    name = sanitize(request.match_info["name"])
+    store = request.app[K_STORE]
+    results = []
+    for rid in [r for r in request.query.get("remotes", "").split(",") if r]:
+        meta = store.remote_info(rid)
+        if name in collect_refs(store.head_state(rid)):
+            results.append({"id": rid, "name": meta["name"], "result": "in_use"})
+            continue
+        try:
+            deleted = await _device(request.app, meta).icon_delete(name)
+            results.append({"id": rid, "name": meta["name"], "result": "deleted" if deleted else "absent"})
+            request.app[K_DEV_ICONS].pop(rid, None)
+            _LOGGER.info("Icon '%s' deleted on '%s'", name, meta["name"])
+        except DeviceError as err:
+            results.append({"id": rid, "name": meta["name"], "result": err.code})
+    if request.query.get("library", "1") == "1" and name in request.app[K_ICONS].names():
+        request.app[K_ICONS].delete(name)
+    return web.json_response({"ok": True, "remotes": results})
 
 
 async def remote_icons(request: web.Request) -> web.Response:
@@ -698,7 +794,16 @@ async def sim_active(request: web.Request) -> web.Response:
     """Composed Activities currently active per room (simulator runtime)."""
     rid = request.match_info["rid"]
     request.app[K_STORE].remote_info(rid)
-    return web.json_response(request.app[K_EXEC].active.get(rid, {}))
+    st = request.app[K_EXEC].state(rid)
+    return web.json_response({"active": st["active"], "devices": st["devices"]})
+
+
+async def sim_reset(request: web.Request) -> web.Response:
+    """RF10.5: forget the simulator's device states and active Activities."""
+    rid = request.match_info["rid"]
+    request.app[K_STORE].remote_info(rid)
+    request.app[K_EXEC].reset(rid)
+    return web.json_response({"active": {}, "devices": {}})
 
 
 # --------------------------------------------------------------------------
@@ -720,7 +825,7 @@ def create_app(data_dir: Path, device_factory=DeviceClient) -> web.Application:
         app[K_HTTP] = aiohttp.ClientSession()
         app[K_HA] = HAClient(app[K_HTTP])
         app[K_HARMONY] = HarmonyRegistry(app[K_HTTP])
-        app[K_EXEC] = Executor(app[K_HA], app[K_HARMONY], app[K_DEVICE], app[K_HTTP])
+        app[K_EXEC] = Executor(app[K_HA], app[K_HARMONY], app[K_DEVICE], app[K_HTTP], data_dir)
         yield
         await app[K_HARMONY].close()
         await app[K_HTTP].close()
@@ -735,6 +840,7 @@ def create_app(data_dir: Path, device_factory=DeviceClient) -> web.Application:
     r.add_post("/api/icons", icon_upload)
     r.add_get("/api/icons/{name}", icon_get)
     r.add_delete("/api/icons/{name}", icon_delete)
+    r.add_get("/api/icons/{name}/usage", icon_usage)
     r.add_get("/api/remotes/{rid}/icons", remote_icons)
     r.add_get("/api/remotes/{rid}/icons/{name}", remote_icon_get)
     r.add_post("/api/remotes/{rid}/icons/import", remote_icons_import)
@@ -760,5 +866,6 @@ def create_app(data_dir: Path, device_factory=DeviceClient) -> web.Application:
     r.add_get("/api/remotes/{rid}/sim/live", sim_live)
     r.add_post("/api/remotes/{rid}/sim/action", sim_action)
     r.add_get("/api/remotes/{rid}/sim/active", sim_active)
+    r.add_post("/api/remotes/{rid}/sim/reset", sim_reset)
     r.add_post("/api/remotes/{rid}/devices/refresh", devices_refresh)
     return app

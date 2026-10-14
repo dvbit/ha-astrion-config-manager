@@ -165,7 +165,7 @@ def _card(ctx: _Ctx, card: Any, path: str) -> None:
             ctx.err(_ptr_join(path, "options", key), "type_mismatch", expected=fspec["kind"])
     # MonitorCard / SpeakerGroupCard read objects ({"entity_id", "name"}); a bare
     # string row is skipped by the remote -> warning with a one-click fix in the UI
-    for key in {"monitor": "entities", "speaker_group": "speakers"}.get(ctype, "").split():
+    for key in {"monitor": "entities", "speaker_group": "speakers", "apple_tv_remote": "apps"}.get(ctype, "").split():
         for idx, row in enumerate(opts.get(key) or [] if isinstance(opts.get(key), list) else []):
             if not isinstance(row, dict):
                 ctx.warn(_ptr_join(path, "options", key, idx), "item_not_object")
@@ -368,7 +368,119 @@ def structural(doc: Any) -> _Ctx:
             val = doc["theme"].get(key)
             if val is not None and not (isinstance(val, str) and _COLOR_RE.match(val)):
                 ctx.warn(f"/theme/{key}", "color_invalid", value=str(val))
+    _rf10(ctx, doc)
     return ctx
+
+
+# RF10.1 (upstream 1.2.7 DashboardLoader.parseDock / parsePower): kind, min, max.
+# A value of the wrong type or out of range is ignored by the remote (default used).
+DOCK_RULES: dict[str, tuple[str, float | None, float | None]] = {
+    "idle_seconds": ("int", 1, None),
+    "brightness": ("float", 0.01, 1.0),
+    "night_brightness": ("float", 0.01, 1.0),
+    "show_battery": ("bool", None, None),
+}
+POWER_RULES: dict[str, tuple[str, float | None, float | None]] = {
+    "motion_wake_minutes": ("int", -1, None),
+    "screen_off_filter_seconds": ("int", -1, None),
+    "dock_debounce_seconds": ("int", 0, 60),
+    "screen_timeout_seconds": ("int", 1, None),
+}
+DOCK_MODES = ("charging", "clock", "dashboard")
+
+
+def _num_ok(kind: str, val: Any) -> bool:
+    if isinstance(val, bool):
+        return kind == "bool"
+    if kind == "int":
+        return isinstance(val, int)
+    if kind == "float":
+        return isinstance(val, int | float)
+    return False
+
+
+def _block(ctx: _Ctx, doc: dict[str, Any], name: str, rules: dict[str, tuple[str, float | None, float | None]]) -> None:
+    """Validate ``dock`` / ``power`` (RF10.1): warnings only, entity refs collected."""
+    if name not in doc:
+        return
+    block = doc[name]
+    if not isinstance(block, dict):
+        ctx.err(f"/{name}", "type_mismatch", expected="object")
+        return
+    for key, (kind, lo, hi) in rules.items():
+        if key not in block:
+            continue
+        val = block[key]
+        if not _num_ok(kind, val):
+            ctx.warn(f"/{name}/{key}", "type_mismatch", expected=kind)
+        elif kind != "bool" and ((lo is not None and val < lo) or (hi is not None and val > hi)):
+            ctx.warn(f"/{name}/{key}", "value_range", value=str(val), min=lo, max=hi if hi is not None else "∞")
+    for key in ("media_entities", "screen_off_entities"):
+        if key in block:
+            if isinstance(block[key], list) and all(isinstance(x, str) for x in block[key]):
+                ctx.entity(f"/{name}/{key}", block[key])
+            else:
+                ctx.warn(f"/{name}/{key}", "type_mismatch", expected="string_list")
+    if name == "dock":
+        if "mode" in block and block["mode"] not in DOCK_MODES:
+            ctx.warn("/dock/mode", "value_unexpected", value=str(block["mode"]))
+        if "time_format" in block and block["time_format"] not in (12, 24):
+            ctx.warn("/dock/time_format", "value_unexpected", value=str(block["time_format"]))
+        if "weather_entity" in block:
+            ctx.entity("/dock/weather_entity", block["weather_entity"])
+
+
+def _rooms(doc: dict[str, Any]) -> set[str]:
+    """Rooms known to the remote: composed Activities + track/room tiles and hotkeys."""
+    rooms = {a["room"] for a in doc.get("activities") or [] if isinstance(a, dict) and isinstance(a.get("room"), str)}
+
+    def walk(node: Any) -> None:
+        if isinstance(node, dict):
+            if node.get("track") is True and isinstance(node.get("room"), str):
+                rooms.add(node["room"])
+            for val in node.values():
+                walk(val)
+        elif isinstance(node, list):
+            for val in node:
+                walk(val)
+
+    walk(doc)
+    return rooms
+
+
+def _stop_refs(node: Any, path: str, out: list[tuple[str, Any]]) -> None:
+    """All ``stopActivity`` values (tiles, long_press, hotkeys)."""
+    if isinstance(node, dict):
+        for key, val in node.items():
+            sub = f"{path}{_ptr(key)}"
+            if key == "stopActivity":
+                out.append((sub, val))
+            else:
+                _stop_refs(val, sub, out)
+    elif isinstance(node, list):
+        for idx, val in enumerate(node):
+            _stop_refs(val, f"{path}/{idx}", out)
+
+
+def _rf10(ctx: _Ctx, doc: dict[str, Any]) -> None:
+    """RF10.1-10.4 checks (upstream 1.2.2-1.2.7-beta)."""
+    _block(ctx, doc, "dock", DOCK_RULES)
+    _block(ctx, doc, "power", POWER_RULES)
+    for idx, page in enumerate(doc.get("pages") or []):
+        if not isinstance(page, dict) or "hideMode" not in page:
+            continue
+        if page["hideMode"] not in ("dots", "full"):
+            ctx.warn(f"/pages/{idx}/hideMode", "value_unexpected", value=str(page["hideMode"]))
+        elif not page.get("hiddenUnlessActivity"):
+            ctx.warn(f"/pages/{idx}/hideMode", "hide_mode_unused")
+    rooms = _rooms(doc)
+    refs: list[tuple[str, Any]] = []
+    _stop_refs(doc, "", refs)
+    for path, room in refs:
+        if not isinstance(room, str) or not room:
+            ctx.warn(path, "type_mismatch", expected="string")
+        elif room != "*" and room not in rooms:
+            ctx.warn(path, "room_unknown", room=room)
 
 
 def _hub_refs(node: Any, path: str, out: list[tuple[str, str]]) -> None:

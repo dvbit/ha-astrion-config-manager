@@ -174,7 +174,16 @@
         "default": "12"
       }
     },
-    "apple_tv_remote": {}
+    "apple_tv_remote": {
+      "layout": {
+        "values": [
+          "classic",
+          "compact",
+          "full"
+        ],
+        "default": "classic"
+      }
+    }
   },
   "colors": {
     "title": [
@@ -275,6 +284,10 @@
         "bool"
       ],
       [
+        "stopActivity",
+        "room"
+      ],
+      [
         "long_press",
         "action"
       ]
@@ -361,6 +374,10 @@
         "bool"
       ],
       [
+        "stopActivity",
+        "room"
+      ],
+      [
         "long_press",
         "action"
       ]
@@ -433,7 +450,25 @@
         "lines"
       ]
     ],
-    "row.cards": "cards"
+    "row.cards": "cards",
+    "apple_tv_remote.apps": [
+      [
+        "source",
+        "text"
+      ],
+      [
+        "label",
+        "text"
+      ],
+      [
+        "icon",
+        "text"
+      ],
+      [
+        "color",
+        "color"
+      ]
+    ]
   },
   "multi": {
     "apple_tv_remote": {
@@ -441,6 +476,12 @@
         "values": [
           "Menu",
           "Home",
+          "SeekBackward",
+          "SeekForward",
+          "Rewind",
+          "FastForward",
+          "Previous",
+          "Next",
           "Siri",
           "Screensaver",
           "Guide",
@@ -450,6 +491,12 @@
         ],
         "default": [
           "Menu",
+          "Home"
+        ],
+        "default_compact": [
+          "Menu",
+          "SeekBackward",
+          "SeekForward",
           "Home"
         ]
       }
@@ -507,6 +554,10 @@
     [
       "closePopup",
       "bool"
+    ],
+    [
+      "stopActivity",
+      "room"
     ]
   ],
   "_long_press": "1.2.1-beta GridLongPress.kt: optional 'long_press' object on button_grid buttons / scene_grid tiles; same action fields as a tile, hub falls back to the tile's own.",
@@ -533,5 +584,112 @@
       }
     }
   },
-  "_csv": "MediaPlayerCard.kt MEDIA_CONTROL_KEYS / VOLUME_CONTROL_KEYS: comma-separated list; empty string = none, key absent = default."
+  "_csv": "MediaPlayerCard.kt MEDIA_CONTROL_KEYS / VOLUME_CONTROL_KEYS: comma-separated list; empty string = none, key absent = default.",
+  "_1_2_7": "1.2.2-1.2.7-beta: dock/power blocks (DashboardLoader.parseDock/parsePower), page hideMode, stopActivity, hotkey event, apple_tv_remote layout/entity/show*/apps and extended buttons (AppleTvRemoteCard.kt ExtraButtons.CATALOG).",
+  "dock": [
+    [
+      "mode",
+      "enum",
+      {
+        "values": [
+          "charging",
+          "clock",
+          "dashboard"
+        ],
+        "default": "charging"
+      }
+    ],
+    [
+      "idle_seconds",
+      "int",
+      {
+        "default": "15/30/60 s"
+      }
+    ],
+    [
+      "brightness",
+      "float",
+      {
+        "default": 0.2
+      }
+    ],
+    [
+      "night_brightness",
+      "float",
+      {
+        "default": 0.05
+      }
+    ],
+    [
+      "time_format",
+      "enum",
+      {
+        "values": [
+          12,
+          24
+        ],
+        "default": "system"
+      }
+    ],
+    [
+      "weather_entity",
+      "entity"
+    ],
+    [
+      "media_entities",
+      "lines"
+    ],
+    [
+      "show_battery",
+      "bool",
+      {
+        "default": true
+      }
+    ]
+  ],
+  "power": [
+    [
+      "motion_wake_minutes",
+      "int",
+      {
+        "default": 5
+      }
+    ],
+    [
+      "screen_off_filter_seconds",
+      "int",
+      {
+        "default": 30
+      }
+    ],
+    [
+      "screen_off_entities",
+      "lines"
+    ],
+    [
+      "dock_debounce_seconds",
+      "int",
+      {
+        "default": 5
+      }
+    ],
+    [
+      "screen_timeout_seconds",
+      "int",
+      {
+        "default": "system"
+      }
+    ]
+  ],
+  "page_hide_mode": {
+    "values": [
+      "dots",
+      "full"
+    ],
+    "default": "dots"
+  },
+  "overlays": [
+    "settings",
+    "activities"
+  ]
 }

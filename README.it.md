@@ -19,7 +19,7 @@ sulle entità HA, push/pull con rilevamento della deriva.
 3. Installa **Astrion Config Manager**, avvialo e apri **Astrion** nella barra laterale.
 
 Su ogni telecomando abilita il **config server** dell'app (porta 8080, pagina impostazioni).
-Schema seguito: release upstream **1.2.0** e beta **1.2.1-beta** (campi delle card rigenerati con `tools/extract_card_schema.py`).
+Schema seguito: release upstream **1.2.0** e beta **1.2.7-beta** (ramo `dev`; campi delle card rigenerati con `tools/extract_card_schema.py`). Le chiavi aggiunte dalle beta sono ignorate dalle app più vecchie.
 
 ## Funzioni
 
@@ -34,6 +34,7 @@ Schema seguito: release upstream **1.2.0** e beta **1.2.1-beta** (campi delle ca
 | Icone | Libreria condivisa (nei backup), selettore con anteprime, caricamento automatico delle icone mancanti al push, importazione da un telecomando. |
 | Catalogo entità | Form per `haDevices` (entità con nome usate dal web builder del telecomando), validato su HA. |
 | Simulatore | La testa resa alla risoluzione del telecomando con stati HA live; tocchi e tasti HA100 eseguono **realmente** su HA, Hub Harmony ed emettitore IR Broadlink. |
+| Dock e standby (1.2.7) | Sezioni "Schermo dock" e "Standby e batteria"; pagine nascoste del tutto (`hideMode: full`); pulsanti Off (`stopActivity`); eventi hotkey verso HA; layout Apple TV compact/full con scorciatoie app; identità del telecomando e rilevamento duplicati; eliminazione icone sui telecomandi. |
 | Lingue | Inglese, italiano, francese, spagnolo, tedesco (segue la lingua di HA). |
 
 ## Esempi d'uso
@@ -116,11 +117,58 @@ su un telecomando? **Sincronizzazione → Importa nella libreria**.
 Player*, entità `media_player.tv`. La voce finisce in `haDevices` ed è proposta
 con ★ in tutti i campi entità.
 
+### 9. Novità con l'app 1.2.7-beta
+
+**Schermo dock** — *Editor → Globale → Schermo dock*: modalità `clock`, meteo
+`weather.home`. Salvato come:
+
+```json
+"dock": { "mode": "clock", "weather_entity": "weather.home", "time_format": 24 },
+"power": { "screen_timeout_seconds": 60, "screen_off_entities": ["binary_sensor.tv_on"] }
+```
+
+Nel **Simulatore** spunta **Sulla base** per vederne l'anteprima (tocca lo schermo per uscire).
+
+**Pulsante Off stile Harmony** — una tile scena con `"stopActivity": "Salotto"`
+(o `"*"` per tutte le stanze) ferma l'Activity della stanza: stop composto o
+PowerOff Harmony. La stanza si sceglie dal menu.
+
+**Pagina visibile solo durante la sua Activity** — pagina *TV*:
+`hiddenUnlessActivity` `guarda_tv`, `hideMode` `full`: gli swipe la saltano a
+Activity spenta e il telecomando la lascia quando l'Activity si ferma.
+
+**Evento da hotkey per le automazioni** — hotkey `VOICE (Microfono)` con
+`"event": "voice"`; un'automazione lo intercetta:
+
+```yaml
+triggers:
+  - trigger: event
+    event_type: astrion_button
+    event_data:
+      event: voice
+actions:
+  - action: assist_satellite.start_conversation
+    target:
+      entity_id: assist_satellite.cucina
+```
+
+**Telecomando Apple TV compatto con app**:
+
+```json
+{ "type": "apple_tv_remote", "options": { "deviceId": "62846050", "layout": "compact",
+  "entity": "media_player.apple_tv", "apps": [ { "source": "Netflix", "color": "#B3261E" } ] } }
+```
+
+**Stati dei dispositivi** — i dispositivi IR con profilo si avviano stile
+Harmony; il simulatore ricorda quali dispositivi ritiene accesi (pannello sotto
+lo schermo). Se un dispositivo è stato acceso o spento a mano, premi **Azzera
+stati dispositivi**.
+
 ## Dati e backup
 
 Tutto risiede nel volume `/data` dell'app (incluso nei backup HA). Scritture
 atomiche (file temporaneo + fsync + rename): una versione esiste per intero o
-non esiste. Struttura dei file: vedi [README inglese](README.md#data-and-backups).
+non esiste. Gli stati dispositivi del simulatore sono in `/data/sim_state/`. Struttura dei file: vedi [README inglese](README.md#data-and-backups).
 
 ## Log
 

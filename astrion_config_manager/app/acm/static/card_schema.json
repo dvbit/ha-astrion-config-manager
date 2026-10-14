@@ -4,14 +4,35 @@
    "appleTv": {
     "kind": "string"
    },
+   "apps": {
+    "kind": "json"
+   },
    "buttons": {
     "kind": "string_list"
    },
    "deviceId": {
     "kind": "string"
    },
+   "entity": {
+    "kind": "string"
+   },
    "hub": {
     "kind": "string"
+   },
+   "layout": {
+    "kind": "string"
+   },
+   "showArtwork": {
+    "default": true,
+    "kind": "bool"
+   },
+   "showProgress": {
+    "default": true,
+    "kind": "bool"
+   },
+   "showSkip": {
+    "default": true,
+    "kind": "bool"
    }
   }
  },

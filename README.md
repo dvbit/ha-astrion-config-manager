@@ -19,7 +19,7 @@ validation against your HA entities, push/pull with drift detection.
 3. Install **Astrion Config Manager**, start it, open **Astrion** in the sidebar.
 
 On each remote, enable the app's **config server** (port 8080, settings page).
-Schema followed: upstream release **1.2.0** and beta **1.2.1-beta** (card fields regenerated with `tools/extract_card_schema.py`).
+Schema followed: upstream release **1.2.0** and beta **1.2.7-beta** (`dev` branch; card fields regenerated with `tools/extract_card_schema.py`). Keys added by the betas are ignored by older apps.
 
 ## Features
 
@@ -34,6 +34,7 @@ Schema followed: upstream release **1.2.0** and beta **1.2.1-beta** (card fields
 | Icons | Shared library (backed up), picker with thumbnails, automatic upload of missing icons on push, import from a remote. |
 | Entity catalog | Form for `haDevices` (named entities used by the remote's web builder), validated against HA. |
 | Simulator | The head rendered at the remote's resolution with live HA states; taps and HA100 keys run **for real** on HA, the Harmony Hub and the Broadlink IR emitter. |
+| Dock & standby (1.2.7) | "Dock screen" and "Standby & battery" sections; pages hidden completely (`hideMode: full`); Off buttons (`stopActivity`); hotkey events to HA; Apple TV compact/full layouts with app shortcuts; remote identity and duplicate detection; icon deletion on the remotes. |
 | Languages | English, Italian, French, Spanish, German (follows your HA language). |
 
 ## Usage examples
@@ -114,6 +115,52 @@ Already have icons on a remote? **Sync → Import into library**.
 entity `media_player.tv`. The entry is stored in `haDevices` and shown with ★
 in every entity field.
 
+### 9. What's new with app 1.2.7-beta
+
+**Dock screen** — *Editor → Global → Dock screen*: mode `clock`, weather
+`weather.home`. Stored as:
+
+```json
+"dock": { "mode": "clock", "weather_entity": "weather.home", "time_format": 24 },
+"power": { "screen_timeout_seconds": 60, "screen_off_entities": ["binary_sensor.tv_on"] }
+```
+
+In the **Simulator**, tick **Docked** to preview it (tap the screen to leave).
+
+**Harmony-style Off button** — a scene tile with `"stopActivity": "Living room"`
+(or `"*"` for every room) stops that room's Activity: composed stop or Harmony
+PowerOff. Pick the room from the dropdown.
+
+**Page shown only during its Activity** — page *TV*: `hiddenUnlessActivity`
+`watch_tv`, `hideMode` `full`: swipes skip it while the Activity is off, and the
+remote leaves it when the Activity stops.
+
+**Hotkey event for automations** — hotkey `VOICE (Microphone)` with
+`"event": "voice"`; an automation triggers on it:
+
+```yaml
+triggers:
+  - trigger: event
+    event_type: astrion_button
+    event_data:
+      event: voice
+actions:
+  - action: assist_satellite.start_conversation
+    target:
+      entity_id: assist_satellite.kitchen
+```
+
+**Apple TV compact remote with apps**:
+
+```json
+{ "type": "apple_tv_remote", "options": { "deviceId": "62846050", "layout": "compact",
+  "entity": "media_player.apple_tv", "apps": [ { "source": "Netflix", "color": "#B3261E" } ] } }
+```
+
+**Device states** — profiled IR devices are started Harmony-style; the
+simulator remembers which devices it believes are on (panel under the screen).
+If a device was switched by hand, press **Reset device states**.
+
 ## Data and backups
 
 Everything lives in the app's `/data` volume (included in HA backups):
@@ -124,6 +171,7 @@ Everything lives in the app's `/data` volume (included in HA backups):
 /data/remotes/<id>/snapshots/*.json.gz full state at v1 and every 50
 /data/remotes/<id>/names.json         version names
 /data/icons/                          shared icon library
+/data/sim_state/<id>.json             simulator device states (RF10.5)
 ```
 
 Writes are atomic (temp file + fsync + rename): a version exists entirely or not at all.

@@ -1,9 +1,9 @@
-# Requirement — Astrion Config Manager (HA add-on) v1.8
+# Requirement — Astrion Config Manager (HA add-on) v1.9
 
 > English translation of [SPEC.md](SPEC.md). The Italian document is the
 > reference; in case of discrepancy the Italian text prevails.
 
-Status: approved by the requester. v1.3: added RF6.12 (navigation-only mode). v1.4: added RF7 (icons and entity catalog). v1.5: added RF8 (multiple Harmony hubs and IR targets). v1.6: added RF3.5 (dropdowns and palettes). v1.7: added RF3.6 (structured lists) and RF9 (upstream 1.2.0, direct Apple TV). v1.8: RF9.6–RF9.7 (upstream 1.2.1-beta and 1.2.0 recheck). Supersedes v1.0: Harmony and IR are now in scope; named versions added (RF2.11–RF2.13). Original document language: Italian.
+Status: approved by the requester. v1.3: added RF6.12 (navigation-only mode). v1.4: added RF7 (icons and entity catalog). v1.5: added RF8 (multiple Harmony hubs and IR targets). v1.6: added RF3.5 (dropdowns and palettes). v1.7: added RF3.6 (structured lists) and RF9 (upstream 1.2.0, direct Apple TV). v1.8: RF9.6–RF9.7 (upstream 1.2.1-beta and 1.2.0 recheck). v1.9: RF10 (upstream 1.2.2–1.2.7-beta). Supersedes v1.0: Harmony and IR are now in scope; named versions added (RF2.11–RF2.13). Original document language: Italian.
 
 ## 1. Purpose
 
@@ -15,7 +15,7 @@ Home Assistant add-on with an Ingress panel that manages the configurations (`da
 
 ## 3. References
 
-- Reference schema: `dashboard.json` as defined by the most recent release of the repo at development time (last observed: 1.2.0). Card and action behaviour: Kotlin sources (`cards/impl/`, `config/DashboardLoader.kt`) and web editor (`docs/index.html`, `cards.js`).
+- Reference schema: `dashboard.json` as defined by the most recent release of the repo at development time (last observed: 1.2.0 stable, 1.2.7-beta on the `dev` branch). Card and action behaviour: Kotlin sources (`cards/impl/`, `config/DashboardLoader.kt`) and web editor (`docs/index.html`, `cards.js`).
 - Remote: the device exposes no API. The add-on issues the same HTTP requests as the browser on the configuration page `http://<host>:<port>` (download and upload of `dashboard.json`), derived from the repo's `web/` sources. Editing happens only in the add-on's web interface.
 - Home Assistant: WebSocket API via the add-on's Supervisor token; no token entered by the user.
 - Harmony Hub: the Hub's local protocol as used by the app's Harmony client (Kotlin sources of the repo).
@@ -98,7 +98,7 @@ Home Assistant add-on with an Ingress panel that manages the configurations (`da
 ### RF7 — Icons and entity catalog
 
 - RF7.1 Shared icon library in the add-on (PNG, JPEG, WebP, max 2 MB), included in HA backups. File names are normalised with the same rule as the remote.
-- RF7.2 Deleting an icon removes it from the library only: the remote offers no deletion and keeps its copy.
+- RF7.2 Deleting an icon removes it from the library; since app 1.2.7 it can also be deleted on the remotes (RF10.11).
 - RF7.3 On push, icons used by the head and missing on the remote are uploaded from the library before the file. Icons present on a remote can be imported into the library.
 - RF7.4 Every icon field of the editor has a thumbnail and a picker (library + remote icons); JSON editors can insert an icon path. The simulator shows the real icons. An icon missing from both the library and the remote is an error that blocks push.
 - RF7.5 Form for the `haDevices` catalog (name, type, HA entity filtered by type). Catalog entries are offered in the editor's entity fields. A catalog entity that does not exist in HA blocks push.
@@ -123,6 +123,23 @@ Home Assistant add-on with an Ingress panel that manages the configurations (`da
 - RF9.5 Direct Apple TV control cannot be executed by the add-on: the simulator shows it disabled with the reason. This covers `astrion_appletv.*` and any service on a paired Apple TV's entity, which the remote handles locally.
 - RF9.6 (1.2.1-beta) Every `button_grid` button and `scene_grid` tile can carry a `long_press` block with the same action fields; dedicated editor form, validation of the entities inside, copy with reference rewriting, simulator long press (fallback hub = the tile's own).
 - RF9.7 `media_player.media_controls`/`volume_controls` are comma lists (empty string = no controls, key absent = default): checkbox editor, faithful simulator. `openWhenState` defaults to `"on"`.
+
+### RF10 — Alignment with upstream 1.2.2–1.2.7-beta
+
+Reference: astrion-custom-dashboard `dev` branch, 1.2.7-beta (latest stable 1.2.0). Every key is optional; an older app ignores it.
+
+- RF10.1 `dock` block (mode charging/clock/dashboard, idle_seconds, brightness, night_brightness, time_format 12/24, weather_entity, media_entities, show_battery) and `power` block (motion_wake_minutes, screen_off_filter_seconds, screen_off_entities, dock_debounce_seconds, screen_timeout_seconds): "Dock screen" and "Standby & battery" sections in Global. Type, range and value errors are warnings (the remote ignores the value); the entities inside are checked like any other.
+- RF10.2 Page `hideMode` (`dots` default, `full`): dropdown. With `full` and the Activity off, the simulator skips the page on swipes and leaves it (to its parent, else the nearest visible page) when its Activity stops. With `dots` the page stays reachable by swipe and only its dot is hidden. `hideMode` without `hiddenUnlessActivity` is a warning.
+- RF10.3 `stopActivity` (a room, or `*` for every room) on tiles, buttons, `long_press` and hotkeys: room dropdown (rooms of the Activities and of `track` tiles). Unknown room = warning. Hotkey `event`, `openOverlay`, `openCurrentActivityRoom`, `track`/`room`/`devices`. Hardware keys are shown as "Menu (MAIN)".
+- RF10.4 `apple_tv_remote`: `layout` classic/compact/full, `entity`, `showArtwork`/`showProgress`/`showSkip`, `apps` list (source, label, icon, color), 14 buttons of the upstream catalog (compact default: Menu, −10 s, +10 s, Home). The simulator renders the three layouts; apps are launched with `media_player.select_source` on `entity` (else the direct Apple TV).
+- RF10.5 Composed Activities follow the upstream ActivityPlanner: with ir-database `profile` (power discrete/toggle/none, timing, repeats, named inputs as key sequences) Harmony-style start (power off unused room devices, staggered power on, inputs once ready, only when they change); otherwise the original per-device order. The simulator keeps a device-state memory per remote (on/off, input, active Activities, tracked rooms) in the add-on data; it is the add-on's own belief, not the remote's, and can be cleared with "Reset device states".
+- RF10.6 IR lookup as the app: loose command ids (case, spaces, `_`, `-`), model names with or without " (Harmony)", repair of Pronto codes split across `pronto`/`pronto_repeat`, `repeats` with the repeat burst (max 1.9 s).
+- RF10.7 Real execution of `stopActivity` (composed stop or Harmony PowerOff of the tracked hub; `*` = every running room) and of hotkey `event` (`astrion_button` on HA's bus with remote_id, remote_name, event, key, long, page).
+- RF10.8 Simulator "Docked" switch: preview of the dock screen (charging = dimmed to near zero, dashboard = dimmed to `brightness`, clock = clock face with date, weather, battery and now playing; night = `night_brightness`, amber).
+- RF10.9 Remote identity from `GET /info` (name, model, app version), read-only, shown in the list; two entries for the same physical remote are flagged.
+- RF10.10 The remote's name is not changed by the add-on.
+- RF10.11 Deleting an icon offers deletion also on the remotes that hold it (`DELETE /icons/<name>`); remotes whose head still uses it cannot be selected.
+- RF10.12 The drift banner lists the changed keys; when only keys written by the remote's own Settings screen changed (`dock.mode`, `power.screen_timeout_seconds`) it says so.
 
 ## 6. Non-functional requirements
 
@@ -152,7 +169,7 @@ Decisions taken during requirement consolidation, not part of the original text:
 
 - Delivered as a Home Assistant app (add-on) repository, not HACS.
 - UI in five languages (EN, IT, FR, ES, DE), extending RNF3.
-- Reference schema: upstream release 1.2.0 (v2.7.0 of the add-on; previously 1.1.9-beta).
+- Reference schema: upstream release 1.2.0 (v2.7.0 of the add-on; previously 1.1.9-beta); 1.2.7-beta from v2.10.0 (RF10).
 - Phased delivery: v1.0 covered RF1–RF5; v2.0 adds RF6 (simulator, Harmony, IR via Broadlink).
 - RF6.3 fidelity: layout, colours (ThemeConfig) and controls follow the app; icons are simplified.
 - Harmony routing: superseded by RF8 (v1.5), per-action `hub` with first-hub fallback.

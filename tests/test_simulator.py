@@ -10,7 +10,7 @@ import pytest
 from acm.actions import Executor
 from acm.device import DeviceClient
 from acm.harmony import HarmonyRegistry
-from acm.ir import pronto_to_pattern, pulses_to_broadlink, to_b64_command
+from acm.ir import build_repeated_pronto, pronto_to_pattern, pulses_to_broadlink, to_b64_command
 from aiohttp import web
 
 PRONTO = "0000 006D 0002 0000 0157 00AC 0015 0016"
@@ -36,6 +36,9 @@ class FakeHA:
 
     async def call_service(self, domain, service, entity_id=None, data=None):
         self.calls.append((f"{domain}.{service}", entity_id, data))
+
+    async def fire_event(self, event_type, data):
+        self.calls.append((f"event.{event_type}", None, data))
 
 
 @pytest.fixture
@@ -325,3 +328,101 @@ async def test_any_service_on_paired_apple_tv_is_local(executor):
     )
     assert [r.get("error") for r in res["results"]] == ["appletv_direct", None]
     assert ha.calls == [("light.toggle", "light.x", None)]
+
+
+# ---------------------------------------------------------------- RF10 (1.2.7-beta)
+
+PROFILED = "0000 006D 0001 0000 0157 00AC"
+
+
+async def test_rf10_profiled_activity_batched_on_extender(aiohttp_server, multi, tmp_path):
+    """Harmony-style plan; consecutive IR keys to one extender = one batch with delays."""
+    ex, ha, meta, _, _, bodies = multi
+    model = {
+        "model_name": "KD",
+        "commands": {"PowerOn": {"pronto": PROFILED}, "HdmiIn": {"pronto": PROFILED}},
+        "profile": {
+            "power": {"type": "discrete", "on": ["PowerOn"], "off": ["PowerOn"]},
+            "timing": {"power_on_delay_ms": 300, "repeats": 2},
+            "inputs": [{"name": "HDMI 1", "steps": ["HdmiIn"]}],
+        },
+    }
+
+    async def irdb(_):
+        return web.json_response({"brands": [{"brand_name": "Sony", "models": [model]}]})
+
+    app = web.Application()
+    app.router.add_get("/ir-database/{cat}.json", irdb)
+    dev_srv = await aiohttp_server(app)
+    meta = {**meta, "host": dev_srv.host, "port": dev_srv.port}
+    ex2 = Executor(ha, ex._harmony, DeviceClient, ex._http, tmp_path)
+    doc = {
+        "irDevices": [{"id": "tv", "category": "tv", "brand": "Sony", "model": "KD", "target": {"extender": "x1"}}],
+        "activities": [
+            {"id": "cinema", "room": "sala", "devices": [{"deviceId": "tv", "source": "ir", "inputCommand": "HDMI 1"}]}
+        ],
+    }
+    res = await ex2.run(meta, doc, [{"kind": "activity", "id": "cinema"}])
+    assert res["results"][0]["ok"], res
+    assert len(bodies) == 1  # one batch
+    lines = bodies[0].split("\n")
+    rep = build_repeated_pronto(PROFILED, None, 2)
+    assert lines == [rep, f"300>{rep}"]  # PowerOn, then HdmiIn once the TV is ready
+    # device state persisted
+    saved = json.loads((tmp_path / "sim_state" / "r2.json").read_text())
+    assert saved["devices"]["tv"] == {"on": True, "input": "HDMI 1"} and saved["active"] == {"sala": "cinema"}
+    # a fresh executor reloads the belief. Same Activity already active -> nothing to send
+    ex3 = Executor(ha, ex._harmony, DeviceClient, ex._http, tmp_path)
+    bodies.clear()
+    await ex3.run(meta, doc, [{"kind": "activity", "id": "cinema"}])
+    assert bodies == []
+    # room no longer active but TV believed on, on HDMI 1 -> only the discrete safety PowerOn
+    ex3.state("r2")["active"].clear()
+    await ex3.run(meta, doc, [{"kind": "activity", "id": "cinema"}])
+    assert bodies == [rep]
+    ex3.reset("r2")
+    assert ex3.state("r2") == {"devices": {}, "active": {}, "tracked": {}}
+
+
+async def test_rf10_stop_room_all_and_harmony_poweroff(executor):
+    import asyncio
+
+    ex, ha, meta, hub = executor
+    await ex.run(
+        meta,
+        DOC,
+        [
+            {"kind": "activity", "id": "watch"},
+            {"kind": "track", "room": "camera", "id": "777", "harmony": "777", "hub": None, "devices": []},
+        ],
+    )
+    assert ex.state("r1")["active"] == {"salotto": "watch", "camera": "777"}
+    ha.calls.clear()
+    res = await ex.run(meta, DOC, [{"kind": "activity_stop", "room": "*"}])
+    assert res["results"][0]["ok"], res and res["active"] == {}
+    assert ("media_player.turn_off", "media_player.tv", None) in ha.calls
+    await asyncio.sleep(0.1)
+    assert hub.received[-1]["hbus"]["params"] == {"activityId": "-1"}
+
+
+async def test_rf10_event_hotkey(executor):
+    ex, ha, meta, _ = executor
+    meta = {**meta, "identity": {"id": "astrion-abc", "name": "Living room"}}
+    res = await ex.run(
+        meta, DOC, [{"kind": "event", "event": "movie_scene", "key": "main", "long": True, "page": "Home"}]
+    )
+    assert res["results"][0]["ok"]
+    assert ha.calls == [
+        (
+            "event.astrion_button",
+            None,
+            {
+                "remote_id": "astrion-abc",
+                "remote_name": "Living room",
+                "event": "movie_scene",
+                "key": "MAIN",
+                "long": True,
+                "page": "Home",
+            },
+        )
+    ]

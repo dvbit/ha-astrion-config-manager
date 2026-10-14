@@ -15,7 +15,10 @@ browser on ``http://<host>:<port>``, as implemented upstream in
   ip, hubId}], ``extenders`` [{localId, name, host, mac}], ``appleTvs``
   (1.2.0: localId, name, entityId, credentials, ...) and ``ha`` (URL and
   token).  Only hubs and extenders are kept (RF8.1): the ``ha`` block, which
-  holds the remote's HA token, is discarded and never stored or logged.
+  holds the remote's HA token, is discarded and never stored or logged;
+* ``GET  /info`` (1.2.7-beta) -> ``{id, name, manufacturer, model, android,
+  version, versionCode, webhook}``: the remote's identity (RF10.9);
+* ``DELETE /icons/<name>`` (1.2.3-beta) -> delete one icon (RF10.11).
 """
 
 from __future__ import annotations
@@ -123,6 +126,39 @@ class DeviceClient:
             # "credentials" and network details are deliberately not kept.
             "apple_tvs": keep(raw.get("appleTvs"), ("localId", "name", "entityId")),
         }
+
+    async def info(self) -> dict[str, Any] | None:
+        """RF10.9: identity of the remote; None on apps older than 1.2.7 (404)."""
+        url = f"{self._base}/info"
+        try:
+            async with self._session.get(url, timeout=TIMEOUT) as resp:
+                if resp.status == 404:
+                    return None
+                if resp.status != 200:
+                    raise DeviceError("http_error", f"HTTP {resp.status}")
+                raw = json.loads((await resp.read()).decode("utf-8"))
+        except (aiohttp.ClientError, TimeoutError) as err:
+            raise DeviceError("unreachable", str(err) or type(err).__name__) from err
+        except (UnicodeDecodeError, json.JSONDecodeError) as err:
+            raise DeviceError("invalid_json", str(err)) from err
+        keys = ("id", "name", "manufacturer", "model", "android", "version", "versionCode", "webhook")
+        return {k: raw.get(k) for k in keys} if isinstance(raw, dict) else None
+
+    async def icon_delete(self, name: str) -> bool:
+        """RF10.11: delete one icon on the remote; False if it was not there (404)."""
+        from urllib.parse import quote
+
+        try:
+            async with self._session.delete(f"{self._base}/icons/{quote(name)}", timeout=TIMEOUT) as resp:
+                if resp.status == 404:
+                    return False
+                if resp.status == 405:
+                    raise DeviceError("not_supported", "DELETE /icons needs app 1.2.3-beta or later")
+                if resp.status >= 400:
+                    raise DeviceError("http_error", f"HTTP {resp.status}")
+                return True
+        except (aiohttp.ClientError, TimeoutError) as err:
+            raise DeviceError("unreachable", str(err) or type(err).__name__) from err
 
     async def icons_list(self) -> set[str]:
         """Names of the icons stored on the remote (RF7.3)."""

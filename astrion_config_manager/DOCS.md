@@ -27,9 +27,16 @@ Open **Astrion** in the sidebar (admins only).
    Changes made on the device are reported (drift) and never applied automatically.
 
 5. **Simulator**: live preview of the head; taps and HA100 keys are executed
-   for real (HA, Harmony Hub at the remote's Hub IP, IR via its `remote.*` entity).
+   for real (HA, the remote's Harmony hubs, IR via its `remote.*` entity or extenders).
 
-6. **Icons**: shared library; missing icons are uploaded to a remote on push.
+6. **Icons**: shared library; missing icons are uploaded to a remote on push;
+   with app 1.2.7+ an icon can also be deleted on the remotes that no longer use it.
+
+7. **App 1.2.7-beta**: dock screen and standby settings (Global), pages hidden
+   during inactive Activities (`hideMode: full`), Off buttons (`stopActivity`),
+   hotkey events (`astrion_button` on HA's bus), Apple TV layouts with apps. The
+   simulator previews the dock screen (**Docked**) and remembers device states
+   (**Reset device states** to clear them).
 
 Data lives in the app's `/data` volume and is included in Home Assistant backups.
 History is never deleted: remotes are archived, not removed.

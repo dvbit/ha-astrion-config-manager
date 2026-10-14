@@ -8,6 +8,7 @@ const S = {
   view: "list",        // "list" | "archive" | "remote"
   remotes: [],
   drift: {},           // remote id -> drift status (RF5.2)
+  driftChanges: {},    // remote id -> {paths, count, settings_only} (RF10.12)
   ignored: new Set(),  // drift dismissed until next check (RF5.3 "ignore")
   rid: null, tab: "editor", remote: null, doc: null, validation: null,
   onlyNamed: false,
@@ -118,7 +119,7 @@ async function checkDriftAll() {
   for (const r of S.remotes) S.drift[r.id] = "unknown";
   render();
   const res = await api("GET", "api/drift");
-  for (const d of res) { S.drift[d.id] = d.status; S.ignored.delete(d.id); }
+  for (const d of res) { S.drift[d.id] = d.status; S.driftChanges[d.id] = d.changes; S.ignored.delete(d.id); }
   render();
 }
 
@@ -171,10 +172,42 @@ async function renderIcons() {
     grid.append(el("div", { class: "icon-cell" }, iconImg(null, i.name, "big"), el("span", { text: i.name }),
       el("span", { class: "muted", text: `${Math.ceil(i.size / 1024)} kB` }),
       el("button", { class: "icon danger", text: t("delete"), onclick: guard(async () => {
-        if (!confirm(`${t("confirm_icon_delete")} ${i.name}?`)) return;
-        await api("DELETE", `api/icons/${encodeURIComponent(i.name)}`); render();
+        await iconDeleteDialog(i.name);
       }) })));
   }
+}
+
+/* RF10.11: delete an icon from the library and, optionally, from the remotes
+ * that hold it but no longer reference it (DELETE /icons/<name>, app 1.2.7+).
+ * Remotes whose dashboard still uses the icon cannot be selected. */
+async function iconDeleteDialog(name) {
+  const usage = await api("GET", `api/icons/${encodeURIComponent(name)}/usage`);
+  const lib = el("input", { type: "checkbox", checked: true });
+  const rows = usage.map((u) => {
+    const cb = el("input", { type: "checkbox", disabled: u.used || u.on_remote === false });
+    const note = u.used ? t("icon_in_use") : u.on_remote === false ? t("icon_not_on_remote") : u.on_remote == null ? t("icon_remote_unknown") : "";
+    return { u, cb, row: el("label", { class: "row" }, cb, el("span", { text: u.name }), el("span", { class: "muted", text: note })) };
+  });
+  const dlg = el("dialog", {}, el("h3", { text: `${t("delete")} ${name}` }),
+    el("label", { class: "row" }, lib, el("span", { text: t("icon_from_library") })),
+    rows.length ? el("p", { class: "muted", text: t("icon_from_remotes") }) : null, ...rows.map((r) => r.row));
+  document.body.append(dlg);
+  return new Promise((resolve) => {
+    const close = () => { dlg.close(); dlg.remove(); resolve(); };
+    dlg.append(el("div", { class: "row" },
+      el("button", { text: t("cancel"), onclick: close }),
+      el("button", { class: "danger", text: t("delete"), onclick: guard(async () => {
+        const ids = rows.filter((r) => r.cb.checked).map((r) => r.u.id);
+        if (!lib.checked && !ids.length) return close();
+        const q = new URLSearchParams({ library: lib.checked ? "1" : "0" });
+        if (ids.length) q.set("remotes", ids.join(","));
+        const res = await api("DELETE", `api/icons/${encodeURIComponent(name)}?${q}`);
+        const bad = ((res && res.remotes) || []).filter((x) => x.result !== "deleted" && x.result !== "absent");
+        toast(bad.length ? t("icon_delete_partial", { names: bad.map((x) => x.name).join(", ") }) : t("icon_deleted"), bad.length > 0);
+        close(); render();
+      }) })));
+    dlg.showModal();
+  });
 }
 
 function renderList() {
@@ -190,7 +223,8 @@ function renderList() {
     const info = el("div", {},
       el("div", { class: "row" }, el("strong", { text: r.name }), archived ? null : statusBadge(r.id)),
       el("div", { class: "muted", text: `${r.host}:${r.port} · ${r.width}×${r.height} ${t(r.orientation)}` }),
-      el("div", { class: "muted", text: `${t("head")}: v${r.head} · ${t("last_push")}: ${r.last_push_version ? "v" + r.last_push_version : t("never")}` }));
+      el("div", { class: "muted", text: `${t("head")}: v${r.head} · ${t("last_push")}: ${r.last_push_version ? "v" + r.last_push_version : t("never")}` }),
+      identityLine(r));
     const actions = archived
       ? el("div", { class: "row" }, el("button", { text: t("unarchive"), onclick: guard(async () => { await api("POST", `api/remotes/${r.id}/unarchive`); await loadList(true); }) }))
       : el("div", { class: "row" },
@@ -286,9 +320,26 @@ function renderRemote() {
   }
 }
 
-/* RF5.3: drift is only reported; the user picks import / overwrite / ignore. */
+/* RF10.9: identity reported by the remote (GET /info, app 1.2.7+), read-only;
+ * two entries pointing at the same physical remote are flagged. */
+function identityLine(r) {
+  const id = r.identity;
+  if (!id) return null;
+  const parts = [id.name, [id.manufacturer, id.model].filter(Boolean).join(" "), id.version && `app ${id.version}`].filter(Boolean);
+  return el("div", {},
+    el("div", { class: "muted", text: `📟 ${parts.join(" · ")}` }),
+    r.duplicate_of && r.duplicate_of.length ? el("div", { class: "msg warn", text: "⚠ " + t("identity_duplicate", { names: r.duplicate_of.join(", ") }) }) : null);
+}
+
+/* RF5.3: drift is only reported; the user picks import / overwrite / ignore.
+ * RF10.12: the changed keys are listed; keys written by the remote's own
+ * Settings screen (dock mode, screen timeout) are pointed out. */
 function driftBanner() {
-  return el("div", { class: "card banner row" }, el("span", { text: "⚠ " + t("drift_banner") }), el("span", { class: "spacer" }),
+  const ch = S.driftChanges[S.rid];
+  const detail = ch && ch.count ? el("div", { class: "muted" },
+    el("div", { text: t("drift_changes", { n: ch.count }) + " " + ch.paths.join(", ") + (ch.count > ch.paths.length ? " …" : "") }),
+    ch.settings_only ? el("div", { text: t("drift_settings_only") }) : null) : null;
+  return el("div", { class: "card banner row" }, el("div", {}, el("span", { text: "⚠ " + t("drift_banner") }), detail), el("span", { class: "spacer" }),
     el("button", { text: t("import_version"), onclick: guard(doPull) }),
     el("button", { text: t("overwrite"), onclick: guard(doPush) }),
     el("button", { text: t("ignore"), onclick: () => { S.ignored.add(S.rid); render(); } }));
@@ -318,7 +369,7 @@ function renderSync(body) {
     el("div", { class: "row" }, el("strong", { text: t("status") + ":" }), statusBadge(r.id),
       el("button", { text: t("check_drift"), onclick: guard(async () => {
         const d = await api("GET", `api/remotes/${S.rid}/drift`);
-        S.drift[S.rid] = d.status; S.ignored.delete(S.rid); render();
+        S.drift[S.rid] = d.status; S.driftChanges[S.rid] = d.changes; S.ignored.delete(S.rid); render();
       }) })),
     el("p", { text: `${t("head")}: v${r.head} · ${t("last_push")}: ${r.last_push_version ? "v" + r.last_push_version : t("never")}` +
       (r.last_push_at ? ` (${new Date(r.last_push_at * 1000).toLocaleString(LANG)})` : "") }),

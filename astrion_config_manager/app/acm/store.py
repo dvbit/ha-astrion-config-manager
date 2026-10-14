@@ -371,6 +371,7 @@ class Store:
             "archived": False,
             "created": time.time(),
             "baseline": device_hash,  # glossary: hash of last successful pull/push
+            "baseline_version": 1,  # RF10.12: version the baseline corresponds to
             "last_push_version": None,
             "last_push_at": None,
         }
@@ -422,6 +423,21 @@ class Store:
         )
         _write_json(self.rdir / rid / "meta.json", meta)
         _LOGGER.info("Remote '%s': %s hub(s), %s extender(s) read", meta["name"], len(hubs), len(extenders))
+
+    def set_identity(self, rid: str, identity: dict[str, Any] | None) -> None:
+        """RF10.9: identity reported by the remote's ``/info`` (None = app too old)."""
+        meta = self._get(rid)
+        if meta.get("identity") != identity:
+            meta["identity"] = identity
+            _write_json(self.rdir / rid / "meta.json", meta)
+            if identity:
+                _LOGGER.info(
+                    "Remote '%s' is %s '%s' (app %s)",
+                    meta["name"],
+                    identity.get("id"),
+                    identity.get("name"),
+                    identity.get("version"),
+                )
 
     def set_sync(self, rid: str, **values: Any) -> None:
         """Persist baseline / last push information (RF5)."""
