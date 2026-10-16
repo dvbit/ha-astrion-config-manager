@@ -34,9 +34,22 @@
       "layout": {
         "values": [
           "horizontal",
-          "vertical"
+          "vertical",
+          "dropdown"
         ],
         "default": "default"
+      },
+      "font_size": {
+        "values": [
+          10,
+          13,
+          16,
+          20,
+          24,
+          32
+        ],
+        "default": "13 / 16",
+        "presets": true
       }
     },
     "fan": {
@@ -183,6 +196,14 @@
         ],
         "default": "classic"
       }
+    },
+    "monitor": {
+      "layout": {
+        "values": [
+          "vertical"
+        ],
+        "default": "rows"
+      }
     }
   },
   "colors": {
@@ -198,7 +219,8 @@
   },
   "item_colors": [
     "color",
-    "active_color"
+    "active_color",
+    "on_color"
   ],
   "theme": {
     "background": "#0E2229",
@@ -320,6 +342,10 @@
       [
         "room",
         "text"
+      ],
+      [
+        "nowPlayingEntity",
+        "entity"
       ],
       [
         "activityId",
@@ -448,6 +474,10 @@
       [
         "targets",
         "lines"
+      ],
+      [
+        "on_color",
+        "color"
       ]
     ],
     "row.cards": "cards",
@@ -645,6 +675,10 @@
       {
         "default": true
       }
+    ],
+    [
+      "room",
+      "room"
     ]
   ],
   "power": [
@@ -691,5 +725,6 @@
   "overlays": [
     "settings",
     "activities"
-  ]
+  ],
+  "_1_2_9": "RF11 (upstream 1.2.8-1.2.9-beta): select layout dropdown + font_size (10-32), monitor layout vertical + marquee, tv_remote show_volume, picture_elements on_color, nowPlayingEntity on Activities / tracked tiles / hotkeys, dock.room, hotkey pageMode."
 }

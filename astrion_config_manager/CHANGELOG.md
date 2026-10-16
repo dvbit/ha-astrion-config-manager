@@ -1,5 +1,24 @@
 # Changelog
 
+## 2.11.0 - 2026-10-16
+
+Aligned with astrion-custom-dashboard **1.2.9-beta** (incl. 1.2.8-beta); spec
+v1.10 (RF11).
+
+- Pull and Push buttons on every remote of the list and in the header of the
+  open remote (all tabs); a push over a drifted remote asks first (RF11.8).
+- Hotkey `pageMode: "popup"`: editor dropdown; simulator opens the page as a
+  popup and the same key closes it (RF11.1).
+- Monitor `layout: "vertical"` and `marquee` (RF11.2).
+- `nowPlayingEntity` on Activities, tracked tiles and hotkeys; `dock.room`; the
+  simulator's dock clock follows the room's Activity player (RF11.3).
+- Select `layout: "dropdown"` and `font_size` (RF11.4).
+- TV remote: volume row (`show_volume`, to `mute_entity`), default media
+  entity and default apps as upstream (RF11.5).
+- Icons: `source_select.icon`, PNG icons on switch / picture elements,
+  `on_color` per picture element (RF11.6).
+- Simulator: long MAIN opens Settings when no hotkey does (RF11.7).
+
 ## 2.10.0 - 2026-10-14
 
 Aligned with astrion-custom-dashboard **1.2.7-beta** (`dev` branch; latest

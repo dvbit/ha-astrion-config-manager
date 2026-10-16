@@ -1,6 +1,6 @@
-# Requisito — Astrion Config Manager (add-on HA) v1.9
+# Requisito — Astrion Config Manager (add-on HA) v1.10
 
-Stato: approvato dal richiedente. v1.3: aggiunto RF6.12 (modalità solo navigazione). v1.4: aggiunto RF7 (icone e catalogo entità). v1.5: aggiunto RF8 (più hub Harmony e destinazioni IR). v1.6: aggiunto RF3.5 (menu e tavolozze). v1.7: aggiunti RF3.6 (liste strutturate) e RF9 (allineamento a upstream 1.2.0, Apple TV diretto). v1.8: RF9.6–RF9.7 (upstream 1.2.1-beta e ricontrollo 1.2.0). v1.9: RF10 (upstream 1.2.2–1.2.7-beta). Sostituisce la v1.0: Harmony e IR rientrano nell'ambito; aggiunte le versioni con nome (RF2.11–RF2.13). Lingua del documento: italiano. Traduzione inglese: [SPEC.en.md](SPEC.en.md).
+Stato: approvato dal richiedente. v1.3: aggiunto RF6.12 (modalità solo navigazione). v1.4: aggiunto RF7 (icone e catalogo entità). v1.5: aggiunto RF8 (più hub Harmony e destinazioni IR). v1.6: aggiunto RF3.5 (menu e tavolozze). v1.7: aggiunti RF3.6 (liste strutturate) e RF9 (allineamento a upstream 1.2.0, Apple TV diretto). v1.8: RF9.6–RF9.7 (upstream 1.2.1-beta e ricontrollo 1.2.0). v1.9: RF10 (upstream 1.2.2–1.2.7-beta). v1.10: RF11 (upstream 1.2.8–1.2.9-beta, push/pull nella schermata principale). Sostituisce la v1.0: Harmony e IR rientrano nell'ambito; aggiunte le versioni con nome (RF2.11–RF2.13). Lingua del documento: italiano. Traduzione inglese: [SPEC.en.md](SPEC.en.md).
 
 ## 1. Scopo
 
@@ -12,7 +12,7 @@ Add-on di Home Assistant con pannello Ingress che gestisce le configurazioni (`d
 
 ## 3. Riferimenti
 
-- Schema di riferimento: `dashboard.json` secondo la release più recente del repo al momento dello sviluppo (ultima osservata: 1.2.0 stabile, 1.2.7-beta sul ramo `dev`). Comportamento di card e azioni: sorgenti Kotlin (`cards/impl/`, `config/DashboardLoader.kt`) e editor web (`docs/index.html`, `cards.js`).
+- Schema di riferimento: `dashboard.json` secondo la release più recente del repo al momento dello sviluppo (ultima osservata: 1.2.0 stabile, 1.2.9-beta sul ramo `dev`). Comportamento di card e azioni: sorgenti Kotlin (`cards/impl/`, `config/DashboardLoader.kt`) e editor web (`docs/index.html`, `cards.js`).
 - Telecomando: il dispositivo non espone un'API. L'add-on esegue le stesse richieste HTTP del browser sulla pagina di configurazione `http://<host>:<porta>` (download e upload di `dashboard.json`), ricavate dai sorgenti `web/` del repo. L'editing avviene solo nell'interfaccia web dell'add-on.
 - Home Assistant: API WebSocket tramite token Supervisor dell'add-on; nessun token inserito dall'utente.
 - Hub Harmony: protocollo locale dell'Hub usato dal client Harmony dell'app (sorgenti Kotlin del repo).
@@ -137,6 +137,17 @@ Riferimento: astrion-custom-dashboard ramo `dev`, 1.2.7-beta (ultima stabile 1.2
 - RF10.10 L'add-on non cambia il nome del telecomando.
 - RF10.11 Eliminando un'icona si può eliminarla anche sui telecomandi che la contengono (`DELETE /icons/<nome>`); i telecomandi la cui testa la usa ancora non sono selezionabili.
 - RF10.12 Il banner di disallineamento elenca le chiavi cambiate; se sono cambiate solo chiavi scritte dalle Impostazioni del telecomando (`dock.mode`, `power.screen_timeout_seconds`) lo segnala.
+
+### RF11 — Allineamento a upstream 1.2.8–1.2.9-beta, sincronizzazione rapida
+
+- RF11.1 Hotkey `pageMode: "popup"` accanto a `page`: menu "page / popup"; il simulatore apre la pagina come popup e lo stesso tasto la richiude. Altri valori = avviso.
+- RF11.2 `monitor`: `layout: "vertical"` (valore sotto il nome) e `marquee` (valore lungo su una riga che scorre) in editor e simulatore.
+- RF11.3 `nowPlayingEntity` su Activity composte, tile `track` e hotkey tracciate (validato come entità) e `dock.room` (menu delle stanze; stanza sconosciuta = avviso). L'orologio dock del simulatore mostra il player dell'Activity attiva in quella stanza (senza stanza: dell'unica Activity attiva; un'Activity composta con Apple TV abbinato direttamente lo usa in automatico), altrimenti `media_entities` con un player in riproduzione prima di uno in pausa, altrimenti qualsiasi player in riproduzione.
+- RF11.4 `select`: `layout: "dropdown"` (solo menu, larghezza piena) e `font_size` (10–32, avviso fuori intervallo).
+- RF11.5 `tv_remote`: riga volume (− / muto / +) verso `mute_entity`, altrimenti la TV, nascosta con `show_volume: false`; pulsanti app su `media_entity`, predefinito `media_player.<nome di remote_entity>`; app predefinite Netflix, YouTube, Prime Video, Plex.
+- RF11.6 Icone: `source_select.icon`, icone PNG su `switch` e sugli elementi di `picture_elements`, `on_color` per elemento (tavolozza).
+- RF11.7 Simulatore: una pressione lunga su MAIN apre le Impostazioni quando nessuna hotkey della dashboard le apre e MAIN non ha una hotkey lunga.
+- RF11.8 Pulsanti Pull e Push anche su ogni telecomando dell'elenco e nell'intestazione del telecomando aperto (tutte le schede), con lo stesso flusso di Sincronizzazione (validazione, verifica, messaggi); da lì un push su un telecomando disallineato chiede conferma.
 
 ## 6. Requisiti non funzionali
 

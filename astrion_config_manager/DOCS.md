@@ -24,6 +24,7 @@ Open **Astrion** in the sidebar (admins only).
 2. **Editor**: every committed change creates a version. Undo/redo are versions too.
 3. **History**: restore any version, give names to milestones, filter named ones.
 4. **Sync**: push sends the head after validation and verifies it by re-reading.
+   Pull and Push are also on each remote of the list and in the open remote's header.
    Changes made on the device are reported (drift) and never applied automatically.
 
 5. **Simulator**: live preview of the head; taps and HA100 keys are executed

@@ -19,6 +19,9 @@
  * - RF10   (upstream 1.2.2-1.2.7-beta) dock / power sections, page hideMode,
  *          stopActivity room pickers, hotkey event / openOverlay / current
  *          Activity, apple_tv_remote layouts + apps; keys shown "Menu (MAIN)".
+ * - RF11   (upstream 1.2.8-1.2.9-beta) hotkey pageMode popup, nowPlayingEntity
+ *          (Activities, tracked tiles/hotkeys), dock.room, select dropdown /
+ *          font_size, monitor vertical / marquee, picture_elements on_color.
  * - RF3.5  fixed-value fields are dropdowns and colour fields have a palette
  *          (field_hints.json, from the upstream builder and renderers);
  *          the theme is a form of colours; JSON editors can insert a colour.
@@ -55,9 +58,9 @@ const PAGE_FIELDS = [
 ];
 const PAGE_OWN = new Set(["cards", "hotkeys", "longHotkeys", ...PAGE_FIELDS.map((f) => f[0])]);
 const HOTKEY_FIELDS = [
-  ["key", "hwkey"], ["page", "page"], ["service", "text"], ["entityId", "entity"], ["data", "json"],
+  ["key", "hwkey"], ["page", "page"], ["pageMode", "pagemode"], ["service", "text"], ["entityId", "entity"], ["data", "json"],
   ["harmonyDevice", "text"], ["harmonyCommand", "text"], ["harmonyActivity", "text"], ["hub", "text"],
-  ["irDevice", "irdev"], ["irCommand", "text"], ["track", "bool"], ["room", "text"], ["devices", "lines"],
+  ["irDevice", "irdev"], ["irCommand", "text"], ["track", "bool"], ["room", "text"], ["devices", "lines"], ["nowPlayingEntity", "entity"],
   ["openOverlay", "enum", { values: ["settings", "activities"], default: "-" }],
   ["openCurrentActivityRoom", "room"], ["stopActivity", "room", { all: true }], ["event", "text"],
 ];
@@ -72,7 +75,7 @@ const iconName = (v) => { const m = typeof v === "string" && v.match(/(?:^|\/)as
 const ACTIVITY_FIELDS = [
   ["id", "text"], ["name", "text"], ["room", "text"], ["icon", "text"], ["page", "page"],
   ["volumeDeviceId", "text"], ["volumeUpCommand", "text"], ["volumeDownCommand", "text"],
-  ["muteCommand", "text"], ["devices", "json"],
+  ["muteCommand", "text"], ["nowPlayingEntity", "entity"], ["devices", "json"],
 ];
 
 class Editor {
@@ -715,7 +718,7 @@ class Editor {
 
   hotkeyList(items, path, getArr) {
     return this.listEditor(items, path, getArr,
-      (h) => `${h.key || "?"} → ${h.event ? "event " + h.event : h.stopActivity ? "⏻ " + h.stopActivity : h.openOverlay ? "overlay " + h.openOverlay
+      (h) => `${h.key || "?"} → ${h.pageMode === "popup" && h.page ? "▣ " + h.page : h.event ? "event " + h.event : h.stopActivity ? "⏻ " + h.stopActivity : h.openOverlay ? "overlay " + h.openOverlay
         : h.openCurrentActivityRoom ? "▶ " + h.openCurrentActivityRoom : h.service || h.page || h.harmonyActivity || h.harmonyCommand || h.irCommand || ""}`,
       (h, ip, get) => this.form(h, HOTKEY_FIELDS, ip, get),
       () => ({ key: "MAIN" }));

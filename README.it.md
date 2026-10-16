@@ -19,7 +19,7 @@ sulle entità HA, push/pull con rilevamento della deriva.
 3. Installa **Astrion Config Manager**, avvialo e apri **Astrion** nella barra laterale.
 
 Su ogni telecomando abilita il **config server** dell'app (porta 8080, pagina impostazioni).
-Schema seguito: release upstream **1.2.0** e beta **1.2.7-beta** (ramo `dev`; campi delle card rigenerati con `tools/extract_card_schema.py`). Le chiavi aggiunte dalle beta sono ignorate dalle app più vecchie.
+Schema seguito: release upstream **1.2.0** e beta **1.2.9-beta** (ramo `dev`; campi delle card rigenerati con `tools/extract_card_schema.py`). Le chiavi aggiunte dalle beta sono ignorate dalle app più vecchie.
 
 ## Funzioni
 
@@ -30,7 +30,7 @@ Schema seguito: release upstream **1.2.0** e beta **1.2.7-beta** (ramo `dev`; ca
 | Versioni con nome | Etichette per le tappe ("Prima del cambio TV"), filtro, ripristino. I nomi non alterano la storia. |
 | Editor | Menu per i valori fissi, tavolozze colore (card e tema). Form per pagine, card (21 tipi, campi ricavati dai renderer upstream), hotkey, dispositivi IR, Attività, tema; JSON grezzo per tutto. Card e campi sconosciuti restano intatti. |
 | Validazione | Struttura + esistenza in HA di ogni entità citata. Push bloccato in caso di errori. |
-| Sync | Pull, push con verifica tramite rilettura, deriva via SHA-256 canonico. La deriva è solo segnalata. |
+| Sync | Pull e Push dalla scheda Sincronizzazione, dall'elenco o dall'intestazione del telecomando; push con verifica tramite rilettura, deriva via SHA-256 canonico. La deriva è solo segnalata. |
 | Icone | Libreria condivisa (nei backup), selettore con anteprime, caricamento automatico delle icone mancanti al push, importazione da un telecomando. |
 | Catalogo entità | Form per `haDevices` (entità con nome usate dal web builder del telecomando), validato su HA. |
 | Simulatore | La testa resa alla risoluzione del telecomando con stati HA live; tocchi e tasti HA100 eseguono **realmente** su HA, Hub Harmony ed emettitore IR Broadlink. |
@@ -163,6 +163,31 @@ actions:
 Harmony; il simulatore ricorda quali dispositivi ritiene accesi (pannello sotto
 lo schermo). Se un dispositivo è stato acceso o spento a mano, premi **Azzera
 stati dispositivi**.
+
+### 10. Push / pull rapidi e opzioni 1.2.8–1.2.9
+
+**Push / Pull** sono su ogni telecomando dell'elenco e nell'intestazione del
+telecomando aperto: una modifica fatta nell'Editor o provata nel Simulatore si
+invia senza aprire Sincronizzazione. Un push su un telecomando modificato dal
+suo lato chiede prima conferma.
+
+**Popup da hotkey** (il tasto blu apre la pagina AV sopra quella corrente; ripremi per chiudere):
+
+```json
+{ "key": "BLUE_BUTTON", "page": "AV", "pageMode": "popup" }
+```
+
+**L'orologio dock segue la stanza** — `dock.room` "Salotto" e, sull'Activity,
+`"nowPlayingEntity": "media_player.apple_tv"`: mentre quell'Activity è attiva,
+l'orologio sulla base mostra solo quel player.
+
+**Monitor con valori lunghi** e **select come semplice menu**:
+
+```json
+{ "type": "monitor", "options": { "layout": "vertical", "marquee": true,
+  "entities": [ { "entity_id": "sensor.avr_audio", "name": "Audio" } ] } }
+{ "type": "select", "options": { "entity_id": "input_select.scena", "layout": "dropdown", "font_size": 18 } }
+```
 
 ## Dati e backup
 

@@ -235,6 +235,13 @@
    "entities": {
     "kind": "json"
    },
+   "layout": {
+    "kind": "string"
+   },
+   "marquee": {
+    "default": false,
+    "kind": "bool"
+   },
    "title": {
     "kind": "string"
    }
@@ -331,6 +338,9 @@
    "entity_id": {
     "kind": "string"
    },
+   "font_size": {
+    "kind": "float"
+   },
    "icon_color": {
     "kind": "string"
    },
@@ -345,6 +355,9 @@
  "source_select": {
   "fields": {
    "entity_id": {
+    "kind": "string"
+   },
+   "icon": {
     "kind": "string"
    },
    "name": {
@@ -422,6 +435,10 @@
    },
    "remote_entity": {
     "kind": "string"
+   },
+   "show_volume": {
+    "default": true,
+    "kind": "bool"
    }
   }
  },

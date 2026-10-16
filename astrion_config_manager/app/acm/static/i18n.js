@@ -283,7 +283,10 @@ const I18N = {
   "sim_reset_hint": "Forget which devices the simulator believes are on, their inputs and the running Activities.",
   "sim_reset_done": "Device states cleared",
   "sim_dev_states": "Device states (simulator)",
-  "sim_err_activity_source_invalid": "Activity device source not supported"
+  "sim_err_activity_source_invalid": "Activity device source not supported",
+  "pull_hint": "Import the remote's dashboard.json as a new version",
+  "push_hint": "Validate the head and send it to the remote",
+  "confirm_push_drift": "The file on the remote was changed there. Overwrite it with the head?"
  },
  "it": {
   "app_title": "Astrion Config Manager",
@@ -566,7 +569,10 @@ const I18N = {
   "sim_reset_hint": "Dimentica quali dispositivi il simulatore ritiene accesi, i loro ingressi e le Activity in corso.",
   "sim_reset_done": "Stati dispositivi azzerati",
   "sim_dev_states": "Stati dispositivi (simulatore)",
-  "sim_err_activity_source_invalid": "Sorgente del dispositivo dell'Activity non supportata"
+  "sim_err_activity_source_invalid": "Sorgente del dispositivo dell'Activity non supportata",
+  "pull_hint": "Importa il dashboard.json del telecomando come nuova versione",
+  "push_hint": "Valida la testa e inviala al telecomando",
+  "confirm_push_drift": "Il file sul telecomando è stato modificato lì. Sovrascriverlo con la testa?"
  },
  "fr": {
   "app_title": "Astrion Config Manager",
@@ -849,7 +855,10 @@ const I18N = {
   "sim_reset_hint": "Oublier quels appareils le simulateur croit allumés, leurs entrées et les Activités en cours.",
   "sim_reset_done": "États réinitialisés",
   "sim_dev_states": "États des appareils (simulateur)",
-  "sim_err_activity_source_invalid": "Source d'appareil de l'Activité non prise en charge"
+  "sim_err_activity_source_invalid": "Source d'appareil de l'Activité non prise en charge",
+  "pull_hint": "Importer le dashboard.json de la télécommande comme nouvelle version",
+  "push_hint": "Valider la tête et l'envoyer à la télécommande",
+  "confirm_push_drift": "Le fichier a été modifié sur la télécommande. L'écraser avec la tête ?"
  },
  "es": {
   "app_title": "Astrion Config Manager",
@@ -1132,7 +1141,10 @@ const I18N = {
   "sim_reset_hint": "Olvidar qué dispositivos cree encendidos el simulador, sus entradas y las Actividades en curso.",
   "sim_reset_done": "Estados restablecidos",
   "sim_dev_states": "Estados de dispositivos (simulador)",
-  "sim_err_activity_source_invalid": "Fuente de dispositivo de la Actividad no admitida"
+  "sim_err_activity_source_invalid": "Fuente de dispositivo de la Actividad no admitida",
+  "pull_hint": "Importar el dashboard.json del mando como nueva versión",
+  "push_hint": "Validar la cabeza y enviarla al mando",
+  "confirm_push_drift": "El archivo se modificó en el mando. ¿Sobrescribirlo con la cabeza?"
  },
  "de": {
   "app_title": "Astrion Config Manager",
@@ -1415,7 +1427,10 @@ const I18N = {
   "sim_reset_hint": "Vergessen, welche Geräte der Simulator für eingeschaltet hält, ihre Eingänge und laufende Aktivitäten.",
   "sim_reset_done": "Gerätezustände zurückgesetzt",
   "sim_dev_states": "Gerätezustände (Simulator)",
-  "sim_err_activity_source_invalid": "Gerätequelle der Aktivität nicht unterstützt"
+  "sim_err_activity_source_invalid": "Gerätequelle der Aktivität nicht unterstützt",
+  "pull_hint": "dashboard.json der Fernbedienung als neue Version importieren",
+  "push_hint": "Kopf prüfen und an die Fernbedienung senden",
+  "confirm_push_drift": "Die Datei wurde auf der Fernbedienung geändert. Mit dem Kopf überschreiben?"
  }
 };
 

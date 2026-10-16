@@ -229,6 +229,7 @@ function renderList() {
       ? el("div", { class: "row" }, el("button", { text: t("unarchive"), onclick: guard(async () => { await api("POST", `api/remotes/${r.id}/unarchive`); await loadList(true); }) }))
       : el("div", { class: "row" },
         el("button", { class: "primary", text: t("open"), onclick: guard(() => openRemote(r.id)) }),
+        ...syncButtons(r, false),
         el("button", { text: t("edit"), onclick: () => remoteDialog(r) }),
         el("button", { class: "danger", text: t("archive"), onclick: guard(async () => {
           if (!confirm(t("confirm_archive"))) return;
@@ -293,7 +294,7 @@ function renderRemote() {
   main.append(el("div", { class: "row" },
     el("button", { text: "← " + t("back"), onclick: guard(async () => { closeSim(); S.view = "list"; await loadList(false); }) }),
     el("h2", { text: r.name }), statusBadge(r.id), el("span", { class: "muted", text: `${t("head")}: v${r.head}` }),
-    el("span", { class: "spacer" }),
+    el("span", { class: "spacer" }), ...syncButtons(r, true),
     el("button", { text: "↶ " + t("undo"), disabled: !r.can_undo, onclick: guard(async () => applyResult(await api("POST", `api/remotes/${S.rid}/undo`, { head: r.head }))) }),
     el("button", { text: "↷ " + t("redo"), disabled: !r.can_redo, onclick: guard(async () => applyResult(await api("POST", `api/remotes/${S.rid}/redo`, { head: r.head }))) })));
   if (S.drift[r.id] === "drift" && !S.ignored.has(r.id)) main.append(driftBanner());
@@ -345,20 +346,50 @@ function driftBanner() {
     el("button", { text: t("ignore"), onclick: () => { S.ignored.add(S.rid); render(); } }));
 }
 
-async function doPull() {
-  const res = await api("POST", `api/remotes/${S.rid}/pull`, { head: S.remote.head });
-  S.drift[S.rid] = "in_sync";
-  applyResult(res);
+/* RF5.4 / RF5.5 pull and push. Shared by the Sync tab, the drift banner and
+ * (RF11.8) the remote list and the remote header: same API calls, same
+ * validation (push refused by the backend on errors), same messages. */
+async function pullRemote(rid, head) {
+  const res = await api("POST", `api/remotes/${rid}/pull`, { head });
+  S.drift[rid] = "in_sync";
   toast(res.version ? `${t("saved_version")} v${res.version.id}` : t("pull_none"));
+  return res;
+}
+async function pushRemote(rid, head) {
+  const res = await api("POST", `api/remotes/${rid}/push`, { head });
+  S.drift[rid] = "in_sync";
+  toast((res.drift_overwritten ? t("push_ok_drift") : t("push_ok"))
+    + (res.icons_uploaded && res.icons_uploaded.length ? ` · ${t("icons_uploaded")}: ${res.icons_uploaded.join(", ")}` : ""));
+  return res;
+}
+/* RF11.8: from the list / header a push over a drifted remote asks first
+ * (the drift banner's "Overwrite" and the Sync tab keep their direct action). */
+const confirmDriftPush = (rid) => S.drift[rid] !== "drift" || confirm(t("confirm_push_drift"));
+
+async function doPull() {
+  applyResult(await pullRemote(S.rid, S.remote.head));
 }
 
 async function doPush() {
-  const res = await api("POST", `api/remotes/${S.rid}/push`, { head: S.remote.head });
-  S.drift[S.rid] = "in_sync";
+  const res = await pushRemote(S.rid, S.remote.head);
   S.remote = res.remote;
   render();
-  toast((res.drift_overwritten ? t("push_ok_drift") : t("push_ok"))
-    + (res.icons_uploaded && res.icons_uploaded.length ? ` · ${t("icons_uploaded")}: ${res.icons_uploaded.join(", ")}` : ""));
+}
+
+/* RF11.8 quick actions (list cards and remote header). */
+function syncButtons(r, inRemote) {
+  return [
+    el("button", { text: "⬇ " + t("pull"), title: t("pull_hint"), onclick: guard(async () => {
+      if (inRemote) return doPull();
+      await pullRemote(r.id, r.head); await loadList(false);
+    }) }),
+    el("button", { class: inRemote ? "primary" : "", text: "⬆ " + t("push"), title: t("push_hint"),
+      disabled: inRemote && S.validation ? !S.validation.push_allowed : false, onclick: guard(async () => {
+        if (!confirmDriftPush(r.id)) return;
+        if (inRemote) return doPush();
+        await pushRemote(r.id, r.head); await loadList(false);
+      }) }),
+  ];
 }
 
 /* RF5.4 / RF5.5 */

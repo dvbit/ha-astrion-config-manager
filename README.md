@@ -19,7 +19,7 @@ validation against your HA entities, push/pull with drift detection.
 3. Install **Astrion Config Manager**, start it, open **Astrion** in the sidebar.
 
 On each remote, enable the app's **config server** (port 8080, settings page).
-Schema followed: upstream release **1.2.0** and beta **1.2.7-beta** (`dev` branch; card fields regenerated with `tools/extract_card_schema.py`). Keys added by the betas are ignored by older apps.
+Schema followed: upstream release **1.2.0** and beta **1.2.9-beta** (`dev` branch; card fields regenerated with `tools/extract_card_schema.py`). Keys added by the betas are ignored by older apps.
 
 ## Features
 
@@ -30,7 +30,7 @@ Schema followed: upstream release **1.2.0** and beta **1.2.7-beta** (`dev` branc
 | Named versions | Label milestones ("Before TV change"), filter them, restore them. Labels never alter history. |
 | Editor | Dropdowns for fixed values, colour palettes (cards and theme). Forms for pages, cards (21 types, fields extracted from upstream renderers), hotkeys, IR devices, Activities, theme; raw JSON for everything. Unknown cards/fields survive untouched. |
 | Validation | Structure + every referenced entity must exist in HA. Push is blocked on errors. |
-| Sync | Pull, push with re-read verification, drift detection by canonical SHA-256. Drift is reported, never auto-applied. |
+| Sync | Pull and Push from the Sync tab, the remote list or the remote's header; push with re-read verification, drift detection by canonical SHA-256. Drift is reported, never auto-applied. |
 | Icons | Shared library (backed up), picker with thumbnails, automatic upload of missing icons on push, import from a remote. |
 | Entity catalog | Form for `haDevices` (named entities used by the remote's web builder), validated against HA. |
 | Simulator | The head rendered at the remote's resolution with live HA states; taps and HA100 keys run **for real** on HA, the Harmony Hub and the Broadlink IR emitter. |
@@ -160,6 +160,30 @@ actions:
 **Device states** — profiled IR devices are started Harmony-style; the
 simulator remembers which devices it believes are on (panel under the screen).
 If a device was switched by hand, press **Reset device states**.
+
+### 10. Quick push / pull and 1.2.8–1.2.9 options
+
+**Push / Pull** are on every remote of the list and in the header of an open
+remote, so a change made in the Editor or tried in the Simulator can be sent
+without opening Sync. A push over a remote changed on its own side asks first.
+
+**Hotkey popup** (blue key opens the AV page over the current one; press again to close):
+
+```json
+{ "key": "BLUE_BUTTON", "page": "AV", "pageMode": "popup" }
+```
+
+**Dock clock follows the room** — `dock.room` "Living room" and, on the
+Activity, `"nowPlayingEntity": "media_player.apple_tv"`: while that Activity
+runs, the docked clock shows only that player.
+
+**Monitor with long values** and **select as a plain menu**:
+
+```json
+{ "type": "monitor", "options": { "layout": "vertical", "marquee": true,
+  "entities": [ { "entity_id": "sensor.avr_audio", "name": "Audio" } ] } }
+{ "type": "select", "options": { "entity_id": "input_select.scene", "layout": "dropdown", "font_size": 18 } }
+```
 
 ## Data and backups
 

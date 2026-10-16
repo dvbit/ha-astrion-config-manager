@@ -19,6 +19,9 @@
  *          when its Activity stops), stopActivity / track / event steps,
  *          Apple TV layouts + apps, "Docked" preview of the dock screen,
  *          device-state memory (reset button).
+ * - RF11   (1.2.8-1.2.9-beta) hotkey popups (toggle), MAIN long press opens
+ *          Settings when no hotkey does, dock "Now playing" by room/Activity,
+ *          monitor vertical/marquee, select dropdown, TV remote volume row.
  * - RF8    several Harmony hubs (action "hub" = localId, else first hub) and
  *          IR targets per device (local -> remote.* entity, or an extender).
  */
@@ -333,6 +336,10 @@ class Simulator {
     const merged = {};
     for (const hk of [...(this.doc[g] || []), ...((page && page[g]) || [])]) if (hk && hk.key) merged[hk.key.toUpperCase()] = hk;
     const hk = merged[key];
+    // 1.2.9 MainActivity.bindSettingsFallback: long MAIN opens Settings when no hotkey anywhere does
+    if (!hk && long && key === "MAIN" && !this.allHotkeys().some((h) => String(h.openOverlay || "").toLowerCase() === "settings")) {
+      this.overlay = "settings"; return this.render();
+    }
     if (!hk) {
       if (!long && page && page.parent && key === (page.parentKey || "BACK").toUpperCase()) return this.goto(page.parent);
       if (!long && key === "BACK" && this.popup) { this.popup = null; return this.render(); }
@@ -349,6 +356,12 @@ class Simulator {
       return act && act.page ? this.goto(act.page) : toast(t("sim_no_activity"));
     }
     if (hk.stopActivity) return this.run([{ kind: "activity_stop", room: hk.stopActivity }]);
+    if (hk.page && String(hk.pageMode || "").toLowerCase() === "popup") {
+      // 1.2.8: the page floats over the current one; the same key closes it again
+      const idx = this.pageIndex(hk.page);
+      if (this.popup && this.popup.page === idx) { this.popup = null; return this.render(); }
+      return this.goto(hk.page, "popup");
+    }
     if (hk.page) return this.goto(hk.page);
     const steps = [];
     if (hk.harmonyActivity) steps.push({ kind: "harmony_activity", activity: hk.harmonyActivity, hub: hk.hub });
@@ -356,6 +369,39 @@ class Simulator {
     else if (hk.irDevice && hk.irCommand) steps.push({ kind: "ir", device: hk.irDevice, command: hk.irCommand });
     else if (hk.service) steps.push({ kind: "service", service: hk.service, entity_id: hk.entityId, data: hk.data });
     this.run(steps);
+  }
+
+  allHotkeys() {
+    const d = this.doc || {};
+    return [...(d.hotkeys || []), ...(d.longHotkeys || []), ...this.pages().flatMap((p) => [...(p.hotkeys || []), ...(p.longHotkeys || [])])]
+      .filter((h) => h && typeof h === "object");
+  }
+  /* ActivityRuntime.nowPlayingEntity (1.2.8): player of the Activity active in
+   * dock.room (case-insensitive) or, with no room, of the only active one. */
+  activityPlayer(room) {
+    const entries = Object.entries(this.active || {}).filter(([, id]) => id);
+    const pick = room && String(room).trim()
+      ? entries.find(([r]) => r.toLowerCase() === String(room).trim().toLowerCase())
+      : (entries.length === 1 ? entries[0] : null);
+    if (!pick) return null;
+    const [r, id] = pick;
+    const act = (this.doc.activities || []).find((a) => a && a.id === id);
+    if (act) {
+      // effectiveNowPlayingEntity: explicit, else a directly paired Apple TV among its devices
+      return act.nowPlayingEntity || ((act.devices || []).find((d) => d && d.source === "ha" && String(d.deviceId).startsWith("media_player.appletv_")) || {}).deviceId || null;
+    }
+    for (const p of this.pages()) for (const c of p.cards || []) {
+      if (c && c.type === "scene_grid") for (const sc of (c.options && c.options.scenes) || []) {
+        const tr = sc && this.trackOf(sc);
+        if (tr && tr.room === r && tr.id === id) return sc.nowPlayingEntity || null;
+      }
+    }
+    for (const hk of this.allHotkeys()) {
+      if (hk.track !== true || hk.room !== r) continue;
+      const name = hk.harmonyActivity || hk.page || hk.key;
+      if ((hk.entityId || hk.harmonyActivity || String(name).toLowerCase().replace(/[^a-z0-9]+/g, "_")) === id) return hk.nowPlayingEntity || null;
+    }
+    return null;
   }
 
   /* ---------- rendering ---------- */
@@ -620,12 +666,25 @@ class Simulator {
   }
   card_select(o) {
     const id = o.entity_id; const opts = this.attr(id, "options") || [];
+    const svc = `${String(id).split(".")[0]}.select_option`;
+    if (o.layout === "dropdown") {
+      // SelectCard 1.2.9 "dropdown": the menu alone, full width; font_size clamped 10-32 (default 16)
+      const fs = typeof o.font_size === "number" ? Math.min(32, Math.max(10, o.font_size)) : 16;
+      const s = el("select", { class: "sim-select", style: `font-size:${fs}px` },
+        ...opts.map((op) => el("option", { value: op, text: op, selected: this.state(id) === op })));
+      s.onclick = (e) => e.stopPropagation();
+      s.onchange = () => this.run([{ kind: "service", service: svc, entity_id: id, data: { option: s.value } }]);
+      return this.card(null, s);
+    }
     return this.card(`${iconFor("select", id)} ${this.name(o, id)}`, el("div", { class: "row" },
       ...opts.map((op) => this.ctl(op, [{ kind: "service", service: `${String(id).split(".")[0]}.select_option`, entity_id: id, data: { option: op } }], this.state(id) === op))));
   }
   card_source_select(o) {
     const id = o.entity_id; const list = this.attr(id, "source_list") || []; const cur = this.attr(id, "source");
-    return this.card(`${this.name(o, id)}`, el("div", { class: "row" },
+    const ic = o.icon ? iconFor(o.icon, id, true) : null;
+    const head = ic && ic.startsWith("IMG:") ? el("div", { class: "row" }, iconImg(this.rid, ic.slice(4), "sim-ico-img"), el("strong", { text: this.name(o, id) }))
+      : el("div", { class: "row" }, el("strong", { text: `${ic ? ic + " " : ""}${this.name(o, id)}` }));
+    return this.card(null, head, el("div", { class: "row" },
       ...list.map((src) => this.ctl(src, [{ kind: "service", service: "media_player.select_source", entity_id: id, data: { source: src } }], cur === src))));
   }
   card_speaker_group(o) {
@@ -657,15 +716,26 @@ class Simulator {
       return tl;
     }));
   }
+  /* TvRemoteCard (1.2.9): commands renamable via "commands"; volume row (− / mute / +)
+   * sent to mute_entity (else the TV), hidden by show_volume: false; apps on
+   * media_entity, default media_player.<same name as remote_entity>. */
   card_tv_remote(o) {
-    const ent = o.remote_entity; const c = o.commands || {};
-    const send = (k, d) => [{ kind: "service", service: "remote.send_command", entity_id: ent, data: { command: c[k] || d } }];
-    const media = o.media_entity;
+    const ent = o.remote_entity;
+    if (!ent) return this.card("📺 TV", el("div", { class: "sim-muted", text: t("sim_not_simulable") }));
+    const c = o.commands || {};
+    const mute = o.mute_entity || ent;
+    const send = (k, d, target) => [{ kind: "service", service: "remote.send_command", entity_id: target || ent, data: { command: c[k] || d } }];
+    const media = o.media_entity || `media_player.${String(ent).split(".").slice(1).join(".")}`;
+    const DEFAULT_APPS = [{ name: "Netflix", app: "com.netflix.ninja" }, { name: "YouTube", app: "com.google.android.youtube.tv" },
+      { name: "Prime Video", app: "com.amazon.amazonvideo.livingroom" }, { name: "Plex", app: "com.plexapp.android" }];
+    const apps = Array.isArray(o.apps) ? o.apps : DEFAULT_APPS;
     return this.card(`📺 ${o.name || "TV"}`,
-      el("div", { class: "row" }, this.ctl("⏻", send("power", "POWER")), el("span", { class: "spacer" }), this.ctl("🔇", [{ kind: "service", service: "remote.send_command", entity_id: o.mute_entity || ent, data: { command: c.mute || "MUTE" } }])),
+      el("div", { class: "row" }, this.ctl("⏻", send("power", "POWER"))),
       this.dpad((k) => send(k, { up: "DPAD_UP", down: "DPAD_DOWN", left: "DPAD_LEFT", right: "DPAD_RIGHT", center: "DPAD_CENTER" }[k])),
       el("div", { class: "row" }, this.ctl("↩", send("back", "BACK")), this.ctl("⌂", send("home", "HOME")), this.ctl("☰", send("menu", "MENU"))),
-      el("div", { class: "row" }, ...(o.apps || []).map((a) => this.ctl(a.name || a.app || "app", a.service
+      o.show_volume === false ? null : el("div", { class: "row" }, this.ctl("🔉", send("volume_down", "VOLUME_DOWN", mute)),
+        this.ctl("🔇", send("mute", "MUTE", mute)), this.ctl("🔊", send("volume_up", "VOLUME_UP", mute))),
+      el("div", { class: "row" }, ...apps.filter((a) => a && typeof a === "object").map((a) => this.ctl(a.name || a.app || "app", a.service
         ? [{ kind: "service", service: a.service, entity_id: a.entity_id, data: a.data }]
         : [{ kind: "service", service: "media_player.play_media", entity_id: media, data: { media_content_type: "app", media_content_id: a.app } }]))));
   }
@@ -759,8 +829,13 @@ class Simulator {
     return this.card(o.title || null, ...(o.entities || []).filter((e) => e && typeof e === "object" && e.entity_id).map((e) => {
       const id = e.entity_id;
       const unit = this.attr(id, "unit_of_measurement");
-      return el("div", { class: "row" }, el("span", { text: `${iconFor(typeof e === "object" ? e.icon : "", id)} ${this.name(typeof e === "object" ? e : {}, id)}` }),
-        el("span", { class: "spacer" }), el("strong", { text: `${this.state(id) != null ? this.state(id) : "--"}${unit ? " " + unit : ""}` }));
+      const label = el("span", { text: `${iconFor(typeof e === "object" ? e.icon : "", id)} ${this.name(typeof e === "object" ? e : {}, id)}` });
+      // 1.2.8: "vertical" puts the value under its name; "marquee" keeps it on one scrolling line
+      const txt = `${this.state(id) != null ? this.state(id) : "--"}${unit ? " " + unit : ""}`;
+      // scrolls only when it can't fit (approximation of the remote's measured overflow)
+      const value = el("strong", { class: o.marquee === true && txt.length > 24 ? "sim-marquee" : "", text: txt });
+      if (o.layout === "vertical") return el("div", { class: "sim-mon-v" }, label, value);
+      return el("div", { class: "row" }, label, el("span", { class: "spacer" }), value);
     }));
   }
   card_camera(o) {
@@ -774,13 +849,15 @@ class Simulator {
     const box = el("div", { class: "sim-pic", style: `aspect-ratio:${o.aspect || 1.3}` }, o.image ? el("img", { src: o.image, alt: "" }) : null);
     for (const e of o.elements || []) {
       const id = e.entity_id;
-      const label = e.icon === "power" ? "⏻" : (this.isOn(id) ? "💡" : "○");
+      // 1.2.9: "power", a PNG path (/sdcard/astrion/icons/x.png) or a bulb; on_color when on
+      const png = typeof e.icon === "string" && e.icon.includes("/") ? iconName(e.icon) : null;
+      const label = png ? "" : e.icon === "power" ? "⏻" : (this.isOn(id) ? "💡" : "○");
       let steps = [];
       if (id) steps = [{ kind: "service", service: `${String(id).split(".")[0]}.toggle`, entity_id: id }];
       else if (e.service) steps = [{ kind: "service", service: e.service, entity_id: (e.targets && e.targets.length) ? e.targets : undefined }];
       box.append(el("button", { class: "sim-pe" + (this.isOn(id) ? " active" : ""), title: id || e.service || "",
-        style: `position:absolute;left:${e.left != null ? e.left : 50}%;top:${e.top != null ? e.top : 50}%`, text: label,
-        onclick: () => this.run(steps) }));
+        style: `position:absolute;left:${e.left != null ? e.left : 50}%;top:${e.top != null ? e.top : 50}%${this.isOn(id) && e.on_color ? `;background:${e.on_color}` : ""}`, text: label,
+        onclick: () => this.run(steps) }, png ? iconImg(this.rid, png, "sim-pe-img") : null));
     }
     return this.card(null, box);
   }
@@ -829,9 +906,13 @@ class Simulator {
     const w = d.weather_entity && this.st(d.weather_entity);
     const temp = w ? this.attr(d.weather_entity, "temperature") : null;
     const weather = w ? [sym[w.state], temp != null ? `${Math.round(temp)}°` : w.state].filter(Boolean).join(" ") : null;
+    // DockClockScreen.nowPlayingEntity (1.2.8): Activity player, else media_entities
+    // (playing before paused), else any playing media_player
     const list = Array.isArray(d.media_entities) ? d.media_entities : [];
-    const np = (list.length ? list.filter((id) => ["playing", "paused"].includes(this.state(id))) : Object.keys(this.states).filter((id) => id.startsWith("media_player.") && this.state(id) === "playing"))
-      .find((id) => this.attr(id, "media_title"));
+    const firstActive = (ids) => { const t1 = ids.filter((id) => this.attr(id, "media_title")); return t1.find((id) => this.state(id) === "playing") || t1.find((id) => this.state(id) === "paused"); };
+    const ap = this.activityPlayer(d.room);
+    const np = ap ? firstActive([ap]) : list.length ? firstActive(list)
+      : Object.keys(this.states).find((id) => id.startsWith("media_player.") && this.state(id) === "playing" && this.attr(id, "media_title"));
     const info = [weather, d.show_battery === false ? null : "🔋 --%"].filter(Boolean).join(" · ");
     // backlight level shown as the face's opacity (kept readable); the black background stays opaque
     const face = el("div", { class: "sim-dock-face", style: `opacity:${Math.max(0.35, Math.min(1, bri * 4))}` },

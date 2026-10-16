@@ -181,6 +181,11 @@ def _card(ctx: _Ctx, card: Any, path: str) -> None:
             bad = [x for x in (v.strip() for v in val.split(",")) if x and x not in hint["values"]]
             if bad:
                 ctx.warn(_ptr_join(path, "options", key), "value_unexpected", value=",".join(bad))
+    # RF11.4 (1.2.9): select font_size is clamped by the remote to 10-32
+    if ctype == "select" and "font_size" in opts:
+        fs = opts["font_size"]
+        if isinstance(fs, int | float) and not isinstance(fs, bool) and not 10 <= fs <= 32:
+            ctx.warn(_ptr_join(path, "options", "font_size"), "value_range", value=str(fs), min=10, max=32)
     # RF9.3: apple_tv_remote with both ways set -> the remote uses appleTv
     if ctype == "apple_tv_remote" and opts.get("appleTv") and opts.get("deviceId"):
         ctx.warn(_ptr_join(path, "options", "deviceId"), "appletv_both")
@@ -217,6 +222,9 @@ def _hotkeys(ctx: _Ctx, items: Any, path: str) -> None:
             ctx.err(f"{hp}/key", "required", field="key")
         elif key not in HARDWARE_KEYS:
             ctx.err(f"{hp}/key", "hotkey_unknown", key=key)
+        # RF11.1 (1.2.8): "popup" opens the page as a popup; any other value = normal jump
+        if "pageMode" in hk and hk["pageMode"] not in ("page", "popup"):
+            ctx.warn(f"{hp}/pageMode", "value_unexpected", value=str(hk["pageMode"]))
         if "data" in hk and not isinstance(hk["data"], dict):
             ctx.err(f"{hp}/data", "type_mismatch", expected="object")
         ctx.walk_entities(hk, hp)
@@ -274,6 +282,9 @@ def _activities(ctx: _Ctx, items: Any, path: str) -> None:
         for key in ("id", "room"):
             if not isinstance(act.get(key), str) or not act[key].strip():
                 ctx.err(f"{ap}/{key}", "required", field=key)
+        # RF11.3 (1.2.8): media_player followed by the dock clock while the Activity runs
+        if "nowPlayingEntity" in act:
+            ctx.entity(f"{ap}/nowPlayingEntity", act["nowPlayingEntity"])
         devs = act.get("devices")
         if not isinstance(devs, list) or not devs:
             ctx.err(f"{ap}/devices", "required", field="devices")
@@ -474,6 +485,13 @@ def _rf10(ctx: _Ctx, doc: dict[str, Any]) -> None:
         elif not page.get("hiddenUnlessActivity"):
             ctx.warn(f"/pages/{idx}/hideMode", "hide_mode_unused")
     rooms = _rooms(doc)
+    # RF11.3 (1.2.8): dock.room = room of this remote, matched against the Activities' rooms
+    dock = doc.get("dock")
+    if isinstance(dock, dict) and "room" in dock:
+        if not isinstance(dock["room"], str) or not dock["room"].strip():
+            ctx.warn("/dock/room", "type_mismatch", expected="string")
+        elif dock["room"] not in rooms:
+            ctx.warn("/dock/room", "room_unknown", room=dock["room"])
     refs: list[tuple[str, Any]] = []
     _stop_refs(doc, "", refs)
     for path, room in refs:

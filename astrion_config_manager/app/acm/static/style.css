@@ -145,3 +145,9 @@ input.hidden-color { position: absolute; width: 0; height: 0; opacity: 0; border
 .sim-atv-sides .sim-col { display: flex; flex-direction: column; gap: 8px; }
 .sim-devstates { margin-top: 8px; font-size: 13px; }
 .sim-dock-face { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+/* RF11 (1.2.8-1.2.9) */
+.sim-mon-v { display: flex; flex-direction: column; gap: 2px; padding: 4px 0; }
+.sim-marquee { white-space: nowrap; overflow: hidden; display: inline-block; max-width: 100%; animation: sim-marquee 8s linear infinite; }
+@keyframes sim-marquee { 0%, 15% { transform: translateX(0); } 100% { transform: translateX(-60%); } }
+.sim-select { width: 100%; padding: 8px; border-radius: 10px; background: var(--ctl); color: inherit; border: 0; }
+.sim-pe-img { width: 24px; height: 24px; object-fit: contain; }

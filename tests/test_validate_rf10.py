@@ -101,3 +101,25 @@ def test_apple_tv_layout_and_apps():
     assert ("/pages/0/cards/0/options/layout", "value_unexpected") in codes
     assert ("/pages/0/cards/0/options/apps/0", "item_not_object") in codes
     assert not any(p.endswith("apps/1") for p, _ in codes)
+
+
+# ------------------------------------------------- RF11 (upstream 1.2.8-1.2.9-beta)
+
+
+def test_rf11_popup_hotkey_now_playing_and_dock_room():
+    doc = base(dock={"room": "Kitchen"}, hotkeys=[{"key": "MAIN", "page": "Home", "pageMode": "float"}])
+    doc["activities"][0]["nowPlayingEntity"] = "media_player.appletv"
+    res = validate(doc, {"media_player.tv"})
+    codes = _codes(res)
+    assert ("/hotkeys/0/pageMode", "value_unexpected") in codes
+    assert ("/dock/room", "room_unknown") in codes
+    assert ("/activities/0/nowPlayingEntity", "entity_missing") in _codes(res, "issues")
+    ok = base(dock={"room": "Salon"}, hotkeys=[{"key": "MAIN", "page": "Home", "pageMode": "popup"}])
+    assert not _codes(validate(ok, {"media_player.tv"}))
+
+
+def test_rf11_select_font_size_and_layout():
+    card = {"type": "select", "options": {"entity_id": "input_select.x", "layout": "dropdown", "font_size": 40}}
+    codes = _codes(validate(base(pages=[{"name": "A", "cards": [card]}]), set()))
+    assert ("/pages/0/cards/0/options/font_size", "value_range") in codes
+    assert not any(p.endswith("/layout") for p, _ in codes)
