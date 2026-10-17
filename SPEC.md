@@ -1,6 +1,6 @@
-# Requisito — Astrion Config Manager (add-on HA) v1.10
+# Requisito — Astrion Config Manager (add-on HA) v1.11
 
-Stato: approvato dal richiedente. v1.3: aggiunto RF6.12 (modalità solo navigazione). v1.4: aggiunto RF7 (icone e catalogo entità). v1.5: aggiunto RF8 (più hub Harmony e destinazioni IR). v1.6: aggiunto RF3.5 (menu e tavolozze). v1.7: aggiunti RF3.6 (liste strutturate) e RF9 (allineamento a upstream 1.2.0, Apple TV diretto). v1.8: RF9.6–RF9.7 (upstream 1.2.1-beta e ricontrollo 1.2.0). v1.9: RF10 (upstream 1.2.2–1.2.7-beta). v1.10: RF11 (upstream 1.2.8–1.2.9-beta, push/pull nella schermata principale). Sostituisce la v1.0: Harmony e IR rientrano nell'ambito; aggiunte le versioni con nome (RF2.11–RF2.13). Lingua del documento: italiano. Traduzione inglese: [SPEC.en.md](SPEC.en.md).
+Stato: approvato dal richiedente. v1.3: aggiunto RF6.12 (modalità solo navigazione). v1.4: aggiunto RF7 (icone e catalogo entità). v1.5: aggiunto RF8 (più hub Harmony e destinazioni IR). v1.6: aggiunto RF3.5 (menu e tavolozze). v1.7: aggiunti RF3.6 (liste strutturate) e RF9 (allineamento a upstream 1.2.0, Apple TV diretto). v1.8: RF9.6–RF9.7 (upstream 1.2.1-beta e ricontrollo 1.2.0). v1.9: RF10 (upstream 1.2.2–1.2.7-beta). v1.10: RF11 (upstream 1.2.8–1.2.9-beta, push/pull nella schermata principale). v1.11: RF12 (upstream 1.3.0, integrazione con la cronologia versioni del telecomando). Sostituisce la v1.0: Harmony e IR rientrano nell'ambito; aggiunte le versioni con nome (RF2.11–RF2.13). Lingua del documento: italiano. Traduzione inglese: [SPEC.en.md](SPEC.en.md).
 
 ## 1. Scopo
 
@@ -12,7 +12,7 @@ Add-on di Home Assistant con pannello Ingress che gestisce le configurazioni (`d
 
 ## 3. Riferimenti
 
-- Schema di riferimento: `dashboard.json` secondo la release più recente del repo al momento dello sviluppo (ultima osservata: 1.2.0 stabile, 1.2.9-beta sul ramo `dev`). Comportamento di card e azioni: sorgenti Kotlin (`cards/impl/`, `config/DashboardLoader.kt`) e editor web (`docs/index.html`, `cards.js`).
+- Schema di riferimento: `dashboard.json` secondo la release più recente del repo al momento dello sviluppo (ultima osservata: 1.3.0). Comportamento di card e azioni: sorgenti Kotlin (`cards/impl/`, `config/DashboardLoader.kt`) e editor web (`docs/index.html`, `cards.js`).
 - Telecomando: il dispositivo non espone un'API. L'add-on esegue le stesse richieste HTTP del browser sulla pagina di configurazione `http://<host>:<porta>` (download e upload di `dashboard.json`), ricavate dai sorgenti `web/` del repo. L'editing avviene solo nell'interfaccia web dell'add-on.
 - Home Assistant: API WebSocket tramite token Supervisor dell'add-on; nessun token inserito dall'utente.
 - Hub Harmony: protocollo locale dell'Hub usato dal client Harmony dell'app (sorgenti Kotlin del repo).
@@ -51,6 +51,7 @@ Add-on di Home Assistant con pannello Ingress che gestisce le configurazioni (`d
 - RF2.11 **Versioni con nome**: l'utente può assegnare un nome a qualsiasi versione, anche non la testa. Il nome non è vuoto, è unico per telecomando (senza distinzione tra maiuscole e minuscole) e ogni versione ne ha al massimo uno.
 - RF2.12 Il nome è un'etichetta separata dalla versione: assegnarlo, rinominarlo o rimuoverlo non crea versioni e non altera lo storico; rimuovere il nome non cancella la versione. I nomi sono conservati anche quando il telecomando è archiviato.
 - RF2.13 Dall'elenco dei nomi si ripristina la versione etichettata con le regole di RF2.6 (crea una versione `restore`). L'elenco dello storico mostra i nomi e consente di filtrare le sole versioni con nome.
+- RF2.14 La cronologia propria del telecomando (app 1.3.0) affianca questa senza sostituirla: vedi RF12.
 
 ### RF3 — Editor
 
@@ -148,6 +149,30 @@ Riferimento: astrion-custom-dashboard ramo `dev`, 1.2.7-beta (ultima stabile 1.2
 - RF11.6 Icone: `source_select.icon`, icone PNG su `switch` e sugli elementi di `picture_elements`, `on_color` per elemento (tavolozza).
 - RF11.7 Simulatore: una pressione lunga su MAIN apre le Impostazioni quando nessuna hotkey della dashboard le apre e MAIN non ha una hotkey lunga.
 - RF11.8 Pulsanti Pull e Push anche su ogni telecomando dell'elenco e nell'intestazione del telecomando aperto (tutte le schede), con lo stesso flusso di Sincronizzazione (validazione, verifica, messaggi); da lì un push su un telecomando disallineato chiede conferma.
+
+### RF12 — Integrazione con la cronologia versioni del telecomando (app 1.3.0)
+
+Dalla 1.3.0 il telecomando conserva una propria cronologia di `dashboard.json` (`DashboardHistory.kt`): ogni salvataggio dal builder o dalla sua pagina web, e ogni `POST /dashboard.json`, è conservato come copia completa con una nota facoltativa; un contenuto modificato fuori dalla pagina web viene conservato prima (`outside`), un ripristino è una nuova versione (`restore`); restano le ultime 30 versioni più quelle fissate. Rotte: `GET /history`, `GET /history/<id>`, `POST /history/{restore,pin,note,delete}`; `POST /dashboard.json` accetta `note`.
+
+Confronto tra le due cronologie:
+
+| | Add-on | Telecomando 1.3.0 |
+| --- | --- | --- |
+| Conservazione | Tutto, per sempre (nei backup di HA) | 30 + fissate |
+| Archiviazione | Differenze tra versioni | Copie complete |
+| Etichette | Nomi univoci per telecomando | Note libere, versioni fissate |
+| Ambito | Tutti i telecomandi, copia tra di essi | Solo quel telecomando |
+| Registra le modifiche fatte sul telecomando | Solo quando emergono come disallineamento | Sì, ogni salvataggio |
+
+Principio: la cronologia dell'add-on (RF2) resta quella principale; la cronologia del telecomando è una rete di sicurezza e un registro di ciò che è avvenuto sul dispositivo, che l'add-on legge ed etichetta.
+
+- RF12.1 Ogni push invia `note` = `ACM v<testa>`, seguito da `· "<nome>"` se la testa è una versione con nome (max 200 caratteri). L'add-on riconosce le proprie versioni nell'elenco del telecomando da quel prefisso.
+- RF12.2 Opzione per telecomando "Fissa le versioni con nome sul telecomando" (disattivata per impostazione predefinita): dopo il push di una versione con nome, la versione corrispondente sul telecomando (stessa nota) viene fissata così il telecomando non la elimina mai. Un errore nel fissarla viene registrato nel log e non fa fallire il push.
+- RF12.3 Quando viene rilevato un disallineamento, la voce più recente della cronologia del telecomando lo spiega nel banner: ripristinata dalla versione X, modificata fuori dalla pagina web (es. Impostazioni), salvata dal builder con la sua nota, oppure salvata per ultimo dall'add-on e poi modificata.
+- RF12.4 Scheda Storico, pannello "Cronologia del telecomando" (sola lettura): ora, motivo, nota, fissata, pagine/card, e se la versione è stata inviata dall'add-on (con la sua versione dell'add-on) o creata sul telecomando. Azioni: **Confronta con la testa** (percorsi diversi), **Scarica**, **Importa come versione** (nuova versione `sync-import` che riporta la sua origine; se è il file attuale del telecomando, questo torna allineato come dopo un pull).
+- RF12.5 L'add-on non ripristina, elimina né modifica le note delle versioni sul telecomando: per tornare indietro si importa (o si ripristina nell'add-on) e si invia.
+- RF12.6 Nessuna copia automatica della cronologia del telecomando in quella dell'add-on.
+- RF12.7 App precedenti alla 1.3.0 (`/history` 404): il pannello indica che non è disponibile, le note vengono ignorate, nient'altro cambia.
 
 ## 6. Requisiti non funzionali
 

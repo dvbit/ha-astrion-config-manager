@@ -48,6 +48,37 @@ class FakeDevice:
         self.icons = {"onboard.png": PNG}
         self.devices_cfg = None
         self.info = None
+        # RF12: emulation of DashboardHistory (app 1.3.0); None = older app (404)
+        self.history = None
+        self._seq = 0
+
+    def _keep(self, text, reason, note=None, restored_from=None):
+        """DashboardHistory.add: newest last here, listed newest first."""
+        self._seq += 1
+        vid = f"20261017-1000{self._seq:02d}"
+        self.history.append(
+            {
+                "id": vid,
+                "time": self._seq,
+                "note": note or "",
+                "pinned": False,
+                "reason": reason,
+                "restoredFrom": restored_from or "",
+                "size": len(text),
+                "pages": 1,
+                "cards": 0,
+                "text": text,
+            }
+        )
+        return vid
+
+    def record_save(self, new_text, note):
+        """DashboardHistory.recordSave: keep the file on disk first when not kept yet."""
+        if self.history is None:
+            return
+        if self.text and (not self.history or json.loads(self.history[-1]["text"]) != json.loads(self.text)):
+            self._keep(self.text, "outside")
+        self._keep(new_text, "save", note)
 
     def app(self):
         async def get(_):
@@ -63,7 +94,10 @@ class FakeDevice:
 
         async def post(request):
             data = await request.post()
-            self.text = data["file"].file.read().decode("utf-8")
+            new_text = data["file"].file.read().decode("utf-8")
+            self.last_note = data.get("note")
+            self.record_save(new_text, self.last_note)
+            self.text = new_text
             self.uploads += 1
             raise web.HTTPFound("/")
 
@@ -97,7 +131,30 @@ class FakeDevice:
                 return web.Response(status=404)
             return web.json_response(self.devices_cfg)
 
+        async def hist_list(_):
+            if self.history is None:
+                return web.Response(status=404)
+            keys = ("id", "time", "note", "pinned", "reason", "restoredFrom", "size", "pages", "cards")
+            return web.json_response({"versions": [{k: v[k] for k in keys} for v in reversed(self.history)]})
+
+        async def hist_get(request):
+            v = next((v for v in self.history or [] if v["id"] == request.match_info["id"]), None)
+            if v is None:
+                return web.json_response({"error": "no such version"}, status=404)
+            return web.Response(text=v["text"], content_type="application/json")
+
+        async def hist_pin(request):
+            data = await request.post()
+            v = next((v for v in self.history or [] if v["id"] == data.get("id")), None)
+            if v is None:
+                return web.json_response({"error": "no such version"}, status=404)
+            v["pinned"] = data.get("pinned") == "true"
+            return web.json_response({"ok": True})
+
         app = web.Application()
+        app.router.add_get("/history", hist_list)
+        app.router.add_post("/history/pin", hist_pin)
+        app.router.add_get("/history/{id}", hist_get)
         app.router.add_get("/devices-config", devices_config)
         app.router.add_get("/info", info)
         app.router.add_delete("/icons/{n}", icon_del)
@@ -278,7 +335,7 @@ async def test_c5_drift_detected_no_action(env):
             "id": rid,
             "status": "drift",
             "last_push_version": None,
-            "changes": {"paths": ["/pages/0/name"], "count": 1, "settings_only": False},
+            "changes": {"paths": ["/pages/0/name"], "count": 1, "settings_only": False, "remote_last": None},
         }
     ]
     assert (await state(env, rid))["remote"]["head"] == 1  # nothing automatic
@@ -702,3 +759,61 @@ async def test_rf10_drift_from_remote_settings(env):
     env.devices["a"].text = json.dumps(doc)
     drift = await (await env.get(f"/api/remotes/{rid}/drift")).json()
     assert drift["status"] == "drift" and drift["changes"]["settings_only"] is True
+
+
+# ------------------------------------------------------------- RF12 remote history (app 1.3.0)
+
+
+async def test_rf12_push_note_pin_and_history_panel(env):
+    dev = env.devices["a"]
+    dev.history = []
+    rid = (await register(env, "a", "R"))["id"]
+    # name v1, enable pinning of named versions, push
+    await env.put(f"/api/remotes/{rid}/versions/1/name", json={"name": "Baseline"})
+    await env.patch(f"/api/remotes/{rid}", json={"pin_named": True})
+    res = await (await env.post(f"/api/remotes/{rid}/push", json={"head": 1})).json()
+    assert dev.last_note == 'ACM v1 · "Baseline"'
+    assert res["remote_pinned"] == dev.history[-1]["id"] and dev.history[-1]["pinned"] is True
+    hist = await (await env.get(f"/api/remotes/{rid}/remote-history")).json()
+    assert hist["supported"] is True
+    assert hist["versions"][0]["addon_version"] == 1 and hist["versions"][0]["reason"] == "save"
+    # the file on disk before the first save was kept as "outside" (not from the add-on)
+    assert hist["versions"][-1]["reason"] == "outside" and hist["versions"][-1]["addon_version"] is None
+
+
+async def test_rf12_drift_reason_diff_and_import(env):
+    dev = env.devices["a"]
+    dev.history = []
+    rid = (await register(env, "a", "R"))["id"]
+    await env.post(f"/api/remotes/{rid}/push", json={"head": 1})
+    # the builder saves a change on the remote with a note
+    doc = json.loads(dev.text)
+    doc["pages"][0]["name"] = "From builder"
+    new_text = json.dumps(doc)
+    dev.record_save(new_text, "new lights")
+    dev.text = new_text
+    drift = await (await env.get(f"/api/remotes/{rid}/drift")).json()
+    last = drift["changes"]["remote_last"]
+    assert last["reason"] == "save" and last["note"] == "new lights" and last["addon_version"] is None
+    vid = last["id"]
+    diff = await (await env.get(f"/api/remotes/{rid}/remote-history/{vid}/diff")).json()
+    assert diff == {"paths": ["/pages/0/name"], "count": 1}
+    down = await env.get(f"/api/remotes/{rid}/remote-history/{vid}")
+    assert "attachment" in down.headers["Content-Disposition"]
+    head = (await state(env, rid))["remote"]["head"]
+    res = await (await env.post(f"/api/remotes/{rid}/remote-history/{vid}/import", json={"head": head})).json()
+    assert res["version"]["type"] == "sync-import"
+    assert res["version"]["origin"] == {"remote_version": vid, "note": "new lights", "reason": "save"}
+    assert res["state"]["pages"][0]["name"] == "From builder"
+    # it was the remote's current file: in sync again, as after a pull
+    assert (await (await env.get(f"/api/remotes/{rid}/drift")).json())["status"] == "in_sync"
+    bad = await env.get(f"/api/remotes/{rid}/remote-history/..%2Fx")
+    assert bad.status in (400, 404)
+
+
+async def test_rf12_older_app_without_history(env):
+    rid = (await register(env, "a", "R"))["id"]
+    hist = await (await env.get(f"/api/remotes/{rid}/remote-history")).json()
+    assert hist == {"supported": False, "versions": []}
+    res = await (await env.post(f"/api/remotes/{rid}/push", json={"head": 1})).json()
+    assert res["ok"] is True and res["remote_pinned"] is None

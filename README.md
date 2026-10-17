@@ -5,8 +5,9 @@
 Home Assistant **app (add-on)** to manage the `dashboard.json` of one or more
 **Astrion HA100** remotes running
 [astrion-custom-dashboard](https://github.com/dckiller51/astrion-custom-dashboard):
-form editor, full version history with undo/redo and named versions,
-validation against your HA entities, push/pull with drift detection.
+form editor, full version history with undo/redo and named versions
+(integrated with the remote's own history since app 1.3.0), validation
+against your HA entities, push/pull with drift detection, live simulator.
 
 🇮🇹 [Versione italiana](README.it.md) · 📄 Specification: [English](SPEC.en.md) · [Italiano](SPEC.md)
 
@@ -19,7 +20,7 @@ validation against your HA entities, push/pull with drift detection.
 3. Install **Astrion Config Manager**, start it, open **Astrion** in the sidebar.
 
 On each remote, enable the app's **config server** (port 8080, settings page).
-Schema followed: upstream release **1.2.0** and beta **1.2.9-beta** (`dev` branch; card fields regenerated with `tools/extract_card_schema.py`). Keys added by the betas are ignored by older apps.
+Schema followed: upstream release **1.3.0** (card fields regenerated with `tools/extract_card_schema.py`; card fields regenerated with `tools/extract_card_schema.py`). Keys added by the betas are ignored by older apps.
 
 ## Features
 
@@ -27,6 +28,7 @@ Schema followed: upstream release **1.2.0** and beta **1.2.9-beta** (`dev` branc
 | --- | --- |
 | Remotes | Register many remotes (name, IP, port, screen size, orientation, Harmony IP, IR entity). Archive instead of delete. |
 | History | Every change is a version stored as a JSON Patch delta; snapshots every 50. Undo/redo are versions too. Restore any version in one step. |
+| Remote history (1.3.0) | The remote's own versions listed in History: pushes labelled `ACM v<n>`, named ones optionally pinned, drift explained, any remote version comparable and importable. |
 | Named versions | Label milestones ("Before TV change"), filter them, restore them. Labels never alter history. |
 | Editor | Dropdowns for fixed values, colour palettes (cards and theme). Forms for pages, cards (21 types, fields extracted from upstream renderers), hotkeys, IR devices, Activities, theme; raw JSON for everything. Unknown cards/fields survive untouched. |
 | Validation | Structure + every referenced entity must exist in HA. Push is blocked on errors. |
@@ -184,6 +186,28 @@ runs, the docked clock shows only that player.
   "entities": [ { "entity_id": "sensor.avr_audio", "name": "Audio" } ] } }
 { "type": "select", "options": { "entity_id": "input_select.scene", "layout": "dropdown", "font_size": 18 } }
 ```
+
+### 11. Two histories: add-on and remote (app 1.3.0)
+
+Since 1.3.0 the remote keeps its own history of `dashboard.json`. The add-on's
+history stays the reference; the remote's is a safety net it reads and labels.
+
+| | Add-on | Remote 1.3.0 |
+| --- | --- | --- |
+| Retention | Everything, forever (in HA backups) | 30 + pinned |
+| Storage | Differences between versions | Full copies |
+| Labels | Unique names per remote | Free notes, pins |
+| Scope | All remotes, copy between them | That remote only |
+| Records edits made on the remote | Only when they're found as drift | Yes, every save |
+
+- Every push is labelled on the remote: `ACM v42 · "Before TV change"`.
+- **Edit remote → Pin named versions on the remote**: pushed named versions are
+  pinned there, so the remote's 30-version limit never removes them.
+- Drift banner: *"Saved from the builder or web page: new lights"*,
+  *"Restored on the remote from version 20261017-101500"*, …
+- **History → Remote history**: compare any remote version with the head,
+  download it, or **Import as version** (then push). The add-on never restores
+  or deletes anything in the remote's history.
 
 ## Data and backups
 

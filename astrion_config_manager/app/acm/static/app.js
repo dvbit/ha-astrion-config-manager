@@ -252,10 +252,14 @@ function remoteDialog(remote) {
     ...["portrait", "landscape"].map((o) => el("option", { value: o, text: t(o), selected: v.orientation === o })));
   const fields = [inp("name", "text"), inp("host", "text"), inp("port", "number"), inp("width", "number"),
     inp("height", "number"), ["orientation", orient], inp("harmony_ip", "text", true), inp("ir_entity", "text", true)];
+  // RF12.2: pin named versions in the remote's own history (app 1.3.0+); off by default
+  const pin = el("input", { type: "checkbox" });
+  pin.checked = !!v.pin_named;
   const msg = el("div", { class: "msg" });
   const dlg = el("dialog", {});
   const save = guard(async () => {
     const body = Object.fromEntries(fields.map(([k, i]) => [k, i.value]));
+    body.pin_named = pin.checked;
     try {
       if (remote) await api("PATCH", `api/remotes/${remote.id}`, body);
       else await api("POST", "api/remotes", body);
@@ -267,6 +271,7 @@ function remoteDialog(remote) {
   });
   dlg.append(el("h2", { text: remote ? t("edit") : t("add_remote") }),
     el("div", { class: "grid" }, ...fields.map(([k, i]) => el("div", { class: "field" }, el("label", { text: t(k) }), i))),
+    el("label", { class: "row", title: t("pin_named_hint") }, pin, t("pin_named")),
     el("div", { class: "field invalid" }, msg),
     el("div", { class: "row" }, el("span", { class: "spacer" }),
       el("button", { text: t("cancel"), onclick: () => { dlg.close(); dlg.remove(); } }),
@@ -332,6 +337,15 @@ function identityLine(r) {
     r.duplicate_of && r.duplicate_of.length ? el("div", { class: "msg warn", text: "⚠ " + t("identity_duplicate", { names: r.duplicate_of.join(", ") }) }) : null);
 }
 
+/* RF12.3: why the remote's file changed, from its newest history entry. */
+function remoteLastText(e) {
+  const when = e.time ? new Date(e.time).toLocaleString(LANG) : e.id;
+  if (e.reason === "restore") return t("rh_last_restore", { id: e.restoredFrom || "?", when });
+  if (e.reason === "outside") return t("rh_last_outside", { when });
+  if (e.addon_version) return t("rh_last_addon", { v: e.addon_version, when });
+  return t("rh_last_save", { note: e.note || "—", when });
+}
+
 /* RF5.3: drift is only reported; the user picks import / overwrite / ignore.
  * RF10.12: the changed keys are listed; keys written by the remote's own
  * Settings screen (dock mode, screen timeout) are pointed out. */
@@ -339,7 +353,8 @@ function driftBanner() {
   const ch = S.driftChanges[S.rid];
   const detail = ch && ch.count ? el("div", { class: "muted" },
     el("div", { text: t("drift_changes", { n: ch.count }) + " " + ch.paths.join(", ") + (ch.count > ch.paths.length ? " …" : "") }),
-    ch.settings_only ? el("div", { text: t("drift_settings_only") }) : null) : null;
+    ch.settings_only ? el("div", { text: t("drift_settings_only") }) : null,
+    ch.remote_last ? el("div", { text: "🕘 " + remoteLastText(ch.remote_last) }) : null) : null;
   return el("div", { class: "card banner row" }, el("div", {}, el("span", { text: "⚠ " + t("drift_banner") }), detail), el("span", { class: "spacer" }),
     el("button", { text: t("import_version"), onclick: guard(doPull) }),
     el("button", { text: t("overwrite"), onclick: guard(doPush) }),
@@ -359,7 +374,8 @@ async function pushRemote(rid, head) {
   const res = await api("POST", `api/remotes/${rid}/push`, { head });
   S.drift[rid] = "in_sync";
   toast((res.drift_overwritten ? t("push_ok_drift") : t("push_ok"))
-    + (res.icons_uploaded && res.icons_uploaded.length ? ` · ${t("icons_uploaded")}: ${res.icons_uploaded.join(", ")}` : ""));
+    + (res.icons_uploaded && res.icons_uploaded.length ? ` · ${t("icons_uploaded")}: ${res.icons_uploaded.join(", ")}` : "")
+    + (res.remote_pinned ? ` · 📌 ${t("rh_pinned_on_remote")}` : ""));
   return res;
 }
 /* RF11.8: from the list / header a push over a drifted remote asks first
@@ -460,6 +476,8 @@ async function renderHistory(body) {
     card.append(el("div", { class: "list-item" },
       el("strong", { text: `v${v.id}` }), el("span", { class: "badge", text: t("type_" + v.type) + (v.ref ? ` → v${v.ref}` : "") }),
       v.name ? el("span", { class: "badge name", text: v.name }) : null,
+      v.origin && v.origin.remote_version ? el("span", { class: "badge", title: v.origin.note || "",
+        text: `🕘 ${t("rh_from_remote")} ${v.origin.remote_version}` }) : null,
       el("span", { class: "muted", text: `${new Date(v.ts * 1000).toLocaleString(LANG)}${v.user ? ` · ${t("by")} ${v.user}` : ""}` }),
       el("span", { class: "spacer" }),
       el("button", { class: "icon", text: t("delta"), onclick: guard(async () => {
@@ -479,6 +497,49 @@ async function renderHistory(body) {
       el("div", { class: "ops", style: "flex-basis:100%", text: ops }), detail));
   }
   body.append(card);
+  body.append(await remoteHistoryCard());
+}
+
+/* RF12.4: the remote's own version history (app 1.3.0), read-only. The add-on
+ * stays the source of truth: a remote version is imported as a new add-on
+ * version (then pushed), never restored on the remote from here (RF12.5). */
+async function remoteHistoryCard() {
+  const card = el("div", { class: "card" }, el("h3", { text: t("rh_title") }), el("p", { class: "muted", text: t("rh_hint") }));
+  let h;
+  try { h = await api("GET", `api/remotes/${S.rid}/remote-history`); } catch (e) {
+    card.append(el("p", { class: "msg", text: t("err_" + ((e.data && e.data.error) || "internal")) }));
+    return card;
+  }
+  if (!h.supported) { card.append(el("p", { class: "muted", text: t("rh_unsupported") })); return card; }
+  if (!h.versions.length) card.append(el("p", { class: "muted", text: t("empty_list") }));
+  for (const v of h.versions) {
+    const out = el("div", { class: "ops", style: "flex-basis:100%", hidden: true });
+    card.append(el("div", { class: "list-item" },
+      el("strong", { text: v.time ? new Date(v.time).toLocaleString(LANG) : v.id }),
+      el("span", { class: "badge", text: t("rh_reason_" + (v.reason || "save")) + (v.restoredFrom ? ` ← ${v.restoredFrom}` : "") }),
+      v.addon_version ? el("span", { class: "badge in_sync", text: `${t("rh_from_addon")} v${v.addon_version}` }) : el("span", { class: "badge", text: t("rh_on_remote") }),
+      v.pinned ? el("span", { title: t("rh_pinned"), text: "📌" }) : null,
+      v.note ? el("span", { text: v.note }) : null,
+      el("span", { class: "muted", text: `${v.pages} ${t("rh_pages")} · ${v.cards} ${t("rh_cards")}` }),
+      el("span", { class: "spacer" }),
+      el("button", { class: "icon", text: t("rh_compare"), onclick: guard(async () => {
+        if (out.hidden) {
+          const d = await api("GET", `api/remotes/${S.rid}/remote-history/${v.id}/diff`);
+          out.textContent = d.count ? `${t("rh_diff", { n: d.count })}\n${d.paths.join("\n")}${d.count > d.paths.length ? "\n…" : ""}` : t("rh_same");
+        }
+        out.hidden = !out.hidden;
+      }) }),
+      el("a", { class: "button icon", href: `api/remotes/${S.rid}/remote-history/${v.id}`, download: `dashboard-${v.id}.json`, text: t("rh_download") }),
+      el("button", { class: "icon", text: t("rh_import"), onclick: guard(async () => {
+        if (!confirm(t("rh_import_confirm", { id: v.id }))) return;
+        const res = await api("POST", `api/remotes/${S.rid}/remote-history/${v.id}/import`, { head: S.remote.head });
+        if (res.remote.baseline_version === res.remote.head) S.drift[S.rid] = "in_sync";
+        applyResult(res);
+        toast(res.version ? `${t("saved_version")} v${res.version.id}` : t("rh_same"));
+      }) }),
+      out));
+  }
+  return card;
 }
 
 async function restoreVersion(v) {

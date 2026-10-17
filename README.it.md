@@ -5,8 +5,9 @@
 **App (add-on)** per Home Assistant che gestisce il `dashboard.json` di uno o
 più telecomandi **Astrion HA100** con
 [astrion-custom-dashboard](https://github.com/dckiller51/astrion-custom-dashboard):
-editor a form, storico completo con undo/redo e versioni con nome, validazione
-sulle entità HA, push/pull con rilevamento della deriva.
+editor a form, storico completo con undo/redo e versioni con nome (integrato
+con la cronologia del telecomando dall'app 1.3.0), validazione sulle entità HA,
+push/pull con rilevamento della deriva, simulatore live.
 
 🇬🇧 [English version](README.md) · 📄 Specifica: [Italiano](SPEC.md) · [English](SPEC.en.md)
 
@@ -19,7 +20,7 @@ sulle entità HA, push/pull con rilevamento della deriva.
 3. Installa **Astrion Config Manager**, avvialo e apri **Astrion** nella barra laterale.
 
 Su ogni telecomando abilita il **config server** dell'app (porta 8080, pagina impostazioni).
-Schema seguito: release upstream **1.2.0** e beta **1.2.9-beta** (ramo `dev`; campi delle card rigenerati con `tools/extract_card_schema.py`). Le chiavi aggiunte dalle beta sono ignorate dalle app più vecchie.
+Schema seguito: release upstream **1.3.0** ( campi delle card rigenerati con `tools/extract_card_schema.py`). Le chiavi aggiunte dalle beta sono ignorate dalle app più vecchie.
 
 ## Funzioni
 
@@ -35,6 +36,7 @@ Schema seguito: release upstream **1.2.0** e beta **1.2.9-beta** (ramo `dev`; ca
 | Catalogo entità | Form per `haDevices` (entità con nome usate dal web builder del telecomando), validato su HA. |
 | Simulatore | La testa resa alla risoluzione del telecomando con stati HA live; tocchi e tasti HA100 eseguono **realmente** su HA, Hub Harmony ed emettitore IR Broadlink. |
 | Dock e standby (1.2.7) | Sezioni "Schermo dock" e "Standby e batteria"; pagine nascoste del tutto (`hideMode: full`); pulsanti Off (`stopActivity`); eventi hotkey verso HA; layout Apple TV compact/full con scorciatoie app; identità del telecomando e rilevamento duplicati; eliminazione icone sui telecomandi. |
+| Cronologia telecomando (1.3.0) | Le versioni conservate dal telecomando elencate nello Storico: push etichettati `ACM v<n>`, versioni con nome fissabili, disallineamento spiegato, ogni versione confrontabile e importabile. |
 | Lingue | Inglese, italiano, francese, spagnolo, tedesco (segue la lingua di HA). |
 
 ## Esempi d'uso
@@ -188,6 +190,30 @@ l'orologio sulla base mostra solo quel player.
   "entities": [ { "entity_id": "sensor.avr_audio", "name": "Audio" } ] } }
 { "type": "select", "options": { "entity_id": "input_select.scena", "layout": "dropdown", "font_size": 18 } }
 ```
+
+### 11. Due cronologie: add-on e telecomando (app 1.3.0)
+
+Dalla 1.3.0 il telecomando conserva una propria cronologia di `dashboard.json`.
+La cronologia dell'add-on resta il riferimento; quella del telecomando è una
+rete di sicurezza che l'add-on legge ed etichetta.
+
+| | Add-on | Telecomando 1.3.0 |
+| --- | --- | --- |
+| Conservazione | Tutto, per sempre (nei backup di HA) | 30 + fissate |
+| Archiviazione | Differenze tra versioni | Copie complete |
+| Etichette | Nomi univoci per telecomando | Note libere, versioni fissate |
+| Ambito | Tutti i telecomandi, copia tra di essi | Solo quel telecomando |
+| Registra le modifiche fatte sul telecomando | Solo quando emergono come disallineamento | Sì, ogni salvataggio |
+
+- Ogni push viene etichettato sul telecomando: `ACM v42 · "Prima del cambio TV"`.
+- **Modifica telecomando → Fissa le versioni con nome sul telecomando**: le
+  versioni con nome inviate vengono fissate lì, così il limite di 30 versioni
+  del telecomando non le elimina mai.
+- Banner di disallineamento: *"Salvata dal builder o dalla pagina web: nuove luci"*,
+  *"Ripristinata sul telecomando dalla versione 20261017-101500"*, …
+- **Storico → Cronologia del telecomando**: confronta qualsiasi versione del
+  telecomando con la testa, scaricala o **Importa come versione** (poi invia).
+  L'add-on non ripristina né elimina nulla nella cronologia del telecomando.
 
 ## Dati e backup
 

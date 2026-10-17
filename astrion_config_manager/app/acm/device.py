@@ -18,7 +18,13 @@ browser on ``http://<host>:<port>``, as implemented upstream in
   holds the remote's HA token, is discarded and never stored or logged;
 * ``GET  /info`` (1.2.7-beta) -> ``{id, name, manufacturer, model, android,
   version, versionCode, webhook}``: the remote's identity (RF10.9);
-* ``DELETE /icons/<name>`` (1.2.3-beta) -> delete one icon (RF10.11).
+* ``DELETE /icons/<name>`` (1.2.3-beta) -> delete one icon (RF10.11);
+* 1.3.0 version history of dashboard.json (RF12, ``DashboardHistory.kt``):
+  ``GET /history`` -> ``{"versions": [{id, time, note, pinned, reason,
+  restoredFrom, size, pages, cards}]}`` newest first; ``GET /history/<id>``
+  -> that version's content; ``POST /history/pin`` (form ``id``,
+  ``pinned=true|false``).  ``POST /dashboard.json`` also takes a ``note``
+  form field, stored with the version the remote keeps for that save.
 """
 
 from __future__ import annotations
@@ -199,10 +205,16 @@ class DeviceClient:
         except (aiohttp.ClientError, TimeoutError) as err:
             raise DeviceError("unreachable", str(err) or type(err).__name__) from err
 
-    async def upload(self, content: Any) -> None:
-        """Upload ``content`` the same way the device's own form does (RF5.4)."""
+    async def upload(self, content: Any, note: str | None = None) -> None:
+        """Upload ``content`` the same way the device's own form does (RF5.4).
+
+        ``note`` (RF12.1): label of the version the remote keeps for this save
+        (app 1.3.0+; older apps ignore the extra field).
+        """
         url = f"{self._base}/dashboard.json"
         form = aiohttp.FormData()
+        if note:
+            form.add_field("note", note)
         form.add_field(
             "file",
             pretty_dumps(content).encode("utf-8"),
@@ -215,5 +227,62 @@ class DeviceClient:
                 # Success is a redirect back to the config home page.
                 if resp.status >= 400:
                     raise DeviceError("http_error", f"HTTP {resp.status}")
+        except (aiohttp.ClientError, TimeoutError) as err:
+            raise DeviceError("unreachable", str(err) or type(err).__name__) from err
+
+    # -- RF12: the remote's own version history (app 1.3.0+) ------------------
+
+    async def history_list(self) -> list[dict[str, Any]] | None:
+        """Versions kept by the remote, newest first; None when unsupported (404, app < 1.3.0)."""
+        url = f"{self._base}/history"
+        _LOGGER.debug("GET %s", url)
+        try:
+            async with self._session.get(url, timeout=TIMEOUT) as resp:
+                if resp.status in (404, 405):
+                    return None
+                if resp.status != 200:
+                    raise DeviceError("http_error", f"HTTP {resp.status}")
+                raw = json.loads((await resp.read()).decode("utf-8"))
+        except (aiohttp.ClientError, TimeoutError) as err:
+            raise DeviceError("unreachable", str(err) or type(err).__name__) from err
+        except (UnicodeDecodeError, json.JSONDecodeError) as err:
+            raise DeviceError("invalid_json", str(err)) from err
+        versions = raw.get("versions") if isinstance(raw, dict) else None
+        if not isinstance(versions, list):
+            return []
+        keys = ("id", "time", "note", "pinned", "reason", "restoredFrom", "size", "pages", "cards")
+        return [{k: v.get(k) for k in keys} for v in versions if isinstance(v, dict) and isinstance(v.get("id"), str)]
+
+    async def history_get(self, version_id: str) -> Any:
+        """Content of one remote version (parsed JSON)."""
+        from urllib.parse import quote
+
+        url = f"{self._base}/history/{quote(version_id)}"
+        _LOGGER.debug("GET %s", url)
+        try:
+            async with self._session.get(url, timeout=TIMEOUT) as resp:
+                if resp.status == 404:
+                    raise DeviceError("remote_version_missing", version_id)
+                if resp.status != 200:
+                    raise DeviceError("http_error", f"HTTP {resp.status}")
+                return json.loads((await resp.read()).decode("utf-8"))
+        except (aiohttp.ClientError, TimeoutError) as err:
+            raise DeviceError("unreachable", str(err) or type(err).__name__) from err
+        except (UnicodeDecodeError, json.JSONDecodeError) as err:
+            raise DeviceError("invalid_json", str(err)) from err
+
+    async def history_pin(self, version_id: str, pinned: bool = True) -> bool:
+        """RF12.2: pin a remote version so the remote never prunes it; False if unknown."""
+        url = f"{self._base}/history/pin"
+        _LOGGER.debug("POST %s (%s, pinned=%s)", url, version_id, pinned)
+        try:
+            async with self._session.post(
+                url, data={"id": version_id, "pinned": "true" if pinned else "false"}, timeout=TIMEOUT
+            ) as resp:
+                if resp.status == 404:
+                    return False
+                if resp.status >= 400:
+                    raise DeviceError("http_error", f"HTTP {resp.status}")
+                return True
         except (aiohttp.ClientError, TimeoutError) as err:
             raise DeviceError("unreachable", str(err) or type(err).__name__) from err

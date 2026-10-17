@@ -151,3 +151,6 @@ input.hidden-color { position: absolute; width: 0; height: 0; opacity: 0; border
 @keyframes sim-marquee { 0%, 15% { transform: translateX(0); } 100% { transform: translateX(-60%); } }
 .sim-select { width: 100%; padding: 8px; border-radius: 10px; background: var(--ctl); color: inherit; border: 0; }
 .sim-pe-img { width: 24px; height: 24px; object-fit: contain; }
+/* RF12.4: download link styled as a small button */
+a.button { font: inherit; border-radius: 6px; border: 1px solid var(--line); background: var(--card); color: var(--fg); text-decoration: none; }
+a.button.icon { padding: 2px 8px; }

@@ -65,6 +65,7 @@ REMOTE_FIELDS = (
     "orientation",
     "harmony_ip",
     "ir_entity",
+    "pin_named",  # RF12.2: pin named versions in the remote's own history on push
 )
 ORIENTATIONS = {"portrait", "landscape"}
 
@@ -165,6 +166,8 @@ def clean_fields(fields: dict[str, Any], partial: bool) -> dict[str, Any]:
                 raise StoreError("orientation_invalid")
         elif key == "harmony_ip":
             val = str(val or "").strip() or None
+        elif key == "pin_named":
+            val = val is True or val == "true"
         elif key == "ir_entity":
             val = str(val or "").strip() or None
             if val and not _ENTITY_RE.match(val):
@@ -175,6 +178,7 @@ def clean_fields(fields: dict[str, Any], partial: bool) -> dict[str, Any]:
         fields_with_default.setdefault("port", 8080)  # RF1.1 default port
         fields_with_default.setdefault("harmony_ip", None)
         fields_with_default.setdefault("ir_entity", None)
+        fields_with_default.setdefault("pin_named", False)
         # RF1.1: no default for width/height/orientation.
         for key in ("name", "host", "width", "height", "orientation"):
             if key not in fields_with_default:
@@ -261,8 +265,14 @@ class History:
 
     # -- append (RF2.2, RNF4) ----------------------------------------------
 
-    def append(self, new_state: Any, vtype: str, user: str | None, ref: int | None = None) -> dict[str, Any]:
-        """Append a version holding ``new_state``; returns its metadata."""
+    def append(
+        self, new_state: Any, vtype: str, user: str | None, ref: int | None = None, origin: dict | None = None
+    ) -> dict[str, Any]:
+        """Append a version holding ``new_state``; returns its metadata.
+
+        ``origin`` (RF12.4): where an imported content came from, e.g.
+        ``{"remote_version": "20261017-101500", "note": "..."}``.
+        """
         vid = self.head + 1
         if vid == 1:
             patch: list[dict[str, Any]] = []
@@ -277,6 +287,8 @@ class History:
             "ref": ref,
             "patch": patch,
         }
+        if origin:
+            ver["origin"] = origin
         if vid == 1 or vid % SNAPSHOT_EVERY == 0:
             data = gzip.compress(canonical_dumps(new_state).encode("utf-8"))
             atomic_write(self._snapshot_path(vid), data)
@@ -465,14 +477,20 @@ class Store:
         return hist.state(hist.head)
 
     def commit(
-        self, rid: str, expected: int, new_state: Any, user: str | None, vtype: str = T_EDIT
+        self,
+        rid: str,
+        expected: int,
+        new_state: Any,
+        user: str | None,
+        vtype: str = T_EDIT,
+        origin: dict | None = None,
     ) -> dict[str, Any] | None:
         """RF2.3: one version per commit with a non-empty delta, else None."""
         hist = self._check_head(rid, expected)
         if canonical_dumps(new_state) == canonical_dumps(hist.state(hist.head)):
             _LOGGER.debug("Commit on %s without changes: no version", rid)
             return None
-        return hist.append(new_state, vtype, user)
+        return hist.append(new_state, vtype, user, origin=origin)
 
     def undo(self, rid: str, expected: int, user: str | None) -> dict[str, Any]:
         """RF2.4: new ``undo`` version with the state before the last undoable."""

@@ -23,6 +23,9 @@ Open **Astrion** in the sidebar (admins only).
    creates version 1; if the pull fails nothing is registered.
 2. **Editor**: every committed change creates a version. Undo/redo are versions too.
 3. **History**: restore any version, give names to milestones, filter named ones.
+   With app 1.3.0+ the **Remote history** panel lists the versions the remote keeps
+   itself (compare, download, import as version). Pushes are labelled `ACM v<n>` on
+   the remote; named versions can be pinned there (remote option).
 4. **Sync**: push sends the head after validation and verifies it by re-reading.
    Pull and Push are also on each remote of the list and in the open remote's header.
    Changes made on the device are reported (drift) and never applied automatically.

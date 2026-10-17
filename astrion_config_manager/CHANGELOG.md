@@ -1,5 +1,22 @@
 # Changelog
 
+## 2.12.0 - 2026-10-17
+
+Aligned with astrion-custom-dashboard **1.3.0** (stable; dashboard format
+unchanged since 1.2.9-beta) and integrated with its new version history;
+spec v1.11 (RF12).
+
+- Every push sends a note to the remote's history: `ACM v<n>` plus the
+  version name (RF12.1).
+- Option per remote "Pin named versions on the remote" (RF12.2).
+- Drift banner explains the change from the remote's newest history entry
+  (restored, changed outside the web page, saved from the builder) (RF12.3).
+- History tab: "Remote history" panel — reason, note, pins, pushed-by-add-on
+  marker; compare with head, download, import as version (origin kept; the
+  remote's current file re-syncs like a pull) (RF12.4).
+- The add-on never restores/deletes on the remote; no automatic mirroring;
+  apps older than 1.3.0 unaffected (RF12.5–RF12.7).
+
 ## 2.11.0 - 2026-10-16
 
 Aligned with astrion-custom-dashboard **1.2.9-beta** (incl. 1.2.8-beta); spec

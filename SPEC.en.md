@@ -1,9 +1,9 @@
-# Requirement — Astrion Config Manager (HA add-on) v1.10
+# Requirement — Astrion Config Manager (HA add-on) v1.11
 
 > English translation of [SPEC.md](SPEC.md). The Italian document is the
 > reference; in case of discrepancy the Italian text prevails.
 
-Status: approved by the requester. v1.3: added RF6.12 (navigation-only mode). v1.4: added RF7 (icons and entity catalog). v1.5: added RF8 (multiple Harmony hubs and IR targets). v1.6: added RF3.5 (dropdowns and palettes). v1.7: added RF3.6 (structured lists) and RF9 (upstream 1.2.0, direct Apple TV). v1.8: RF9.6–RF9.7 (upstream 1.2.1-beta and 1.2.0 recheck). v1.9: RF10 (upstream 1.2.2–1.2.7-beta). v1.10: RF11 (upstream 1.2.8–1.2.9-beta, push/pull on the main screen). Supersedes v1.0: Harmony and IR are now in scope; named versions added (RF2.11–RF2.13). Original document language: Italian.
+Status: approved by the requester. v1.3: added RF6.12 (navigation-only mode). v1.4: added RF7 (icons and entity catalog). v1.5: added RF8 (multiple Harmony hubs and IR targets). v1.6: added RF3.5 (dropdowns and palettes). v1.7: added RF3.6 (structured lists) and RF9 (upstream 1.2.0, direct Apple TV). v1.8: RF9.6–RF9.7 (upstream 1.2.1-beta and 1.2.0 recheck). v1.9: RF10 (upstream 1.2.2–1.2.7-beta). v1.10: RF11 (upstream 1.2.8–1.2.9-beta, push/pull on the main screen). v1.11: RF12 (upstream 1.3.0, integration with the remote's version history). Supersedes v1.0: Harmony and IR are now in scope; named versions added (RF2.11–RF2.13). Original document language: Italian.
 
 ## 1. Purpose
 
@@ -15,7 +15,7 @@ Home Assistant add-on with an Ingress panel that manages the configurations (`da
 
 ## 3. References
 
-- Reference schema: `dashboard.json` as defined by the most recent release of the repo at development time (last observed: 1.2.0 stable, 1.2.9-beta on the `dev` branch). Card and action behaviour: Kotlin sources (`cards/impl/`, `config/DashboardLoader.kt`) and web editor (`docs/index.html`, `cards.js`).
+- Reference schema: `dashboard.json` as defined by the most recent release of the repo at development time (last observed: 1.3.0). Card and action behaviour: Kotlin sources (`cards/impl/`, `config/DashboardLoader.kt`) and web editor (`docs/index.html`, `cards.js`).
 - Remote: the device exposes no API. The add-on issues the same HTTP requests as the browser on the configuration page `http://<host>:<port>` (download and upload of `dashboard.json`), derived from the repo's `web/` sources. Editing happens only in the add-on's web interface.
 - Home Assistant: WebSocket API via the add-on's Supervisor token; no token entered by the user.
 - Harmony Hub: the Hub's local protocol as used by the app's Harmony client (Kotlin sources of the repo).
@@ -54,6 +54,7 @@ Home Assistant add-on with an Ingress panel that manages the configurations (`da
 - RF2.11 **Named versions**: the user can give a name to any version, not only the head. The name is not empty, is unique per remote (case-insensitive) and each version has at most one.
 - RF2.12 The name is a label separate from the version: assigning, renaming or removing it creates no versions and does not alter the history; removing the name does not delete the version. Names are kept even when the remote is archived.
 - RF2.13 From the list of names the labelled version is restored with the rules of RF2.6 (creates a `restore` version). The history list shows the names and allows filtering only the named versions.
+- RF2.14 The remote's own history (app 1.3.0) complements this one without replacing it: see RF12.
 
 ### RF3 — Editor
 
@@ -151,6 +152,30 @@ Reference: astrion-custom-dashboard `dev` branch, 1.2.7-beta (latest stable 1.2.
 - RF11.6 Icons: `source_select.icon`, PNG icons on `switch` and `picture_elements` elements, `on_color` per element (colour palette).
 - RF11.7 Simulator: a long press on MAIN opens Settings when no hotkey of the dashboard opens it and MAIN has no long-press hotkey.
 - RF11.8 Pull and Push buttons also on every remote of the list and in the header of the open remote (all tabs), with the same flow as Sync (validation, verification, messages); from there a push over a drifted remote asks for confirmation.
+
+### RF12 — Integration with the remote's version history (app 1.3.0)
+
+Since 1.3.0 the remote keeps its own history of `dashboard.json` (`DashboardHistory.kt`): every save from the builder or its web page, and every `POST /dashboard.json`, is kept as a full copy with an optional note; content changed outside the web page is kept first (`outside`), a restore is a new version (`restore`); the last 30 versions plus pinned ones are kept. Routes: `GET /history`, `GET /history/<id>`, `POST /history/{restore,pin,note,delete}`; `POST /dashboard.json` accepts `note`.
+
+The two histories compared:
+
+| | Add-on | Remote 1.3.0 |
+| --- | --- | --- |
+| Retention | Everything, forever (in HA backups) | 30 + pinned |
+| Storage | Differences between versions | Full copies |
+| Labels | Unique names per remote | Free notes, pins |
+| Scope | All remotes, copy between them | That remote only |
+| Records edits made on the remote | Only when they're found as drift | Yes, every save |
+
+Principle: the add-on's history (RF2) stays the master; the remote's history is a safety net and a record of what happened on the device, which the add-on reads and labels.
+
+- RF12.1 Every push sends `note` = `ACM v<head>`, followed by `· "<name>"` when the head is a named version (max 200 characters). The add-on recognises its own versions in the remote's list by that prefix.
+- RF12.2 Option per remote "Pin named versions on the remote" (off by default): after a push of a named version, the matching remote version (same note) is pinned so the remote never prunes it. A failed pin is logged and does not fail the push.
+- RF12.3 When drift is detected, the newest entry of the remote's history explains it in the banner: restored from version X, changed outside the web page (e.g. Settings), saved from the builder with its note, or last saved by the add-on and then changed.
+- RF12.4 History tab, "Remote history" panel (read-only): time, reason, note, pinned, pages/cards, and whether the version was pushed by the add-on (with its add-on version) or made on the remote. Actions: **Compare with head** (paths that differ), **Download**, **Import as version** (a new `sync-import` version carrying its origin; if it is the remote's current file the remote is in sync again, as after a pull).
+- RF12.5 The add-on never restores, deletes or re-notes versions on the remote: to go back, import (or restore in the add-on) and push.
+- RF12.6 No automatic mirroring of the remote's history into the add-on's history.
+- RF12.7 Apps older than 1.3.0 (`/history` 404): the panel says it is not available, notes are ignored, nothing else changes.
 
 ## 6. Non-functional requirements
 

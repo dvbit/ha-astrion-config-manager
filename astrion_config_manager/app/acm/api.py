@@ -24,7 +24,7 @@ from aiohttp import web
 
 from . import __version__, copying
 from .actions import Executor
-from .canonical import canonical_hash
+from .canonical import canonical_hash, pretty_dumps
 from .device import DeviceClient, DeviceError
 from .ha import HAClient, HAError
 from .harmony import HarmonyRegistry
@@ -226,20 +226,7 @@ def _drift_changes(store: Store, meta: dict[str, Any], device_doc: Any) -> dict[
         base = hist.state(min(ref, hist.head))
     except StoreError:
         base = hist.state(hist.head)
-    paths: list[str] = []
-
-    def leaves(prefix: str, value: Any) -> None:  # an added block -> its leaf paths
-        if isinstance(value, dict) and value:
-            for key, val in value.items():
-                leaves(f"{prefix}/{str(key).replace('~', '~0').replace('/', '~1')}", val)
-        else:
-            paths.append(prefix)
-
-    for op in jsonpatch.make_patch(base, device_doc).patch:
-        if op["op"] in ("add", "replace"):
-            leaves(op["path"], op.get("value"))
-        else:
-            paths.append(op["path"])
+    paths = _history_paths(base, device_doc)
     return {
         "paths": paths[:12],
         "count": len(paths),
@@ -295,6 +282,57 @@ def _summary(ver: dict[str, Any]) -> dict[str, Any]:
     return out
 
 
+# --------------------------------------------------------------------------
+# RF12: the remote's own version history (app 1.3.0, DashboardHistory.kt)
+# --------------------------------------------------------------------------
+
+# Note sent with every push; also how the add-on recognises its own versions
+# in the remote's list (the remote keeps notes up to 200 characters).
+PUSH_NOTE_RE = re.compile(r"^ACM v(\d+)\b")
+REMOTE_NOTE_MAX = 200
+
+
+def push_note(version: int, name: str | None) -> str:
+    """RF12.1: ``ACM v42 · "Before TV change"`` (name only for named versions)."""
+    note = f"ACM v{version}" + (f' · "{name}"' if name else "")
+    return note[:REMOTE_NOTE_MAX]
+
+
+def _remote_entry(entry: dict[str, Any]) -> dict[str, Any]:
+    """Return a remote history entry plus the add-on version it came from, if any."""
+    match = PUSH_NOTE_RE.match(str(entry.get("note") or ""))
+    return {**entry, "addon_version": int(match.group(1)) if match else None}
+
+
+def _history_paths(base: Any, other: Any) -> list[str]:
+    """Leaf paths that differ between two dashboards (RF10.12 / RF12.4)."""
+    paths: list[str] = []
+
+    def leaves(prefix: str, value: Any) -> None:  # an added block -> its leaf paths
+        if isinstance(value, dict) and value:
+            for key, val in value.items():
+                leaves(f"{prefix}/{str(key).replace('~', '~0').replace('/', '~1')}", val)
+        else:
+            paths.append(prefix)
+
+    for op in jsonpatch.make_patch(base, other).patch:
+        if op["op"] in ("add", "replace"):
+            leaves(op["path"], op.get("value"))
+        else:
+            paths.append(op["path"])
+    return paths
+
+
+async def _remote_last(app: web.Application, meta: dict[str, Any]) -> dict[str, Any] | None:
+    """RF12.3: newest entry of the remote's history (why the file changed); None if unsupported."""
+    try:
+        versions = await _device(app, meta).history_list()
+    except DeviceError as err:
+        _LOGGER.debug("Remote history of '%s' unavailable: %s", meta["name"], err.code)
+        return None
+    return _remote_entry(versions[0]) if versions else None
+
+
 async def _drift(app: web.Application, meta: dict[str, Any]) -> dict[str, Any]:
     """RF5.2: compare canonical hash of the device file with the baseline."""
     try:
@@ -307,6 +345,7 @@ async def _drift(app: web.Application, meta: dict[str, Any]) -> dict[str, Any]:
     changes = None
     if status == DRIFT_DRIFT:
         changes = _drift_changes(app[K_STORE], meta, pulled.content)
+        changes["remote_last"] = await _remote_last(app, meta)
         _LOGGER.warning("Drift detected on '%s': %s change(s) %s", meta["name"], changes["count"], changes["paths"][:4])
     else:
         _LOGGER.debug("Drift check '%s': in sync", meta["name"])
@@ -610,7 +649,10 @@ async def push(request: web.Request) -> web.Response:
         if uploaded:
             request.app[K_DEV_ICONS].pop(rid, None)
             _LOGGER.info("Push '%s': %s icon(s) uploaded: %s", meta["name"], len(uploaded), ", ".join(uploaded))
-        await device.upload(head_state)
+        # RF12.1 / RF12.2: label the version the remote keeps for this save
+        name = store.names(rid).get(str(hist.head))
+        note = push_note(hist.head, name)
+        await device.upload(head_state, note)
         # 4. re-read and verify
         expected = canonical_hash(head_state)
         reread = await device.pull()
@@ -620,12 +662,14 @@ async def push(request: web.Request) -> web.Response:
         store.set_sync(
             rid, baseline=expected, baseline_version=hist.head, last_push_version=hist.head, last_push_at=time.time()
         )
+        pinned = await _pin_pushed(request.app, meta, note) if name and meta.get("pin_named") else None
     _LOGGER.info("Push '%s': v%s sent and verified", meta["name"], hist.head)
     return web.json_response(
         {
             "ok": True,
             "drift_overwritten": drift["status"] == DRIFT_DRIFT,
             "icons_uploaded": uploaded,
+            "remote_pinned": pinned,
             "remote": store.remote_info(rid),
         }
     )
@@ -806,6 +850,96 @@ async def sim_reset(request: web.Request) -> web.Response:
     return web.json_response({"active": {}, "devices": {}})
 
 
+async def _pin_pushed(app: web.Application, meta: dict[str, Any], note: str) -> str | None:
+    """RF12.2: pin the remote version just created by a push (found by its note).
+
+    Never fatal: the push itself already succeeded; returns the pinned id.
+    """
+    try:
+        versions = await _device(app, meta).history_list() or []
+        match = next((v for v in versions if v.get("note") == note), None)
+        if match and await _device(app, meta).history_pin(match["id"], True):
+            _LOGGER.info("Push '%s': remote version %s pinned (%s)", meta["name"], match["id"], note)
+            return match["id"]
+        _LOGGER.warning("Push '%s': pushed version not found in the remote history, not pinned", meta["name"])
+    except DeviceError as err:
+        _LOGGER.warning("Push '%s': pin on the remote failed: %s %s", meta["name"], err.code, err.detail)
+    return None
+
+
+def _remote_vid(request: web.Request) -> str:
+    vid = request.match_info["vid"]
+    if not REMOTE_VID_RE.match(vid):
+        raise StoreError("bad_request")
+    return vid
+
+
+# Same rule as DashboardHistory.ID_PATTERN.
+REMOTE_VID_RE = re.compile(r"^[0-9]{8}-[0-9]{6}(-[0-9]+)?$")
+
+
+async def remote_history(request: web.Request) -> web.Response:
+    """RF12.4: the remote's own versions (read-only), marked when pushed by the add-on."""
+    meta = request.app[K_STORE].remote_info(request.match_info["rid"])
+    versions = await _device(request.app, meta).history_list()
+    if versions is None:
+        _LOGGER.info("Remote history of '%s': not supported (app < 1.3.0)", meta["name"])
+        return web.json_response({"supported": False, "versions": []})
+    _LOGGER.debug("Remote history of '%s': %s version(s)", meta["name"], len(versions))
+    return web.json_response({"supported": True, "versions": [_remote_entry(v) for v in versions]})
+
+
+async def remote_history_get(request: web.Request) -> web.Response:
+    """RF12.4 Download: one remote version as a dashboard.json file."""
+    meta = request.app[K_STORE].remote_info(request.match_info["rid"])
+    vid = _remote_vid(request)
+    content = await _device(request.app, meta).history_get(vid)
+    return web.Response(
+        text=pretty_dumps(content),
+        content_type="application/json",
+        headers={"Content-Disposition": f'attachment; filename="dashboard-{vid}.json"'},
+    )
+
+
+async def remote_history_diff(request: web.Request) -> web.Response:
+    """RF12.4 Compare with head: leaf paths that differ."""
+    rid = request.match_info["rid"]
+    store = request.app[K_STORE]
+    meta = store.remote_info(rid)
+    content = await _device(request.app, meta).history_get(_remote_vid(request))
+    paths = _history_paths(store.head_state(rid), content)
+    return web.json_response({"paths": paths[:40], "count": len(paths)})
+
+
+async def remote_history_import(request: web.Request) -> web.Response:
+    """RF12.4 Import as version: a remote version becomes a new add-on version.
+
+    The remote's file is not touched, so the sync baseline does not change.
+    """
+    rid = request.match_info["rid"]
+    data = await _body(request)
+    store = request.app[K_STORE]
+    vid = _remote_vid(request)
+    async with request.app[K_LOCKS][rid]:
+        meta = store.remote_info(rid)
+        device = _device(request.app, meta)
+        content = await device.history_get(vid)
+        entry = next((v for v in await device.history_list() or [] if v.get("id") == vid), {})
+        origin = {"remote_version": vid, "note": entry.get("note") or "", "reason": entry.get("reason") or ""}
+        ver = store.commit(rid, _int(data.get("head")), content, _user(request), T_SYNC_IMPORT, origin=origin)
+        # The imported version may be the file the remote is using now: then the
+        # head equals the device, exactly as after a pull (baseline realigned).
+        try:
+            current = await device.pull()
+        except DeviceError:
+            current = None
+        if current is not None and current.hash == canonical_hash(content):
+            store.set_sync(rid, baseline=current.hash, baseline_version=store.history(rid).head)
+            _LOGGER.debug("Remote version %s is the current file of '%s': baseline realigned", vid, meta["name"])
+    _LOGGER.info("Remote version %s of '%s' imported: %s", vid, meta["name"], f"v{ver['id']}" if ver else "no changes")
+    return await _after_version(request, rid, ver)
+
+
 # --------------------------------------------------------------------------
 # Application factory
 # --------------------------------------------------------------------------
@@ -867,5 +1001,10 @@ def create_app(data_dir: Path, device_factory=DeviceClient) -> web.Application:
     r.add_post("/api/remotes/{rid}/sim/action", sim_action)
     r.add_get("/api/remotes/{rid}/sim/active", sim_active)
     r.add_post("/api/remotes/{rid}/sim/reset", sim_reset)
+    # RF12: remote history (app 1.3.0)
+    r.add_get("/api/remotes/{rid}/remote-history", remote_history)
+    r.add_get("/api/remotes/{rid}/remote-history/{vid}", remote_history_get)
+    r.add_get("/api/remotes/{rid}/remote-history/{vid}/diff", remote_history_diff)
+    r.add_post("/api/remotes/{rid}/remote-history/{vid}/import", remote_history_import)
     r.add_post("/api/remotes/{rid}/devices/refresh", devices_refresh)
     return app
