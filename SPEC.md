@@ -1,6 +1,6 @@
-# Requisito — Astrion Config Manager (add-on HA) v1.12
+# Requisito — Astrion Config Manager (add-on HA) v1.13
 
-Stato: approvato dal richiedente. v1.3: aggiunto RF6.12 (modalità solo navigazione). v1.4: aggiunto RF7 (icone e catalogo entità). v1.5: aggiunto RF8 (più hub Harmony e destinazioni IR). v1.6: aggiunto RF3.5 (menu e tavolozze). v1.7: aggiunti RF3.6 (liste strutturate) e RF9 (allineamento a upstream 1.2.0, Apple TV diretto). v1.8: RF9.6–RF9.7 (upstream 1.2.1-beta e ricontrollo 1.2.0). v1.9: RF10 (upstream 1.2.2–1.2.7-beta). v1.10: RF11 (upstream 1.2.8–1.2.9-beta, push/pull nella schermata principale). v1.11: RF12 (upstream 1.3.0, integrazione con la cronologia versioni del telecomando). v1.12: RF13 (mappa di navigazione) e RF14 (libreria temi). Sostituisce la v1.0: Harmony e IR rientrano nell'ambito; aggiunte le versioni con nome (RF2.11–RF2.13). Lingua del documento: italiano. Traduzione inglese: [SPEC.en.md](SPEC.en.md).
+Stato: approvato dal richiedente. v1.3: aggiunto RF6.12 (modalità solo navigazione). v1.4: aggiunto RF7 (icone e catalogo entità). v1.5: aggiunto RF8 (più hub Harmony e destinazioni IR). v1.6: aggiunto RF3.5 (menu e tavolozze). v1.7: aggiunti RF3.6 (liste strutturate) e RF9 (allineamento a upstream 1.2.0, Apple TV diretto). v1.8: RF9.6–RF9.7 (upstream 1.2.1-beta e ricontrollo 1.2.0). v1.9: RF10 (upstream 1.2.2–1.2.7-beta). v1.10: RF11 (upstream 1.2.8–1.2.9-beta, push/pull nella schermata principale). v1.11: RF12 (upstream 1.3.0, integrazione con la cronologia versioni del telecomando). v1.12: RF13 (mappa di navigazione) e RF14 (libreria temi). v1.13: RF15 (mappa di navigazione modificabile). Sostituisce la v1.0: Harmony e IR rientrano nell'ambito; aggiunte le versioni con nome (RF2.11–RF2.13). Lingua del documento: italiano. Traduzione inglese: [SPEC.en.md](SPEC.en.md).
 
 ## 1. Scopo
 
@@ -192,6 +192,16 @@ Principio: la cronologia dell'add-on (RF2) resta quella principale; la cronologi
 - RF14.3 Barra in Editor → Globale → Tema: **Carica** (selettore con campioni e anteprima; sostituisce il blocco `theme` = una versione, annullabile), **Salva come…** (sovrascrivere un tema salvato chiede conferma; un predefinito non viene mai sovrascritto), **Elimina** (solo temi salvati).
 - RF14.4 Scheda "Temi" nella schermata principale: elenco con campioni e anteprima; anteprima, rinomina, duplica, elimina, **Esporta** in `.json`, **Applica ai telecomandi…** (una versione per ogni telecomando spuntato, nulla viene inviato), **Importa da file** (il nostro export, un blocco tema o un intero dashboard.json; colori non validi e chiavi sconosciute segnalati e ignorati; un nome già usato chiede un nuovo nome).
 - RF14.5 Anteprima prima di applicare: schermo in miniatura della prima pagina del telecomando aperto (o di quello scelto nella scheda Temi) con il tema applicato.
+
+### RF15 — Mappa di navigazione modificabile
+
+Solo nella scheda Editor (la mappa del Simulatore resta in sola lettura). Ogni modifica è una versione (annullabile) ed è validata come sempre.
+
+- RF15.1 Ogni schermo ha quattro ancore: sinistra/destra = ordine di swipe, alto = arrivo dei collegamenti dalle tile, basso = arrivo delle hotkey. I bersagli validi si illuminano durante il trascinamento. Un clic breve mantiene RF13.5; trascinare su uno spazio vuoto sposta la vista.
+- RF15.2 Swipe: trascinare l'ancora destra di A sull'ancora sinistra di B sposta B subito dopo A (sinistra di A su destra di B: prima di A). Le pagine sono riferite per nome, quindi i collegamenti restano validi; `startPage` segue la sua pagina. Un collegamento di swipe non si può rimuovere (il telecomando scorre sempre tutte le pagine): tenerlo premuto lo spiega.
+- RF15.3 Tasti fisici sotto la mappa su due righe: tasti della pagina selezionata nell'editor e tasti globali; i tasti assegnati partono dal loro riquadro. Trascinare l'ancora di un tasto sull'ancora inferiore di uno schermo chiede pressione breve/lunga e pagina/popup, poi scrive `{key, page, pageMode}` nelle `hotkeys`/`longHotkeys` di quella pagina (o globali); un'assegnazione esistente di quel tasto chiede se sostituirla.
+- RF15.4 Trascinare una tile di `button_grid`/`scene_grid` di un'anteprima (anche dentro card `row`) sull'ancora superiore di uno schermo chiede tocco/tocco lungo e pagina/popup e scrive `page`/`pageMode` sulla tile o nel suo blocco `long_press`; una destinazione esistente chiede se sostituirla; una tile di scena che avvia un'Activity avvisa che il tocco mostra la pagina dell'Activity.
+- RF15.5 Pressione prolungata (600 ms, mouse o touch) su un collegamento, poi conferma: tocco → rimuove `page`/`pageMode`; tocco lungo → lo stesso in `long_press` (eliminato se vuoto); hotkey → l'assegnazione; swipe in alto → `linkedPage`/`linkedPageMode`; indietro → `parent`/`parentKey`; HA → `openWhenEntity`/`openWhenState`/`closeWhenState`/`openMode`. I collegamenti di Activity e overlay sono in sola lettura (si modificano nei form).
 
 ## 6. Requisiti non funzionali
 

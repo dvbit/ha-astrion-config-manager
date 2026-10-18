@@ -322,7 +322,8 @@ function renderRemote() {
   main.append(el("div", { class: "tabs" }, ...["editor", "simulator", "history", "sync"].map((tab) =>
     el("button", { class: S.tab === tab ? "active" : "", text: t("tab_" + tab), onclick: () => { if (tab !== "simulator") closeSim(); S.tab = tab; render(); } }))));
   if (S.tab === "editor" || S.tab === "simulator") {
-    if (!navmap) navmap = new NavMap({ rid: S.rid, remote: S.remote, doc: S.doc, onSelect: mapSelect });
+    // RF15: map edits are ordinary commits (one version each, undoable)
+    if (!navmap) navmap = new NavMap({ rid: S.rid, remote: S.remote, doc: S.doc, hwKeys: S.hwKeys, onSelect: mapSelect, onCommit: commit });
     navmap.setDoc(S.doc, S.remote, S.tab);
     main.append(navmap.root);
   }

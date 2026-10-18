@@ -222,6 +222,17 @@ popup. Click a card in a preview to edit it, or a line to open the tile or
 hotkey behind it. In the Simulator, clicking a page jumps there. ▴ hides the
 map; drag its bottom edge to resize it.
 
+**Editing on the map** (Editor tab):
+
+- drag *Home*'s right ● onto *TV*'s left ● → *TV* becomes *Home*'s swipe neighbour;
+- drag the **Play / Pause** key chip (global row) onto *TV*'s bottom ● → choose
+  *Long* + *Popup* → `{"key": "PLAY", "page": "TV", "pageMode": "popup"}` in `longHotkeys`;
+- drag the *Movie* tile of a scene grid onto *Cinema*'s top ● → choose *Tap* →
+  the tile gets `"page": "Cinema"`;
+- press and hold a connection's icon → confirm → the link is removed.
+
+Each change is one version: **Undo** reverts it.
+
 ### 13. Themes
 
 **Editor → Global → Theme → 📂 Load theme** → pick *OLED black* (preview on the

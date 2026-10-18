@@ -158,7 +158,8 @@ a.button.icon { padding: 2px 8px; }
 /* ---------- RF13 navigation map ---------- */
 .navmap { padding: 8px 12px; }
 .navmap-head { gap: 8px; }
-.navmap-head .muted { font-size: 12px; }
+.navmap-head .muted { font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; flex: 1 1 auto; }
+.navmap-head { flex-wrap: nowrap; }
 .navmap-viewport { position: relative; overflow: hidden; margin-top: 8px; border: 1px solid var(--line); border-radius: 8px;
   background: radial-gradient(circle, var(--line) 1px, transparent 1px) 0 0 / 22px 22px, var(--bg);
   resize: vertical; min-height: 160px; max-height: 85vh; cursor: grab; touch-action: none; user-select: none; }
@@ -217,3 +218,23 @@ a.button.icon { padding: 2px 8px; }
 .theme-list { display: flex; flex-direction: column; gap: 6px; min-width: 240px; max-height: 60vh; overflow-y: auto; }
 .theme-item { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; text-align: left; }
 .theme-item.sel { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); }
+
+/* ---------- RF15 editable map ---------- */
+.navmap-anchor { position: absolute; width: 18px; height: 18px; margin: -9px 0 0 -9px; border-radius: 50%; background: var(--card);
+  border: 3px solid var(--accent); z-index: 2; cursor: crosshair; box-shadow: 0 1px 3px rgba(0,0,0,.3); transform: scale(var(--bs, 1)); }
+.navmap-anchor.a-top { border-color: #7c4dff; }
+.navmap-anchor.a-bottom { border-color: #ef6c00; }
+.navmap-anchor.a-key { left: 50%; top: 0; border-color: #ef6c00; }
+.navmap-anchor.drop-ok { background: #fff59d; transform: scale(calc(var(--bs, 1) * 1.4)); }
+.navmap-anchor.hover { background: var(--ok); }
+.navmap-anchor.dragging, .navmap-node .dragging { outline: 3px solid var(--accent); }
+.navmap-drag { fill: none; stroke: var(--accent); stroke-width: 3; stroke-dasharray: 6 4; }
+.navmap-chip { position: absolute; display: flex; flex-direction: column; align-items: center; justify-content: center; border-radius: 10px;
+  border: 1px solid var(--line); background: var(--card); font-size: 13px; line-height: 1.1; }
+.navmap-chip small { color: var(--muted); font-size: 10px; }
+.navmap-chip.s-p { border-color: #ef6c00; }
+.navmap-rowlabel { position: absolute; font-weight: 600; color: var(--muted); white-space: nowrap; }
+.navmap-dialog fieldset { border: 1px solid var(--line); border-radius: 8px; margin: 8px 0; }
+.navmap-dialog .row { gap: 8px; }
+.navmap-dialog input[type=radio] { width: auto; }
+button.danger-fill { background: var(--err); border-color: var(--err); }

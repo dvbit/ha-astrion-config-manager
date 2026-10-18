@@ -229,6 +229,17 @@ card in anteprima per modificarla, o su una linea per aprire la tile o la
 hotkey che la crea. Nel Simulatore il clic su una pagina la mostra. ▴ nasconde
 la mappa; trascina il bordo inferiore per ridimensionarla.
 
+**Modifiche sulla mappa** (scheda Editor):
+
+- trascina il ● destro di *Home* sul ● sinistro di *TV* → *TV* diventa la vicina di swipe di *Home*;
+- trascina il tasto **Play / Pausa** (riga globale) sul ● inferiore di *TV* → scegli
+  *Lunga* + *Popup* → `{"key": "PLAY", "page": "TV", "pageMode": "popup"}` in `longHotkeys`;
+- trascina la tile *Film* di una scene grid sul ● superiore di *Cinema* → scegli *Tocco* →
+  la tile riceve `"page": "Cinema"`;
+- tieni premuta l'icona di un collegamento → conferma → il collegamento è rimosso.
+
+Ogni modifica è una versione: **Annulla** la ripristina.
+
 ### 13. Temi
 
 **Editor → Globale → Tema → 📂 Carica tema** → scegli *OLED black* (anteprima a

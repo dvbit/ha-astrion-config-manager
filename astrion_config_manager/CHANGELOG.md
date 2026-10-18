@@ -1,5 +1,20 @@
 # Changelog
 
+## 2.14.0 - 2026-10-18
+
+Spec v1.13 (RF15): the navigation map becomes editable (Editor tab).
+
+- Screen anchors: left/right = swipe order (drag A.right onto B.left moves B
+  after A; startPage follows its page), top = tile jumps, bottom = hotkeys.
+- Hardware key chips under the map: keys of the selected page and global keys;
+  drag a chip onto a screen → short/long, page/popup → hotkey (replace asked).
+- Drag a button_grid / scene_grid tile (also inside rows) onto a screen → tap /
+  long tap, page/popup (replace asked; Activity tiles warned).
+- Press and hold a connection to remove it (tap, long tap, hotkey, swipe up,
+  back, HA state); swipe, Activity and overlay links explain why they can't.
+- Every change is one undoable version. Pure document functions covered by
+  Node tests (tests/map_mutations.test.js).
+
 ## 2.13.0 - 2026-10-18
 
 Spec v1.12 (RF13, RF14).
