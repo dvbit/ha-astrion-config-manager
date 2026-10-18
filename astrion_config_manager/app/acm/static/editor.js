@@ -527,6 +527,7 @@ class Editor {
     }
     root.append(this.renderIssues());
     root.append(el("div", { class: "layout" }, this.renderTree(), el("div", {}, this.renderPanel())));
+    if (this.onRender) this.onRender(this.sel); // RF13.5: the map highlights the selection
   }
 
   renderIssues() {
@@ -542,15 +543,21 @@ class Editor {
 
   /* Jump to the element an issue points to. */
   reveal(path) {
+    // open every list item on the way (listEditor keys open items by JSON path)
+    const parts = path.split("/");
+    for (let i = 2; i <= parts.length; i++) this.open.add(parts.slice(0, i).join("/"));
+    this.sel = { ...this.sel, path };
     const m = path.match(/^\/pages\/(\d+)(?:\/cards\/(\d+))?/);
     if (m) this.sel = m[2] !== undefined ? { kind: "card", p: +m[1], c: +m[2] } : { kind: "page", p: +m[1] };
     else {
       const g = path.split("/")[1];
       this.sel = ["hotkeys", "longHotkeys", "irDevices", "haDevices", "activities", "theme", "dock", "power"].includes(g) ? { kind: "global", g } : { kind: "raw" };
     }
+    this.sel.path = path; // RF13.5: lets the map highlight the connection
     this.render();
-    const target = this.root.querySelector(`[data-path="${CSS.escape(path)}"]`);
-    if (target) target.scrollIntoView({ block: "center" });
+    let target = null;
+    for (let i = parts.length; i > 1 && !target; i--) target = this.root.querySelector(`[data-path="${CSS.escape(parts.slice(0, i).join("/"))}"]`);
+    if (target) { target.scrollIntoView({ block: "center" }); target.classList.add("flash"); setTimeout(() => target.classList.remove("flash"), 1600); }
   }
 
   renderTree() {
@@ -765,7 +772,8 @@ class Editor {
       // RF3.5: ThemeConfig colours (config/AppConfig.kt) with palettes
       const th = this.doc.theme || {};
       const defaults = (this.hints && this.hints.theme) || {};
-      panel.append(el("h2", { text: t("theme") }), el("p", { class: "muted", text: t("theme_hint") }),
+      // RF14.3: Load / Save as / Delete from the shared theme library (themes.js)
+      panel.append(el("h2", { text: t("theme") }), themeToolbar(this), el("p", { class: "muted", text: t("theme_hint") }),
         this.form(th, Object.entries(defaults).map(([k, dv]) => [k, "color", { default: dv }]), "/theme", (d) => { if (!d.theme || typeof d.theme !== "object") d.theme = {}; return d.theme; }));
     }
     return panel;

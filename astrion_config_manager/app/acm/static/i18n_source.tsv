@@ -309,3 +309,60 @@ rh_last_outside	Changed outside the web page, e.g. from the remote's Settings ({
 rh_last_save	Saved from the builder or web page: {note} ({when})	Salvata dal builder o dalla pagina web: {note} ({when})	Enregistrée depuis le builder ou la page web : {note} ({when})	Guardada desde el editor o la página web: {note} ({when})	Im Builder oder auf der Webseite gespeichert: {note} ({when})
 rh_last_addon	Last saved by the add-on (v{v}, {when}), then changed	Ultimo salvataggio dall'add-on (v{v}, {when}), poi modificata	Dernier envoi par l'add-on (v{v}, {when}), puis modifiée	Último envío del complemento (v{v}, {when}), luego modificada	Zuletzt vom Add-on gespeichert (v{v}, {when}), danach geändert
 err_remote_version_missing	That version is no longer on the remote	Quella versione non è più sul telecomando	Cette version n'est plus sur la télécommande	Esa versión ya no está en el mando	Diese Version ist nicht mehr auf der Fernbedienung
+map_title	Navigation map	Mappa di navigazione	Carte de navigation	Mapa de navegación	Navigationskarte
+map_hint_editor	Click a screen, a card or a connection to edit it · drag to pan · wheel/pinch to zoom	Clic su schermo, card o collegamento per modificarlo · trascina per spostare · rotella/pinch per lo zoom	Cliquez un écran, une carte ou un lien pour le modifier · glisser pour déplacer · molette/pincer pour zoomer	Haz clic en una pantalla, tarjeta o conexión para editarla · arrastra para mover · rueda/pellizco para zoom	Bildschirm, Karte oder Verbindung anklicken zum Bearbeiten · ziehen zum Verschieben · Mausrad/Pinch zum Zoomen
+map_hint_sim	Click a screen to show it in the simulator	Clic su uno schermo per mostrarlo nel simulatore	Cliquez un écran pour l'afficher dans le simulateur	Haz clic en una pantalla para mostrarla en el simulador	Bildschirm anklicken, um ihn im Simulator zu zeigen
+map_zoom_in	Zoom in	Ingrandisci	Zoom avant	Acercar	Vergrößern
+map_zoom_out	Zoom out	Riduci	Zoom arrière	Alejar	Verkleinern
+map_fit	Fit all	Adatta	Tout afficher	Ajustar	Alles zeigen
+map_legend	Legend	Legenda	Légende	Leyenda	Legende
+map_toggle	Show / hide the map	Mostra / nascondi la mappa	Afficher / masquer la carte	Mostrar / ocultar el mapa	Karte ein-/ausblenden
+map_any_page	Any page (global keys)	Qualsiasi pagina (tasti globali)	Toute page (touches globales)	Cualquier página (teclas globales)	Jede Seite (globale Tasten)
+map_ha	Home Assistant	Home Assistant	Home Assistant	Home Assistant	Home Assistant
+map_overlay_activities	Activities overlay	Overlay Activity	Panneau Activités	Panel de Actividades	Aktivitäten-Overlay
+map_overlay_settings	Settings	Impostazioni	Réglages	Ajustes	Einstellungen
+map_missing	Page not found: the link points to a page name that does not exist	Pagina non trovata: il collegamento punta a un nome di pagina inesistente	Page introuvable : le lien pointe vers un nom de page inexistant	Página no encontrada: el enlace apunta a un nombre de página inexistente	Seite nicht gefunden: der Link zeigt auf einen nicht vorhandenen Seitennamen
+map_start	Start page	Pagina iniziale	Page de démarrage	Página de inicio	Startseite
+map_hidden	Shown only while its Activity runs (crossed = hideMode full)	Visibile solo mentre la sua Activity è attiva (barrato = hideMode full)	Visible seulement pendant son Activité (barré = hideMode full)	Visible solo mientras su Actividad está activa (tachado = hideMode full)	Nur sichtbar, solange ihre Aktivität läuft (durchgestrichen = hideMode full)
+map_popup	opens as a popup (dashed line)	si apre come popup (linea tratteggiata)	s'ouvre en popup (ligne pointillée)	se abre como ventana emergente (línea discontinua)	öffnet als Popup (gestrichelte Linie)
+map_limit	Not shown: pages opened by Home Assistant's page selector or by calls to the remote's web server (not in dashboard.json).	Non mostrate: pagine aperte dal selettore pagina di Home Assistant o da chiamate al server web del telecomando (non sono in dashboard.json).	Non affichées : pages ouvertes par le sélecteur de page de Home Assistant ou par des appels au serveur web de la télécommande (absents de dashboard.json).	No se muestran: páginas abiertas por el selector de página de Home Assistant o por llamadas al servidor web del mando (no están en dashboard.json).	Nicht dargestellt: Seiten, die über die Seitenauswahl von Home Assistant oder Aufrufe des Webservers der Fernbedienung geöffnet werden (nicht in dashboard.json).
+map_k_swipe	Horizontal swipe (neighbouring pages)	Swipe orizzontale (pagine vicine)	Balayage horizontal (pages voisines)	Deslizar en horizontal (páginas vecinas)	Horizontal wischen (Nachbarseiten)
+map_k_swipe_up	Swipe up (linked page)	Swipe verso l'alto (pagina collegata)	Balayage vers le haut (page liée)	Deslizar hacia arriba (página vinculada)	Nach oben wischen (verknüpfte Seite)
+map_k_tap	Tap on a tile or button	Tocco su tile o pulsante	Appui sur une tuile ou un bouton	Toque en un mosaico o botón	Tippen auf Kachel oder Taste
+map_k_long	Long press on a tile	Pressione lunga su una tile	Appui long sur une tuile	Pulsación larga en un mosaico	Langes Drücken auf eine Kachel
+map_k_key	Physical key (hotkey)	Tasto fisico (hotkey)	Touche physique (raccourci)	Tecla física (atajo)	Physische Taste (Hotkey)
+map_k_activity	Activity started → its page	Activity avviata → la sua pagina	Activité lancée → sa page	Actividad iniciada → su página	Aktivität gestartet → ihre Seite
+map_k_ha	Home Assistant state (openWhenEntity)	Stato di Home Assistant (openWhenEntity)	État Home Assistant (openWhenEntity)	Estado de Home Assistant (openWhenEntity)	Home-Assistant-Zustand (openWhenEntity)
+map_k_swipe_down	Swipe down (Activities)	Swipe verso il basso (Activity)	Balayage vers le bas (Activités)	Deslizar hacia abajo (Actividades)	Nach unten wischen (Aktivitäten)
+map_k_back	Back to the parent page	Ritorno alla pagina genitore	Retour à la page parente	Volver a la página padre	Zurück zur übergeordneten Seite
+map_k_broken	Link to a missing page	Collegamento a una pagina mancante	Lien vers une page manquante	Enlace a una página inexistente	Link zu einer fehlenden Seite
+themes	Themes	Temi	Thèmes	Temas	Designs
+themes_hint	Shared theme library: presets plus your saved themes. Load one in a remote's Editor (Global → Theme) or apply it to several remotes here; nothing is pushed automatically.	Libreria di temi condivisa: predefiniti più i tuoi temi salvati. Caricane uno nell'Editor di un telecomando (Globale → Tema) o applicalo qui a più telecomandi; nulla viene inviato automaticamente.	Bibliothèque de thèmes partagée : préréglages et vos thèmes enregistrés. Chargez-en un dans l'Éditeur d'une télécommande (Global → Thème) ou appliquez-le ici à plusieurs télécommandes ; rien n'est envoyé automatiquement.	Biblioteca de temas compartida: predefinidos y tus temas guardados. Carga uno en el Editor de un mando (Global → Tema) o aplícalo aquí a varios mandos; no se envía nada automáticamente.	Gemeinsame Design-Bibliothek: Vorlagen und gespeicherte Designs. Im Editor einer Fernbedienung laden (Global → Design) oder hier auf mehrere anwenden; nichts wird automatisch gesendet.
+theme_preset	preset	predefinito	préréglage	predefinido	Vorlage
+theme_load	Load theme	Carica tema	Charger un thème	Cargar tema	Design laden
+theme_load_hint	Loading replaces this remote's theme block: one version, which Undo reverts.	Il caricamento sostituisce il blocco tema del telecomando: una versione, annullabile con Annulla.	Le chargement remplace le bloc thème de la télécommande : une version, annulable.	Cargar reemplaza el bloque de tema del mando: una versión, que Deshacer revierte.	Laden ersetzt den Design-Block dieser Fernbedienung: eine Version, rückgängig machbar.
+theme_loaded	Theme loaded	Tema caricato	Thème chargé	Tema cargado	Design geladen
+theme_save_as	Save as…	Salva come…	Enregistrer sous…	Guardar como…	Speichern unter…
+theme_delete	Delete theme	Elimina tema	Supprimer un thème	Eliminar tema	Design löschen
+theme_deleted	Theme deleted	Tema eliminato	Thème supprimé	Tema eliminado	Design gelöscht
+theme_saved	Theme saved	Tema salvato	Thème enregistré	Tema guardado	Design gespeichert
+theme_name_prompt	Theme name	Nome del tema	Nom du thème	Nombre del tema	Name des Designs
+theme_overwrite_confirm	A theme named "{name}" exists. Overwrite it?	Esiste già un tema "{name}". Sovrascriverlo?	Un thème « {name} » existe. L'écraser ?	Ya existe un tema «{name}». ¿Sobrescribirlo?	Ein Design „{name}“ existiert. Überschreiben?
+theme_delete_confirm	Delete the theme "{name}"?	Eliminare il tema "{name}"?	Supprimer le thème « {name} » ?	¿Eliminar el tema «{name}»?	Design „{name}“ löschen?
+theme_none_saved	No saved themes (presets can't be deleted)	Nessun tema salvato (i predefiniti non si possono eliminare)	Aucun thème enregistré (les préréglages ne peuvent pas être supprimés)	No hay temas guardados (los predefinidos no se pueden eliminar)	Keine gespeicherten Designs (Vorlagen können nicht gelöscht werden)
+theme_import	Import from file	Importa da file	Importer depuis un fichier	Importar desde archivo	Aus Datei importieren
+theme_imported	Theme imported	Tema importato	Thème importé	Tema importado	Design importiert
+theme_rejected	ignored: {list}	ignorati: {list}	ignorés : {list}	ignorados: {list}	ignoriert: {list}
+theme_name_clash	A theme with this name exists: choose another name	Esiste già un tema con questo nome: scegline un altro	Un thème porte déjà ce nom : choisissez-en un autre	Ya existe un tema con ese nombre: elige otro	Ein Design mit diesem Namen existiert: anderen Namen wählen
+theme_preview_with	Preview with	Anteprima con	Aperçu avec	Vista previa con	Vorschau mit
+theme_apply	Apply to remotes…	Applica ai telecomandi…	Appliquer aux télécommandes…	Aplicar a mandos…	Auf Fernbedienungen anwenden…
+theme_apply_hint	Each ticked remote gets one new version with this theme. Push it when ready.	Ogni telecomando selezionato riceve una nuova versione con questo tema. Invialo quando sei pronto.	Chaque télécommande cochée reçoit une nouvelle version avec ce thème. Envoyez-la quand vous êtes prêt.	Cada mando marcado recibe una nueva versión con este tema. Envíala cuando quieras.	Jede ausgewählte Fernbedienung erhält eine neue Version mit diesem Design. Danach senden.
+theme_unchanged	unchanged	invariato	inchangé	sin cambios	unverändert
+theme_export	Export	Esporta	Exporter	Exportar	Exportieren
+theme_rename	Rename	Rinomina	Renommer	Renombrar	Umbenennen
+err_theme_name_exists	A theme with this name already exists	Esiste già un tema con questo nome	Un thème porte déjà ce nom	Ya existe un tema con ese nombre	Ein Design mit diesem Namen existiert bereits
+err_theme_name_required	Theme name required	Nome del tema obbligatorio	Nom du thème requis	Nombre del tema obligatorio	Name des Designs erforderlich
+err_theme_name_too_long	Theme name too long (max 60)	Nome del tema troppo lungo (max 60)	Nom du thème trop long (max 60)	Nombre del tema demasiado largo (máx. 60)	Name zu lang (max. 60)
+err_theme_invalid	Not a theme file	Non è un file di tema	Pas un fichier de thème	No es un archivo de tema	Keine Design-Datei
+err_theme_not_found	Theme not found	Tema non trovato	Thème introuvable	Tema no encontrado	Design nicht gefunden
+err_theme_preset_readonly	Presets can't be changed or deleted	I predefiniti non si possono modificare né eliminare	Les préréglages ne peuvent être ni modifiés ni supprimés	Los predefinidos no se pueden modificar ni eliminar	Vorlagen können nicht geändert oder gelöscht werden

@@ -1,5 +1,24 @@
 # Changelog
 
+## 2.13.0 - 2026-10-18
+
+Spec v1.12 (RF13, RF14).
+
+- Navigation map above the Editor and the Simulator (RF13): live mini preview
+  of every page, one row in swipe order, icons per way to reach a page (swipe,
+  swipe up, tap, long press, key, Activity, HA state, swipe down, back; dashed
+  = popup), special boxes for global keys, Home Assistant, Activities and
+  Settings, missing-page warnings, legend. Zoom / pan / fit, collapsible and
+  resizable (remembered). Click a page, a card or a link to edit it; in the
+  Simulator a click jumps to the page.
+- Theme library (RF14): presets Default / Light / OLED black / High contrast;
+  Load / Save as / Delete in Editor → Theme (load = one undoable version);
+  Themes tab with preview, rename, duplicate, delete, export, import (checks
+  colours) and apply to several remotes.
+- Fix (RF13.8): the simulator's horizontal swipe runs over all pages in file
+  order like the remote (it was limited to pages with the same parent); the
+  dots still show only the siblings.
+
 ## 2.12.0 - 2026-10-17
 
 Aligned with astrion-custom-dashboard **1.3.0** (stable; dashboard format

@@ -1,9 +1,9 @@
-# Requirement — Astrion Config Manager (HA add-on) v1.11
+# Requirement — Astrion Config Manager (HA add-on) v1.12
 
 > English translation of [SPEC.md](SPEC.md). The Italian document is the
 > reference; in case of discrepancy the Italian text prevails.
 
-Status: approved by the requester. v1.3: added RF6.12 (navigation-only mode). v1.4: added RF7 (icons and entity catalog). v1.5: added RF8 (multiple Harmony hubs and IR targets). v1.6: added RF3.5 (dropdowns and palettes). v1.7: added RF3.6 (structured lists) and RF9 (upstream 1.2.0, direct Apple TV). v1.8: RF9.6–RF9.7 (upstream 1.2.1-beta and 1.2.0 recheck). v1.9: RF10 (upstream 1.2.2–1.2.7-beta). v1.10: RF11 (upstream 1.2.8–1.2.9-beta, push/pull on the main screen). v1.11: RF12 (upstream 1.3.0, integration with the remote's version history). Supersedes v1.0: Harmony and IR are now in scope; named versions added (RF2.11–RF2.13). Original document language: Italian.
+Status: approved by the requester. v1.3: added RF6.12 (navigation-only mode). v1.4: added RF7 (icons and entity catalog). v1.5: added RF8 (multiple Harmony hubs and IR targets). v1.6: added RF3.5 (dropdowns and palettes). v1.7: added RF3.6 (structured lists) and RF9 (upstream 1.2.0, direct Apple TV). v1.8: RF9.6–RF9.7 (upstream 1.2.1-beta and 1.2.0 recheck). v1.9: RF10 (upstream 1.2.2–1.2.7-beta). v1.10: RF11 (upstream 1.2.8–1.2.9-beta, push/pull on the main screen). v1.11: RF12 (upstream 1.3.0, integration with the remote's version history). v1.12: RF13 (navigation map) and RF14 (theme library). Supersedes v1.0: Harmony and IR are now in scope; named versions added (RF2.11–RF2.13). Original document language: Italian.
 
 ## 1. Purpose
 
@@ -176,6 +176,25 @@ Principle: the add-on's history (RF2) stays the master; the remote's history is 
 - RF12.5 The add-on never restores, deletes or re-notes versions on the remote: to go back, import (or restore in the add-on) and push.
 - RF12.6 No automatic mirroring of the remote's history into the add-on's history.
 - RF12.7 Apps older than 1.3.0 (`/history` 404): the panel says it is not available, notes are ignored, nothing else changes.
+
+### RF13 — Navigation map
+
+- RF13.1 A "Navigation map" panel above the **Editor** and the **Simulator**: hidden or shown with ▴/▾, height resizable by dragging (both remembered in the browser). Zoom with the wheel or a pinch, pan by dragging, buttons for zoom ± and "fit all"; it opens on "fit all".
+- RF13.2 Every page is a **live mini preview** drawn by the simulator's own renderer (theme colours, current HA states refreshed at most every 3 s), display-only. Badges: ⭐ start page; 👁 shown only while its Activity runs (`hiddenUnlessActivity`), crossed out with `hideMode: full`.
+- RF13.3 Layout follows the remote: upstream keeps **one continuous pager over the flat page list in file order** (hierarchy only changes the dots and Back), so all pages sit in one row in file order with 👋 between swipe neighbours. Back links to the parent are arcs under the row, every other link an arc above it. Special boxes in a row below: "Any page (global keys)", "Home Assistant", "Activities overlay", "Settings"; a link to a page name that does not exist points to a red ⚠ box.
+- RF13.4 Connections, one per way to reach a page: 👋 swipe; ☝️ swipe up (`linkedPage`); 👆 tile/button tap (`page`); ✋ long press (`long_press.page`); 🎛 physical key with its name (page hotkeys from that page, global ones from "Any page"; `openOverlay`; `openCurrentActivityRoom` to the pages of that room's Activities; long Menu to Settings when no hotkey opens it); 🎬 Activity started → its page (scene `activity`, Activities overlay); 👇 swipe down → Activities overlay; 🏠 `openWhenEntity` (entity = state); ↩ child → parent with its key. Dashed line + ▣ = opens as a popup. A legend explains them.
+- RF13.5 Clicks — Editor: page → page settings; card inside a preview → that card's form; connection → the element that creates it (tile, hotkey, Activity, page setting), opened and highlighted. The editor's selection is highlighted on the map. Simulator: page or connection → the simulated screen jumps there.
+- RF13.6 Redrawn on every new version keeping the current zoom; no external library (works offline).
+- RF13.7 Not drawable: pages opened by Home Assistant's page selector or by calls to the remote's web server (not in `dashboard.json`).
+- RF13.8 Simulator fidelity fix found while mapping: horizontal swipe now runs over all pages in file order (skipping `hideMode: full` pages whose Activity is off); the dots still show only the current page's siblings.
+
+### RF14 — Theme library
+
+- RF14.1 Shared library of themes in the add-on data (in HA backups). A theme = name + the remote's `theme` block saved exactly as set (absent keys = remote default). Names unique, case-insensitive.
+- RF14.2 Read-only presets (can be duplicated): **Default** (empty block = the remote's built-in theme), **Light**, **OLED black**, **High contrast**.
+- RF14.3 Editor → Global → Theme toolbar: **Load** (picker with swatches and preview; replaces the `theme` block = one version, undoable), **Save as…** (overwriting a saved theme asks first; a preset is never overwritten), **Delete** (saved themes only).
+- RF14.4 "Themes" tab on the main screen: list with swatches and preview; preview, rename, duplicate, delete, **Export** as `.json`, **Apply to remotes…** (one version per ticked remote, nothing pushed), **Import from file** (our export, a bare theme block or a whole dashboard.json; invalid colours and unknown keys reported and ignored; a name clash asks for a new name).
+- RF14.5 Preview before applying: mini screen of the first page of the open remote (or of the remote chosen in the Themes tab) with the theme applied.
 
 ## 6. Non-functional requirements
 

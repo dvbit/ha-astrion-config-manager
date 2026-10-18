@@ -817,3 +817,58 @@ async def test_rf12_older_app_without_history(env):
     assert hist == {"supported": False, "versions": []}
     res = await (await env.post(f"/api/remotes/{rid}/push", json={"head": 1})).json()
     assert res["ok"] is True and res["remote_pinned"] is None
+
+
+# ------------------------------------------------------------- RF14 theme library
+
+
+async def test_rf14_presets_save_rename_delete(env):
+    lst = await (await env.get("/api/themes")).json()
+    assert [t["name"] for t in lst[:4]] == ["Default", "Light", "OLED black", "High contrast"]
+    assert all(t["preset"] for t in lst[:4]) and lst[0]["theme"] == {}
+    res = await env.post(
+        "/api/themes", json={"name": "Salon", "theme": {"accent": "#FF0000", "bogus": "#000", "danger": "red"}}
+    )
+    item = await res.json()
+    assert item["theme"] == {"accent": "#FF0000"}
+    assert {r["key"] for r in item["rejected"]} == {"bogus", "danger"}
+    # names are unique, case-insensitive, presets included
+    dup = await env.post("/api/themes", json={"name": "salon", "theme": {}})
+    assert dup.status == 409 and (await dup.json())["error"] == "theme_name_exists"
+    clash = await env.post("/api/themes", json={"name": "light", "theme": {}, "overwrite": True})
+    assert clash.status == 409  # a preset is never overwritten
+    over = await (
+        await env.post("/api/themes", json={"name": "SALON", "theme": {"accent": "#00FF00"}, "overwrite": True})
+    ).json()
+    assert over["id"] == item["id"] and over["theme"] == {"accent": "#00FF00"} and over["name"] == "Salon"
+    ren = await (await env.put(f"/api/themes/{item['id']}", json={"name": "Living"})).json()
+    assert ren["name"] == "Living"
+    assert (await env.delete("/api/themes/preset:light")).status == 403
+    assert (await env.delete(f"/api/themes/{item['id']}")).status == 200
+    assert len(await (await env.get("/api/themes")).json()) == 4
+
+
+async def test_rf14_export_import_and_apply(env):
+    rid_a = (await register(env, "a", "A"))["id"]
+    rid_b = (await register(env, "b", "B"))["id"]
+    exp = await env.get("/api/themes/preset:oled/export")
+    assert "attachment" in exp.headers["Content-Disposition"]
+    data = json.loads(await exp.text())
+    imp = await env.post("/api/themes/import", json={"data": data})
+    assert imp.status == 409  # same name as the preset: the UI asks for another one
+    item = await (await env.post("/api/themes/import", json={"data": data, "name": "My OLED"})).json()
+    assert item["theme"]["background"] == "#000000" and item["rejected"] == []
+    # a whole dashboard.json is accepted too (its theme block)
+    dash = {"pages": [], "theme": {"accent": "#123456", "primaryText": "nope"}}
+    item2 = await (await env.post("/api/themes/import", json={"data": dash, "name": "From dash"})).json()
+    assert item2["theme"] == {"accent": "#123456"} and item2["rejected"][0]["key"] == "primaryText"
+    res = await (await env.post(f"/api/themes/{item['id']}/apply", json={"remotes": [rid_a, rid_b, "nope"]})).json()
+    by = {r["id"]: r for r in res["results"]}
+    assert by[rid_a]["version"] == 2 and by[rid_b]["version"] == 2 and by["nope"]["error"]
+    st = await state(env, rid_a)
+    assert st["state"]["theme"]["background"] == "#000000"
+    # Default preset = remote built-ins: the theme block is removed (one more version)
+    res = await (await env.post("/api/themes/preset:default/apply", json={"remotes": [rid_a]})).json()
+    assert res["results"][0]["version"] == 3 and "theme" not in (await state(env, rid_a))["state"]
+    again = await (await env.post("/api/themes/preset:default/apply", json={"remotes": [rid_a]})).json()
+    assert again["results"][0]["version"] is None  # unchanged: no version

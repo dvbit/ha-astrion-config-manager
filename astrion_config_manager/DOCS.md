@@ -33,10 +33,15 @@ Open **Astrion** in the sidebar (admins only).
 5. **Simulator**: live preview of the head; taps and HA100 keys are executed
    for real (HA, the remote's Harmony hubs, IR via its `remote.*` entity or extenders).
 
-6. **Icons**: shared library; missing icons are uploaded to a remote on push;
+6. **Navigation map** (above Editor and Simulator): every page as a live mini
+   preview with the ways to reach it; click a card or a link to edit it.
+   **Themes** tab: shared theme library (presets, save/load in the Editor, export,
+   import, apply to several remotes).
+
+7. **Icons**: shared library; missing icons are uploaded to a remote on push;
    with app 1.2.7+ an icon can also be deleted on the remotes that no longer use it.
 
-7. **App 1.2.7-beta**: dock screen and standby settings (Global), pages hidden
+8. **App 1.2.7-beta**: dock screen and standby settings (Global), pages hidden
    during inactive Activities (`hideMode: full`), Off buttons (`stopActivity`),
    hotkey events (`astrion_button` on HA's bus), Apple TV layouts with apps. The
    simulator previews the dock screen (**Docked**) and remembers device states

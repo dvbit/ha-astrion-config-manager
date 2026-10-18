@@ -30,6 +30,7 @@ from .ha import HAClient, HAError
 from .harmony import HarmonyRegistry
 from .icons import IconLibrary, collect_refs, sanitize
 from .store import T_SYNC_IMPORT, Store, StoreError, clean_fields
+from .themes import ThemeLibrary, clean_theme, theme_from_file
 from .validate import HARDWARE_KEYS, validate
 
 _LOGGER = logging.getLogger(__name__)
@@ -47,6 +48,7 @@ K_DEVICE = web.AppKey("device_factory", object)
 K_EXEC = web.AppKey("executor", Executor)
 K_HARMONY = web.AppKey("harmony", HarmonyRegistry)
 K_ICONS = web.AppKey("icons", IconLibrary)
+K_THEMES = web.AppKey("themes", ThemeLibrary)
 K_DEV_ICONS = web.AppKey("device_icons", dict)  # rid -> (monotonic, set of names)
 K_HA_OK = web.AppKey("ha_ok", dict)  # mutable holder: app state is frozen after start
 
@@ -941,6 +943,98 @@ async def remote_history_import(request: web.Request) -> web.Response:
 
 
 # --------------------------------------------------------------------------
+# RF14: shared theme library
+# --------------------------------------------------------------------------
+
+
+async def themes_list(request: web.Request) -> web.Response:
+    """Presets + saved themes."""
+    return web.json_response(request.app[K_THEMES].list())
+
+
+async def theme_save(request: web.Request) -> web.Response:
+    """RF14.3 Save as (``overwrite`` replaces a saved theme with the same name)."""
+    data = await _body(request)
+    item = request.app[K_THEMES].save(data.get("name"), data.get("theme"), overwrite=data.get("overwrite") is True)
+    return web.json_response(item)
+
+
+async def theme_rename(request: web.Request) -> web.Response:
+    """RF14.4 rename."""
+    data = await _body(request)
+    return web.json_response(request.app[K_THEMES].rename(request.match_info["tid"], data.get("name")))
+
+
+async def theme_delete(request: web.Request) -> web.Response:
+    """RF14.3 delete (presets are read-only)."""
+    request.app[K_THEMES].delete(request.match_info["tid"])
+    return web.json_response({"ok": True})
+
+
+async def theme_export(request: web.Request) -> web.Response:
+    """RF14.4 export as ``{"name", "theme"}`` .json."""
+    item = request.app[K_THEMES].get(request.match_info["tid"])
+    slug = re.sub(r"[^A-Za-z0-9._-]+", "_", item["name"]).strip("_") or "theme"
+    return web.Response(
+        text=pretty_dumps({"name": item["name"], "theme": item["theme"]}),
+        content_type="application/json",
+        headers={"Content-Disposition": f'attachment; filename="astrion-theme-{slug}.json"'},
+    )
+
+
+async def theme_import(request: web.Request) -> web.Response:
+    """RF14.4 import from a file's content: checks colours, reports dropped values.
+
+    Body ``{"data": <parsed file>, "name"?: str}``; a name clash answers 409
+    ``theme_name_exists`` so the UI can ask for another name.
+    """
+    data = await _body(request)
+    file_name, raw = theme_from_file(data.get("data"))
+    clean, rejected = clean_theme(raw)
+    name = data.get("name") or file_name
+    item = request.app[K_THEMES].save(name, clean)
+    _LOGGER.info("Theme '%s' imported (%s colour(s), %s dropped)", item["name"], len(clean), len(rejected))
+    return web.json_response({**item, "rejected": rejected})
+
+
+def themed(doc: Any, theme: dict[str, Any]) -> Any:
+    """RF14.3 Load: the remote's ``theme`` block replaced (empty = remote defaults)."""
+    if not isinstance(doc, dict):
+        raise StoreError("root_invalid")
+    out = copy.deepcopy(doc)
+    if theme:
+        out["theme"] = copy.deepcopy(theme)
+    else:
+        out.pop("theme", None)
+    return out
+
+
+async def theme_apply(request: web.Request) -> web.Response:
+    """RF14.4 Apply to remotes: one version per remote, nothing pushed.
+
+    Body ``{"remotes": [rid, ...]}``; result per remote: ``version`` (new
+    version id), ``unchanged`` or an error code.
+    """
+    data = await _body(request)
+    store = request.app[K_STORE]
+    item = request.app[K_THEMES].get(request.match_info["tid"])
+    results = []
+    for rid in data.get("remotes") or []:
+        try:
+            async with request.app[K_LOCKS][rid]:
+                meta = store.remote_info(rid)
+                ver = store.commit(rid, meta["head"], themed(store.head_state(rid), item["theme"]), _user(request))
+            results.append({"id": rid, "name": meta["name"], "version": ver["id"] if ver else None})
+            _LOGGER.info(
+                "Theme '%s' applied to '%s': %s", item["name"], meta["name"], f"v{ver['id']}" if ver else "unchanged"
+            )
+        except StoreError as err:
+            _LOGGER.warning("Theme '%s' not applied to %s: %s", item["name"], rid, err.code)
+            results.append({"id": rid, "error": err.code})
+    return web.json_response({"results": results})
+
+
+# --------------------------------------------------------------------------
 # Application factory
 # --------------------------------------------------------------------------
 
@@ -953,6 +1047,7 @@ def create_app(data_dir: Path, device_factory=DeviceClient) -> web.Application:
     app[K_DEVICE] = device_factory
     app[K_HA_OK] = {"ok": True}
     app[K_ICONS] = IconLibrary(data_dir)
+    app[K_THEMES] = ThemeLibrary(data_dir)
     app[K_DEV_ICONS] = {}
 
     async def _ctx(app: web.Application):
@@ -1001,6 +1096,14 @@ def create_app(data_dir: Path, device_factory=DeviceClient) -> web.Application:
     r.add_post("/api/remotes/{rid}/sim/action", sim_action)
     r.add_get("/api/remotes/{rid}/sim/active", sim_active)
     r.add_post("/api/remotes/{rid}/sim/reset", sim_reset)
+    # RF14: theme library
+    r.add_get("/api/themes", themes_list)
+    r.add_post("/api/themes", theme_save)
+    r.add_post("/api/themes/import", theme_import)
+    r.add_put("/api/themes/{tid}", theme_rename)
+    r.add_delete("/api/themes/{tid}", theme_delete)
+    r.add_get("/api/themes/{tid}/export", theme_export)
+    r.add_post("/api/themes/{tid}/apply", theme_apply)
     # RF12: remote history (app 1.3.0)
     r.add_get("/api/remotes/{rid}/remote-history", remote_history)
     r.add_get("/api/remotes/{rid}/remote-history/{vid}", remote_history_get)

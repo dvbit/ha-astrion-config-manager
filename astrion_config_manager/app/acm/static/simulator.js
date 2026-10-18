@@ -84,6 +84,9 @@ class Simulator {
     this.atvPlaying = {};         // AppleTvRemoteCard Harmony play/pause guess
     this.navOnly = false;         // RF6.12, remembered per browser
     try { this.navOnly = window.localStorage.getItem("acm-sim-nav-only") === "1"; } catch (e) { /* storage unavailable */ }
+    // RF13.2: a "preview" instance only renders pages for the navigation map;
+    // the map opens its live connection itself
+    if (this.preview) return;
     this.connect();
     api("GET", `api/remotes/${this.rid}/sim/active`).then((a) => { this.setActive(a.active); this.devStates = a.devices || {}; this.render(); }).catch(() => {});
   }
@@ -170,18 +173,23 @@ class Simulator {
   fullyHidden(p, act) {
     return !!(p && p.hiddenUnlessActivity && p.hideMode === "full" && !(act || this.activeIds()).has(p.hiddenUnlessActivity));
   }
-  /* Pages reachable by swiping. "dots" (default): the page stays in the pager,
-   * only its dot is hidden; "full": skipped by swipes (RF10.2). */
+  /* Pages reachable by swiping: upstream Dashboard.kt keeps ONE continuous
+   * pager over the full flat page list in file order ("swiping itself is
+   * unaffected by hierarchy"); "full" pages whose Activity is off are skipped
+   * (RF10.2), "dots" pages stay in the pager with their dot hidden. */
   siblings() {
-    const pages = this.pages(); const cur = pages[this.cur] || {};
     const act = this.activeIds();
-    return pages.map((p, i) => [p, i]).filter(([p, i]) => (p.parent || null) === (cur.parent || null)
-      && (i === this.cur || !this.fullyHidden(p, act))).map(([, i]) => i);
+    return this.pages().map((p, i) => [p, i]).filter(([p, i]) => i === this.cur || !this.fullyHidden(p, act)).map(([, i]) => i);
   }
-  /* Dashboard.isDotVisible */
+  /* PageIndicator: dots are the current page's siblings (same parent) only,
+   * gated by Dashboard.isDotVisible. */
   dotPages() {
     const act = this.activeIds();
-    return this.siblings().filter((i) => { const p = this.pages()[i]; return i === this.cur || !p.hiddenUnlessActivity || act.has(p.hiddenUnlessActivity); });
+    const pages = this.pages(); const cur = pages[this.cur] || {};
+    return this.siblings().filter((i) => {
+      const p = pages[i];
+      return (p.parent || null) === (cur.parent || null) && (i === this.cur || !p.hiddenUnlessActivity || act.has(p.hiddenUnlessActivity));
+    });
   }
   /* New runtime state; HiddenPageExitEffect: leave a "full" page whose
    * Activity just stopped (to its parent, else the nearest visible page). */
@@ -460,6 +468,7 @@ class Simulator {
     if (newPage) newPage.scrollTop = this.scroll[this.cur] || 0;
     const newPop = screen.querySelector(".sim-popup");
     if (newPop && oldPop) newPop.scrollTop = popScroll;
+    if (this.onRender) this.onRender(this.cur); // RF13.5: the map follows the current page
   }
 
   dots() {

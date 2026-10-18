@@ -216,8 +216,10 @@ function renderList() {
   main.append(el("div", { class: "tabs" },
     el("button", { class: S.view === "list" ? "active" : "", text: t("remotes"), onclick: guard(async () => { S.view = "list"; await loadList(false); }) }),
     el("button", { class: archived ? "active" : "", text: t("archived"), onclick: guard(async () => { S.view = "archive"; await loadList(true); }) }),
-    el("button", { class: S.view === "icons" ? "active" : "", text: t("icons"), onclick: () => { S.view = "icons"; render(); } })));
+    el("button", { class: S.view === "icons" ? "active" : "", text: t("icons"), onclick: () => { S.view = "icons"; render(); } }),
+    el("button", { class: S.view === "themes" ? "active" : "", text: t("themes"), onclick: () => { S.view = "themes"; render(); } })));
   if (S.view === "icons") return renderIcons();
+  if (S.view === "themes") return renderThemes().catch(handleError); // RF14.4
   if (!S.remotes.length) main.append(el("p", { class: "muted", text: t("empty_list") }));
   for (const r of S.remotes) {
     const info = el("div", {},
@@ -281,7 +283,7 @@ function remoteDialog(remote) {
 }
 
 async function openRemote(rid) {
-  closeSim();
+  closeSim(); closeMap();
   S.view = "remote"; S.rid = rid; S.tab = "editor"; editor = null;
   main.replaceChildren(el("p", { class: "muted", text: t("loading") }));
   await loadRemote();
@@ -293,11 +295,25 @@ let sim = null;
 /* Stop the simulator live stream when leaving the remote/tab. */
 function closeSim() { if (sim) { sim.close(); sim = null; } }
 
+/* RF13: navigation map above the Editor and the Simulator (one per open remote). */
+let navmap = null;
+function closeMap() { if (navmap) { navmap.close(); navmap = null; } }
+function mapSelect(target) {
+  if (S.tab === "simulator") {
+    if (sim && target.p !== undefined) { sim.cur = target.p; sim.popup = null; sim.overlay = null; sim.render(); }
+    return;
+  }
+  if (!editor) return;
+  if (target.kind === "path") return editor.reveal(target.path);
+  editor.sel = target.kind === "card" ? { kind: "card", p: target.p, c: target.c } : { kind: "page", p: target.p };
+  editor.render();
+}
+
 function renderRemote() {
   const r = S.remote;
   main.replaceChildren();
   main.append(el("div", { class: "row" },
-    el("button", { text: "← " + t("back"), onclick: guard(async () => { closeSim(); S.view = "list"; await loadList(false); }) }),
+    el("button", { text: "← " + t("back"), onclick: guard(async () => { closeSim(); closeMap(); S.view = "list"; await loadList(false); }) }),
     el("h2", { text: r.name }), statusBadge(r.id), el("span", { class: "muted", text: `${t("head")}: v${r.head}` }),
     el("span", { class: "spacer" }), ...syncButtons(r, true),
     el("button", { text: "↶ " + t("undo"), disabled: !r.can_undo, onclick: guard(async () => applyResult(await api("POST", `api/remotes/${S.rid}/undo`, { head: r.head }))) }),
@@ -305,6 +321,11 @@ function renderRemote() {
   if (S.drift[r.id] === "drift" && !S.ignored.has(r.id)) main.append(driftBanner());
   main.append(el("div", { class: "tabs" }, ...["editor", "simulator", "history", "sync"].map((tab) =>
     el("button", { class: S.tab === tab ? "active" : "", text: t("tab_" + tab), onclick: () => { if (tab !== "simulator") closeSim(); S.tab = tab; render(); } }))));
+  if (S.tab === "editor" || S.tab === "simulator") {
+    if (!navmap) navmap = new NavMap({ rid: S.rid, remote: S.remote, doc: S.doc, onSelect: mapSelect });
+    navmap.setDoc(S.doc, S.remote, S.tab);
+    main.append(navmap.root);
+  }
   const body = el("div", {});
   main.append(body);
   if (S.tab === "editor") {
@@ -313,11 +334,13 @@ function renderRemote() {
         entities: () => S.entities, remote: () => S.remote, pickIcon: (cb) => openIconPicker(S.rid, cb) });
     }
     editor.root = body;
+    editor.onRender = (sel) => { if (navmap) navmap.highlight(sel); };
     editor.setDoc(S.doc, S.validation);
   } else if (S.tab === "simulator") {
     // RF6.1: the simulator follows the head and is refreshed on every version.
     if (!sim) sim = new Simulator({ rid: S.rid, remote: S.remote, doc: S.doc });
     sim.root = body;
+    sim.onRender = (cur) => { if (navmap) navmap.highlight({ kind: "page", p: cur }); };
     sim.setDoc(S.doc, S.remote);
   } else if (S.tab === "history") {
     renderHistory(body);

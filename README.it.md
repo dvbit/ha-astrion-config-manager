@@ -37,6 +37,8 @@ Schema seguito: release upstream **1.3.0** ( campi delle card rigenerati con `to
 | Simulatore | La testa resa alla risoluzione del telecomando con stati HA live; tocchi e tasti HA100 eseguono **realmente** su HA, Hub Harmony ed emettitore IR Broadlink. |
 | Dock e standby (1.2.7) | Sezioni "Schermo dock" e "Standby e batteria"; pagine nascoste del tutto (`hideMode: full`); pulsanti Off (`stopActivity`); eventi hotkey verso HA; layout Apple TV compact/full con scorciatoie app; identità del telecomando e rilevamento duplicati; eliminazione icone sui telecomandi. |
 | Cronologia telecomando (1.3.0) | Le versioni conservate dal telecomando elencate nello Storico: push etichettati `ACM v<n>`, versioni con nome fissabili, disallineamento spiegato, ogni versione confrontabile e importabile. |
+| Mappa di navigazione | Sopra Editor e Simulatore: ogni pagina come anteprima live, un'icona per ogni modo di raggiungerla (swipe, tocco, pressione lunga, tasto, Activity, stato HA, popup, indietro); zoom, spostamento, clic per modificare. |
+| Temi | Libreria di temi condivisa con predefiniti: carica / salva / elimina nell'Editor, scheda Temi per anteprima, esporta, importa e applica a più telecomandi. |
 | Lingue | Inglese, italiano, francese, spagnolo, tedesco (segue la lingua di HA). |
 
 ## Esempi d'uso
@@ -215,11 +217,37 @@ rete di sicurezza che l'add-on legge ed etichetta.
   telecomando con la testa, scaricala o **Importa come versione** (poi invia).
   L'add-on non ripristina né elimina nulla nella cronologia del telecomando.
 
+### 12. Mappa di navigazione
+
+Apri un telecomando: la **🗺 Mappa di navigazione** sta sopra l'Editor. Tutte le
+pagine sono su una riga nell'ordine in cui il telecomando le scorre, ognuna
+disegnata come schermo live in miniatura. Le icone sulle linee dicono come si
+raggiunge una pagina: 👋 swipe, ☝️ swipe in alto, 👆 tocco, ✋ pressione lunga,
+🎛 tasto ("Menu ⏱" = pressione lunga di Menu), 🎬 Activity, 🏠 stato di Home
+Assistant, ↩ indietro; una linea tratteggiata con ▣ apre un popup. Clic su una
+card in anteprima per modificarla, o su una linea per aprire la tile o la
+hotkey che la crea. Nel Simulatore il clic su una pagina la mostra. ▴ nasconde
+la mappa; trascina il bordo inferiore per ridimensionarla.
+
+### 13. Temi
+
+**Editor → Globale → Tema → 📂 Carica tema** → scegli *OLED black* (anteprima a
+destra) → una nuova versione, Annulla riporta i colori precedenti. **💾 Salva
+come…** salva i colori attuali come *Salotto*. Nella schermata principale,
+**Temi** → *Salotto* → **Applica ai telecomandi…** → spunta *Cucina* e *Camera*
+→ ognuno riceve una versione, pronta da inviare. **Esporta** produce un file come:
+
+```json
+{ "name": "Salotto", "theme": { "background": "#000000", "accent": "#4DA3FF" } }
+```
+
+che **Importa da file** rilegge (va bene anche un intero `dashboard.json`).
+
 ## Dati e backup
 
 Tutto risiede nel volume `/data` dell'app (incluso nei backup HA). Scritture
 atomiche (file temporaneo + fsync + rename): una versione esiste per intero o
-non esiste. Gli stati dispositivi del simulatore sono in `/data/sim_state/`. Struttura dei file: vedi [README inglese](README.md#data-and-backups).
+non esiste. Gli stati dispositivi del simulatore sono in `/data/sim_state/`, i temi salvati in `/data/themes/`. Struttura dei file: vedi [README inglese](README.md#data-and-backups).
 
 ## Log
 

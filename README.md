@@ -29,6 +29,8 @@ Schema followed: upstream release **1.3.0** (card fields regenerated with `tools
 | Remotes | Register many remotes (name, IP, port, screen size, orientation, Harmony IP, IR entity). Archive instead of delete. |
 | History | Every change is a version stored as a JSON Patch delta; snapshots every 50. Undo/redo are versions too. Restore any version in one step. |
 | Remote history (1.3.0) | The remote's own versions listed in History: pushes labelled `ACM v<n>`, named ones optionally pinned, drift explained, any remote version comparable and importable. |
+| Navigation map | Above the Editor and the Simulator: every page as a live mini preview, one icon per way to reach it (swipe, tap, long press, key, Activity, HA state, popup, back); zoom, pan, click to edit. |
+| Themes | Shared theme library with presets: load / save / delete in the Editor, a Themes tab to preview, export, import and apply to several remotes. |
 | Named versions | Label milestones ("Before TV change"), filter them, restore them. Labels never alter history. |
 | Editor | Dropdowns for fixed values, colour palettes (cards and theme). Forms for pages, cards (21 types, fields extracted from upstream renderers), hotkeys, IR devices, Activities, theme; raw JSON for everything. Unknown cards/fields survive untouched. |
 | Validation | Structure + every referenced entity must exist in HA. Push is blocked on errors. |
@@ -209,6 +211,31 @@ history stays the reference; the remote's is a safety net it reads and labels.
   download it, or **Import as version** (then push). The add-on never restores
   or deletes anything in the remote's history.
 
+### 12. Navigation map
+
+Open a remote: the **🗺 Navigation map** sits above the Editor. All pages are
+in one row in the order the remote swipes through them, each drawn as a live
+mini screen. Icons on the lines tell how a page is reached: 👋 swipe,
+☝️ swipe up, 👆 tap, ✋ long press, 🎛 key ("Menu ⏱" = long press of Menu),
+🎬 Activity, 🏠 Home Assistant state, ↩ back; a dashed line with ▣ opens a
+popup. Click a card in a preview to edit it, or a line to open the tile or
+hotkey behind it. In the Simulator, clicking a page jumps there. ▴ hides the
+map; drag its bottom edge to resize it.
+
+### 13. Themes
+
+**Editor → Global → Theme → 📂 Load theme** → pick *OLED black* (preview on the
+right) → one new version, Undo brings the old colours back. **💾 Save as…**
+stores the current colours as *Living room*. On the main screen, **Themes** →
+*Living room* → **Apply to remotes…** → tick *Kitchen* and *Bedroom* → each gets
+a version, ready to push. **Export** gives a file like:
+
+```json
+{ "name": "Living room", "theme": { "background": "#000000", "accent": "#4DA3FF" } }
+```
+
+that **Import from file** reads back (a whole `dashboard.json` works too).
+
 ## Data and backups
 
 Everything lives in the app's `/data` volume (included in HA backups):
@@ -220,6 +247,7 @@ Everything lives in the app's `/data` volume (included in HA backups):
 /data/remotes/<id>/names.json         version names
 /data/icons/                          shared icon library
 /data/sim_state/<id>.json             simulator device states (RF10.5)
+/data/themes/<id>.json                saved themes (RF14)
 ```
 
 Writes are atomic (temp file + fsync + rename): a version exists entirely or not at all.

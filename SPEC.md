@@ -1,6 +1,6 @@
-# Requisito — Astrion Config Manager (add-on HA) v1.11
+# Requisito — Astrion Config Manager (add-on HA) v1.12
 
-Stato: approvato dal richiedente. v1.3: aggiunto RF6.12 (modalità solo navigazione). v1.4: aggiunto RF7 (icone e catalogo entità). v1.5: aggiunto RF8 (più hub Harmony e destinazioni IR). v1.6: aggiunto RF3.5 (menu e tavolozze). v1.7: aggiunti RF3.6 (liste strutturate) e RF9 (allineamento a upstream 1.2.0, Apple TV diretto). v1.8: RF9.6–RF9.7 (upstream 1.2.1-beta e ricontrollo 1.2.0). v1.9: RF10 (upstream 1.2.2–1.2.7-beta). v1.10: RF11 (upstream 1.2.8–1.2.9-beta, push/pull nella schermata principale). v1.11: RF12 (upstream 1.3.0, integrazione con la cronologia versioni del telecomando). Sostituisce la v1.0: Harmony e IR rientrano nell'ambito; aggiunte le versioni con nome (RF2.11–RF2.13). Lingua del documento: italiano. Traduzione inglese: [SPEC.en.md](SPEC.en.md).
+Stato: approvato dal richiedente. v1.3: aggiunto RF6.12 (modalità solo navigazione). v1.4: aggiunto RF7 (icone e catalogo entità). v1.5: aggiunto RF8 (più hub Harmony e destinazioni IR). v1.6: aggiunto RF3.5 (menu e tavolozze). v1.7: aggiunti RF3.6 (liste strutturate) e RF9 (allineamento a upstream 1.2.0, Apple TV diretto). v1.8: RF9.6–RF9.7 (upstream 1.2.1-beta e ricontrollo 1.2.0). v1.9: RF10 (upstream 1.2.2–1.2.7-beta). v1.10: RF11 (upstream 1.2.8–1.2.9-beta, push/pull nella schermata principale). v1.11: RF12 (upstream 1.3.0, integrazione con la cronologia versioni del telecomando). v1.12: RF13 (mappa di navigazione) e RF14 (libreria temi). Sostituisce la v1.0: Harmony e IR rientrano nell'ambito; aggiunte le versioni con nome (RF2.11–RF2.13). Lingua del documento: italiano. Traduzione inglese: [SPEC.en.md](SPEC.en.md).
 
 ## 1. Scopo
 
@@ -173,6 +173,25 @@ Principio: la cronologia dell'add-on (RF2) resta quella principale; la cronologi
 - RF12.5 L'add-on non ripristina, elimina né modifica le note delle versioni sul telecomando: per tornare indietro si importa (o si ripristina nell'add-on) e si invia.
 - RF12.6 Nessuna copia automatica della cronologia del telecomando in quella dell'add-on.
 - RF12.7 App precedenti alla 1.3.0 (`/history` 404): il pannello indica che non è disponibile, le note vengono ignorate, nient'altro cambia.
+
+### RF13 — Mappa di navigazione
+
+- RF13.1 Pannello "Mappa di navigazione" sopra **Editor** e **Simulatore**: si mostra o nasconde con ▴/▾, altezza ridimensionabile trascinando (entrambi ricordati dal browser). Zoom con rotella o pinch, spostamento trascinando, pulsanti zoom ± e "adatta"; si apre su "adatta".
+- RF13.2 Ogni pagina è un'**anteprima live in miniatura** disegnata dal renderer del simulatore (colori del tema, stati HA aggiornati al massimo ogni 3 s), solo visualizzazione. Badge: ⭐ pagina iniziale; 👁 visibile solo mentre la sua Activity è attiva (`hiddenUnlessActivity`), barrato con `hideMode: full`.
+- RF13.3 Il layout segue il telecomando: upstream mantiene **un unico pager continuo sull'elenco piatto delle pagine in ordine di file** (la gerarchia cambia solo i pallini e Indietro), quindi tutte le pagine stanno su una riga in ordine di file con 👋 tra le vicine di swipe. I ritorni al genitore sono archi sotto la riga, ogni altro collegamento un arco sopra. Riquadri speciali in una riga sotto: "Qualsiasi pagina (tasti globali)", "Home Assistant", "Overlay Activity", "Impostazioni"; un collegamento a un nome di pagina inesistente punta a un riquadro ⚠ rosso.
+- RF13.4 Collegamenti, uno per ogni modo di raggiungere una pagina: 👋 swipe; ☝️ swipe in alto (`linkedPage`); 👆 tocco su tile/pulsante (`page`); ✋ pressione lunga (`long_press.page`); 🎛 tasto fisico con il suo nome (hotkey di pagina da quella pagina, globali da "Qualsiasi pagina"; `openOverlay`; `openCurrentActivityRoom` verso le pagine delle Activity di quella stanza; Menu lungo verso Impostazioni quando nessuna hotkey le apre); 🎬 Activity avviata → la sua pagina (scena `activity`, overlay Activity); 👇 swipe in basso → overlay Activity; 🏠 `openWhenEntity` (entità = stato); ↩ figlia → genitore con il suo tasto. Linea tratteggiata + ▣ = si apre come popup. Una legenda li spiega.
+- RF13.5 Clic — Editor: pagina → impostazioni della pagina; card dentro un'anteprima → il form di quella card; collegamento → l'elemento che lo crea (tile, hotkey, Activity, impostazione di pagina), aperto ed evidenziato. La selezione dell'editor è evidenziata sulla mappa. Simulatore: pagina o collegamento → lo schermo simulato salta lì.
+- RF13.6 Ridisegnata a ogni nuova versione mantenendo lo zoom; nessuna libreria esterna (funziona offline).
+- RF13.7 Non disegnabili: pagine aperte dal selettore pagina di Home Assistant o da chiamate al server web del telecomando (non sono in `dashboard.json`).
+- RF13.8 Correzione di fedeltà del simulatore emersa con la mappa: lo swipe orizzontale ora scorre tutte le pagine in ordine di file (saltando le pagine `hideMode: full` con Activity spenta); i pallini mostrano ancora solo le pagine sorelle.
+
+### RF14 — Libreria temi
+
+- RF14.1 Libreria di temi condivisa nei dati dell'add-on (nei backup HA). Un tema = nome + il blocco `theme` del telecomando salvato esattamente com'è (chiavi assenti = predefinito del telecomando). Nomi univoci, senza distinzione maiuscole/minuscole.
+- RF14.2 Temi predefiniti in sola lettura (duplicabili): **Default** (blocco vuoto = tema integrato del telecomando), **Light**, **OLED black**, **High contrast**.
+- RF14.3 Barra in Editor → Globale → Tema: **Carica** (selettore con campioni e anteprima; sostituisce il blocco `theme` = una versione, annullabile), **Salva come…** (sovrascrivere un tema salvato chiede conferma; un predefinito non viene mai sovrascritto), **Elimina** (solo temi salvati).
+- RF14.4 Scheda "Temi" nella schermata principale: elenco con campioni e anteprima; anteprima, rinomina, duplica, elimina, **Esporta** in `.json`, **Applica ai telecomandi…** (una versione per ogni telecomando spuntato, nulla viene inviato), **Importa da file** (il nostro export, un blocco tema o un intero dashboard.json; colori non validi e chiavi sconosciute segnalati e ignorati; un nome già usato chiede un nuovo nome).
+- RF14.5 Anteprima prima di applicare: schermo in miniatura della prima pagina del telecomando aperto (o di quello scelto nella scheda Temi) con il tema applicato.
 
 ## 6. Requisiti non funzionali
 
