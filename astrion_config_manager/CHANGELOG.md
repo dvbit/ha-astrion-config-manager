@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.20.0 - 2026-10-19
+
+- Fix (RF16.3): with "Global keys" OFF the global hotkeys were still drawn,
+  grouped on the "Any page" box. They are now hidden; the box only stands for
+  the swipe down. "Page keys" alone shows only the selected page's keys.
+
 ## 2.19.0 - 2026-10-19
 
 - Map (RF15.3): the hardware keys are now ONE row, each key shown once, with

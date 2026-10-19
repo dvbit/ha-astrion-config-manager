@@ -35,6 +35,9 @@ assert(g.edges.some((e) => e.from === "kp:MAIN" && e.to === "p2" && e.kind === "
 assert(g.edges.some((e) => e.from === "kg:BACK" && e.to === "p0"));
 g = M.buildNavGraph(doc, hw);
 assert(g.edges.some((e) => e.from === "p0" && e.kind === "key") && g.edges.some((e) => e.from === "any"));
+// 2.19.1: "Global keys" OFF in the map hides global hotkeys (never back on the "any" box)
+g = M.buildNavGraph(doc, hw, { chips: true, keysPage: 0, chipsGlobal: false });
+assert(g.edges.some((e) => e.from === "kp:MAIN") && !g.edges.some((e) => e.from === "any" || e.from.startsWith("kg:")));
 
 // RF15.2 move: A.right -> C.left => A, C, B ; startPage follows B
 let d = M.mapMovePage(doc, 0, 2, true);

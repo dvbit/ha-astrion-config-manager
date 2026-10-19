@@ -74,6 +74,9 @@ function buildNavGraph(doc, hwLabel, opts) {
   const keysPage = opts && Number.isInteger(opts.keysPage) ? opts.keysPage : null;
   const chips = !!(opts && opts.chips);
   const chipsGlobal = chips && !(opts && opts.chipsGlobal === false);
+  // RF16.3 (2.19.1): in the map (chips mode) the "Global keys" switch OFF hides
+  // global hotkey links completely (they are never moved back onto the "any" box)
+  const globalEdges = !chips || chipsGlobal;
   const pages = Array.isArray(doc && doc.pages) ? doc.pages : [];
   const byName = new Map(pages.map((p, i) => [String(p.name || "").toLowerCase(), i]));
   const acts = Array.isArray(doc && doc.activities) ? doc.activities.filter((a) => a && typeof a === "object") : [];
@@ -114,13 +117,13 @@ function buildNavGraph(doc, hwLabel, opts) {
       (Array.isArray(p[g]) ? p[g] : []).forEach((hk, k) => hotkey(hk, chips && i === keysPage ? "kp:" + String(hk && hk.key).toUpperCase() : from, long, `${base}/${g}/${k}`));
     }
   });
-  for (const [g, long] of [["hotkeys", false], ["longHotkeys", true]]) {
+  if (globalEdges) for (const [g, long] of [["hotkeys", false], ["longHotkeys", true]]) {
     (Array.isArray(doc[g]) ? doc[g] : []).forEach((hk, k) => hotkey(hk, chipsGlobal ? "kg:" + String(hk && hk.key).toUpperCase() : "any", long, `/${g}/${k}`));
   }
   // 1.2.9 settings fallback: long MAIN opens Settings when no hotkey does
   const allHk = [...(doc.hotkeys || []), ...(doc.longHotkeys || []), ...pages.flatMap((p) => [...(p.hotkeys || []), ...(p.longHotkeys || [])])];
   const longMain = [...(doc.longHotkeys || []), ...pages.flatMap((p) => p.longHotkeys || [])].some((h) => h && String(h.key).toUpperCase() === "MAIN");
-  if (!allHk.some((h) => h && String(h.openOverlay || "").toLowerCase() === "settings") && !longMain) {
+  if (globalEdges && !allHk.some((h) => h && String(h.openOverlay || "").toLowerCase() === "settings") && !longMain) {
     edges.push({ from: chipsGlobal ? "kg:MAIN" : "any", to: "ov_set", kind: "key", label: keyName("MAIN", true), path: null });
   }
   // 👇 swipe down from any page opens the Activities overlay; it lists the Activities
@@ -165,9 +168,9 @@ function buildNavGraph(doc, hwLabel, opts) {
 
   // special boxes only when something uses them
   const used = new Set(edges.flatMap((e) => [e.from, e.to]));
-  // with the global key row shown, global hotkeys start from their chips: the
+  // in the map global hotkeys start from their chips (or are hidden): the
   // "any page" box then only stands for the swipe down (no duplicated keys)
-  const anyBox = chipsGlobal ? ["any", "map_any_swipe", "👇"] : ["any", "map_any_page", "🎛"];
+  const anyBox = chips ? ["any", "map_any_swipe", "👇"] : ["any", "map_any_page", "🎛"];
   const specials = [anyBox, ["ov_act", "map_overlay_activities", "🎬"], ["ov_set", "map_overlay_settings", "⚙"], ["ha", "map_ha", "🏠"]]
     .filter(([id]) => used.has(id)).map(([id, label, icon]) => ({ id, kind: "special", label, icon }));
   return { nodes: [...nodes, ...specials, ...missing.values()], edges };
