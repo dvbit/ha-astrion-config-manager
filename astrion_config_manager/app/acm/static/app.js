@@ -317,6 +317,9 @@ function mapSelect(target) {
     return;
   }
   if (!editor) return;
+  // 2.22: a click on the map reopens a collapsed Editor (the selection must be visible)
+  const wrap = document.querySelector(".editor-wrap");
+  if (wrap && wrap.hidden) document.querySelector(".editor-head button").click();
   if (target.kind === "path") return editor.reveal(target.path);
   editor.sel = target.kind === "card" ? { kind: "card", p: target.p, c: target.c } : { kind: "page", p: target.p };
   editor.render();
@@ -347,7 +350,19 @@ function renderRemote() {
   if (S.tab === "editor") {
     // RF17: big preview of the selected screen in a pane on the left
     if (!bigprev) bigprev = new BigPreview({ map: navmap, onSelect: mapSelect });
-    main.append(el("div", { class: "editor-wrap" }, bigprev.root, body));
+    // 2.22: the Editor can be collapsed like the map (chevron, remembered in the browser)
+    const wrap = el("div", { class: "editor-wrap" }, bigprev.root, body);
+    const edOpen = () => mapStore("acm-editor-open") !== "0";
+    const edToggle = el("button", { class: "icon", title: t("editor_toggle"), text: edOpen() ? "▴" : "▾", onclick: () => {
+      const open = !edOpen();
+      mapStore("acm-editor-open", open ? "1" : "0");
+      edToggle.textContent = open ? "▴" : "▾";
+      wrap.hidden = !open;
+      console.debug(`[acm] editor ${open ? "shown" : "hidden"}`);
+    } });
+    wrap.hidden = !edOpen();
+    main.append(el("div", { class: "card editor-head row" }, edToggle, el("strong", { text: "✎ " + t("tab_editor") }),
+      el("span", { class: "muted", text: t("editor_hint") })), wrap);
   } else main.append(body);
   if (S.tab === "editor") {
     if (!editor) {

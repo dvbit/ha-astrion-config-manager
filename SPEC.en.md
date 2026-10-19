@@ -219,6 +219,7 @@ Editor tab only (the Simulator's map stays read-only). Every change is one versi
 
 - RF17.1 Editor tab: a pane on the left shows the screen selected in the editor (tree or map) in large size, drawn by the simulator's renderer with live states, sticky while the forms scroll. Clicking a card opens its form (nothing is executed); the selected card is highlighted. Resizable by its right edge (220–520 px) and hideable; both remembered in the browser.
 - RF17.2 "Open in builder ↗", "History ↗" and "Edit in builder ↗" are real links (`target="_blank"`, `rel="opener"`) followed on the user's click, never `window.open`: a script-opened tab is blocked as a pop-up inside Home Assistant's frame and in the companion app. In "Edit with the remote's builder" mode with unsynced changes the link first asks Push / Discard, then shows a dialog with the link to click.
+- RF17.3 (2.22) The Editor (with its preview pane) collapses with a ▴/▾ chevron like the map, choice kept in the browser; a click on the map reopens it.
 
 ## 6. Non-functional requirements
 

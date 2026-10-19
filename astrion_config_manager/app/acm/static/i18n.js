@@ -450,7 +450,9 @@ const I18N = {
   "map_keys_row": "Keys — ◧ left anchor: page \"{name}\" only (overrides) · ◨ right anchor: global (every page)",
   "map_scope_page": "This page only",
   "map_scope_global": "Global",
-  "map_legend_action": "Key bound to an action that opens no page (service, Harmony, IR, event…): no link to draw — left = this page, right = global"
+  "map_legend_action": "Key bound to an action that opens no page (service, Harmony, IR, event…): no link to draw — left = this page, right = global",
+  "editor_toggle": "Show / hide the editor",
+  "editor_hint": "Sections, cards and settings of the dashboard"
  },
  "it": {
   "app_title": "Astrion Config Manager",
@@ -900,7 +902,9 @@ const I18N = {
   "map_keys_row": "Tasti — ◧ ancora sinistra: solo pagina \"{name}\" (sostituisce) · ◨ ancora destra: globale (tutte le pagine)",
   "map_scope_page": "Solo questa pagina",
   "map_scope_global": "Globale",
-  "map_legend_action": "Tasto assegnato a un'azione che non apre pagine (servizio, Harmony, IR, evento…): nessun collegamento da disegnare — sinistra = questa pagina, destra = globale"
+  "map_legend_action": "Tasto assegnato a un'azione che non apre pagine (servizio, Harmony, IR, evento…): nessun collegamento da disegnare — sinistra = questa pagina, destra = globale",
+  "editor_toggle": "Mostra / nascondi l'editor",
+  "editor_hint": "Sezioni, card e impostazioni della dashboard"
  },
  "fr": {
   "app_title": "Astrion Config Manager",
@@ -1350,7 +1354,9 @@ const I18N = {
   "map_keys_row": "Touches — ◧ ancre gauche : page « {name} » seule (remplace) · ◨ ancre droite : globale (toutes les pages)",
   "map_scope_page": "Cette page seulement",
   "map_scope_global": "Globale",
-  "map_legend_action": "Touche liée à une action qui n'ouvre aucune page (service, Harmony, IR, événement…) : pas de lien à dessiner — gauche = cette page, droite = globale"
+  "map_legend_action": "Touche liée à une action qui n'ouvre aucune page (service, Harmony, IR, événement…) : pas de lien à dessiner — gauche = cette page, droite = globale",
+  "editor_toggle": "Afficher / masquer l'éditeur",
+  "editor_hint": "Sections, cartes et réglages du tableau de bord"
  },
  "es": {
   "app_title": "Astrion Config Manager",
@@ -1800,7 +1806,9 @@ const I18N = {
   "map_keys_row": "Teclas — ◧ ancla izquierda: solo página «{name}» (sustituye) · ◨ ancla derecha: global (todas las páginas)",
   "map_scope_page": "Solo esta página",
   "map_scope_global": "Global",
-  "map_legend_action": "Tecla asignada a una acción que no abre páginas (servicio, Harmony, IR, evento…): ningún enlace que dibujar — izquierda = esta página, derecha = global"
+  "map_legend_action": "Tecla asignada a una acción que no abre páginas (servicio, Harmony, IR, evento…): ningún enlace que dibujar — izquierda = esta página, derecha = global",
+  "editor_toggle": "Mostrar / ocultar el editor",
+  "editor_hint": "Secciones, tarjetas y ajustes del panel"
  },
  "de": {
   "app_title": "Astrion Config Manager",
@@ -2250,7 +2258,9 @@ const I18N = {
   "map_keys_row": "Tasten — ◧ linker Anker: nur Seite „{name}“ (ersetzt) · ◨ rechter Anker: global (alle Seiten)",
   "map_scope_page": "Nur diese Seite",
   "map_scope_global": "Global",
-  "map_legend_action": "Taste mit einer Aktion ohne Seite (Dienst, Harmony, IR, Ereignis…): keine Verbindung zu zeichnen — links = diese Seite, rechts = global"
+  "map_legend_action": "Taste mit einer Aktion ohne Seite (Dienst, Harmony, IR, Ereignis…): keine Verbindung zu zeichnen — links = diese Seite, rechts = global",
+  "editor_toggle": "Editor ein-/ausblenden",
+  "editor_hint": "Abschnitte, Karten und Einstellungen des Dashboards"
  }
 };
 

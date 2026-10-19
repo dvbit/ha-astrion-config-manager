@@ -278,3 +278,6 @@ a.button.primary { background: var(--accent); border-color: var(--accent); color
 .navmap-chip-act { position: absolute; bottom: 1px; font-size: 11px; line-height: 1; }
 .navmap-chip-act.s-p { left: 4px; }
 .navmap-chip-act.s-g { right: 4px; }
+/* 2.22: collapsible Editor header (same chevron as the map) */
+.editor-head { gap: 8px; padding: 8px 12px; margin-bottom: 8px; }
+.editor-wrap[hidden] { display: none; }

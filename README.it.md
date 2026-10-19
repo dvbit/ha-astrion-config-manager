@@ -292,6 +292,8 @@ una card orologio e meteo o nell'orologio dock.
 Nell'Editor il pannello a sinistra mostra in grande lo schermo selezionato con
 stati live; clic su una card per modificarla. Trascina il bordo destro per
 ridimensionarlo, **◂** lo nasconde (**▸ Anteprima** lo riporta).
+La freccetta **▴/▾** nella barra **✎ Editor** comprime tutto l'Editor (come la mappa);
+un clic sulla mappa lo riapre.
 
 ## Dati e backup
 

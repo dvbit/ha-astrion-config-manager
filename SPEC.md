@@ -216,6 +216,7 @@ Solo nella scheda Editor (la mappa del Simulatore resta in sola lettura). Ogni m
 
 - RF17.1 Scheda Editor: un pannello a sinistra mostra in grande lo schermo selezionato nell'editor (albero o mappa), disegnato dal renderer del simulatore con stati live, fisso mentre i form scorrono. Il clic su una card apre il suo form (nulla viene eseguito); la card selezionata è evidenziata. Ridimensionabile dal bordo destro (220–520 px) e nascondibile; entrambi ricordati dal browser.
 - RF17.2 "Apri nel builder ↗", "Cronologia ↗" e "Modifica nel builder ↗" sono link veri (`target="_blank"`, `rel="opener"`) seguiti al clic dell'utente, mai `window.open`: una scheda aperta da script viene bloccata come pop-up nel frame di Home Assistant e nell'app companion. In modalità "Modifica con il builder del telecomando" con modifiche non inviate il link chiede prima Invia / Scarta, poi mostra una finestra con il link da cliccare.
+- RF17.3 (2.22) L'Editor (con il pannello anteprima) si comprime con una freccetta ▴/▾ come la mappa, scelta ricordata dal browser; un clic sulla mappa lo riapre.
 
 ## 6. Requisiti non funzionali
 

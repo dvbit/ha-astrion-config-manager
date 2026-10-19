@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.22.0 - 2026-10-19
+
+- UI: the Editor (with its big preview pane) can be collapsed with a ▴/▾
+  chevron, like the navigation map; the choice is kept in the browser.
+  Clicking a screen, card or link on the map reopens it.
+
 ## 2.21.0 - 2026-10-19
 
 - Map (RF15.3): a key bound to an action that opens no page (service,

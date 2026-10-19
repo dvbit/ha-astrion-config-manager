@@ -284,6 +284,8 @@ or the dock clock.
 In the Editor, the pane on the left shows the selected screen in large size with
 live states; click a card in it to edit that card. Drag its right edge to resize
 it, **◂** hides it (**▸ Preview** brings it back).
+The **▴/▾** chevron in the **✎ Editor** bar collapses the whole Editor (like the map);
+a click on the map reopens it.
 
 ## Data and backups
 
