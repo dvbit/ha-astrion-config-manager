@@ -726,5 +726,46 @@
     "settings",
     "activities"
   ],
-  "_1_2_9": "RF11 (upstream 1.2.8-1.2.9-beta): select layout dropdown + font_size (10-32), monitor layout vertical + marquee, tv_remote show_volume, picture_elements on_color, nowPlayingEntity on Activities / tracked tiles / hotkeys, dock.room, hotkey pageMode."
+  "_1_2_9": "RF11 (upstream 1.2.8-1.2.9-beta): select layout dropdown + font_size (10-32), monitor layout vertical + marquee, tv_remote show_volume, picture_elements on_color, nowPlayingEntity on Activities / tracked tiles / hotkeys, dock.room, hotkey pageMode.",
+  "weather": [
+    [
+      "name",
+      "text"
+    ],
+    [
+      "latitude",
+      "float"
+    ],
+    [
+      "longitude",
+      "float"
+    ],
+    [
+      "model",
+      "enum",
+      {
+        "values": [
+          "auto",
+          "meteofrance"
+        ],
+        "labels": [
+          "Automatic (7 days)",
+          "Météo-France (4 days)"
+        ],
+        "default": "auto"
+      }
+    ],
+    [
+      "unit",
+      "enum",
+      {
+        "values": [
+          "celsius",
+          "fahrenheit"
+        ],
+        "default": "celsius"
+      }
+    ]
+  ],
+  "_1_3_2": "RF16.2 (upstream 1.3.2-beta): built-in weather block -> weather.astrion; latitude/longitude required (DashboardLoader.parseWeather)."
 }

@@ -831,7 +831,8 @@ class Simulator {
     const time = now.toLocaleTimeString(LANG, { hour: "2-digit", minute: "2-digit", hour12: o.time_format === "12h" });
     return this.card(null, el("div", { class: "sim-big", text: time }),
       el("div", { class: "sim-muted", text: now.toLocaleDateString(LANG, { weekday: "long", day: "numeric", month: "long" }) }),
-      id ? el("div", { text: `⛅ ${this.state(id) || "--"} · ${this.attr(id, "temperature") != null ? this.attr(id, "temperature") + "°" : ""}` }) : null);
+      id === "weather.astrion" && !this.st(id) ? el("div", { class: "sim-muted", text: `⛅ ${t("weather_builtin_sim")}` }) // RF16.2: remote only
+        : id ? el("div", { text: `⛅ ${this.state(id) || "--"} · ${this.attr(id, "temperature") != null ? this.attr(id, "temperature") + "°" : ""}` }) : null);
   }
   card_monitor(o) {
     // MonitorCard: rows are {entity_id, name}; anything else is skipped, as on the remote

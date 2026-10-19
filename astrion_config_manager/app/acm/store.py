@@ -66,6 +66,7 @@ REMOTE_FIELDS = (
     "harmony_ip",
     "ir_entity",
     "pin_named",  # RF12.2: pin named versions in the remote's own history on push
+    "native_builder",  # RF16.4: edit with the remote's own builder; the add-on is the backup
 )
 ORIENTATIONS = {"portrait", "landscape"}
 
@@ -166,7 +167,7 @@ def clean_fields(fields: dict[str, Any], partial: bool) -> dict[str, Any]:
                 raise StoreError("orientation_invalid")
         elif key == "harmony_ip":
             val = str(val or "").strip() or None
-        elif key == "pin_named":
+        elif key in ("pin_named", "native_builder"):
             val = val is True or val == "true"
         elif key == "ir_entity":
             val = str(val or "").strip() or None
@@ -179,6 +180,7 @@ def clean_fields(fields: dict[str, Any], partial: bool) -> dict[str, Any]:
         fields_with_default.setdefault("harmony_ip", None)
         fields_with_default.setdefault("ir_entity", None)
         fields_with_default.setdefault("pin_named", False)
+        fields_with_default.setdefault("native_builder", False)
         # RF1.1: no default for width/height/orientation.
         for key in ("name", "host", "width", "height", "orientation"):
             if key not in fields_with_default:
@@ -456,6 +458,19 @@ class Store:
         meta = self._get(rid)
         meta.update(values)
         _write_json(self.rdir / rid / "meta.json", meta)
+
+    def set_map_layout(self, rid: str, layout: Any) -> dict[str, Any]:
+        """RF16.3: map positions by page name {name: {x, y}} (never in dashboard.json)."""
+        meta = self._get(rid)
+        clean: dict[str, dict[str, float]] = {}
+        if isinstance(layout, dict):
+            for name, pos in list(layout.items())[:500]:
+                if isinstance(pos, dict) and all(isinstance(pos.get(k), int | float) for k in ("x", "y")):
+                    clean[str(name)[:200]] = {"x": round(float(pos["x"]), 1), "y": round(float(pos["y"]), 1)}
+        meta["map_layout"] = clean
+        _write_json(self.rdir / rid / "meta.json", meta)
+        _LOGGER.debug("Map layout of '%s': %s position(s)", meta["name"], len(clean))
+        return clean
 
     # -- versions (RF2) -----------------------------------------------------
 

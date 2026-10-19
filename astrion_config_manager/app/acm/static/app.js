@@ -64,6 +64,9 @@ function refreshEntityList() {
   const named = new Map(cat.filter((d) => d && d.entityId).map((d) => [d.entityId, d.name]));
   // RF9.2: paired Apple TVs are entities of the remote itself
   for (const tv of (S.remote && S.remote.apple_tvs) || []) if (!named.has(tv.entityId)) named.set(tv.entityId, tv.name);
+  // RF16.2: built-in weather published by the remote itself (1.3.2-beta)
+  const w = S.doc && S.doc.weather;
+  if (w && typeof w.latitude === "number" && typeof w.longitude === "number") named.set("weather.astrion", `${t("weather_builtin")}${w.name ? " · " + w.name : ""}`);
   document.getElementById("entity-list").replaceChildren(
     ...[...named].map(([e, n]) => el("option", { value: e, label: `★ ${n}` })),
     ...S.entities.filter((e) => !named.has(e)).map((e) => el("option", { value: e })));
@@ -138,6 +141,8 @@ function applyResult(data) {
 
 /* Commit from the editor (RF2.3). */
 async function commit(newDoc) {
+  // RF16.4: in "Edit with the remote's builder" mode the add-on is read-only (backup)
+  if (S.remote && S.remote.native_builder) { toast(t("nb_readonly"), true); render(); return; }
   try {
     const res = await api("POST", `api/remotes/${S.rid}/commit`, { head: S.remote.head, state: newDoc });
     applyResult(res);
@@ -257,11 +262,15 @@ function remoteDialog(remote) {
   // RF12.2: pin named versions in the remote's own history (app 1.3.0+); off by default
   const pin = el("input", { type: "checkbox" });
   pin.checked = !!v.pin_named;
+  // RF16.4: edit with the remote's own builder; the add-on keeps the backup
+  const nbx = el("input", { type: "checkbox" });
+  nbx.checked = !!v.native_builder;
   const msg = el("div", { class: "msg" });
   const dlg = el("dialog", {});
   const save = guard(async () => {
     const body = Object.fromEntries(fields.map(([k, i]) => [k, i.value]));
     body.pin_named = pin.checked;
+    body.native_builder = nbx.checked;
     try {
       if (remote) await api("PATCH", `api/remotes/${remote.id}`, body);
       else await api("POST", "api/remotes", body);
@@ -274,6 +283,7 @@ function remoteDialog(remote) {
   dlg.append(el("h2", { text: remote ? t("edit") : t("add_remote") }),
     el("div", { class: "grid" }, ...fields.map(([k, i]) => el("div", { class: "field" }, el("label", { text: t(k) }), i))),
     el("label", { class: "row", title: t("pin_named_hint") }, pin, t("pin_named")),
+    el("label", { class: "row", title: t("nb_option_hint") }, nbx, t("nb_option")),
     el("div", { class: "field invalid" }, msg),
     el("div", { class: "row" }, el("span", { class: "spacer" }),
       el("button", { text: t("cancel"), onclick: () => { dlg.close(); dlg.remove(); } }),
@@ -315,15 +325,18 @@ function renderRemote() {
   main.append(el("div", { class: "row" },
     el("button", { text: "← " + t("back"), onclick: guard(async () => { closeSim(); closeMap(); S.view = "list"; await loadList(false); }) }),
     el("h2", { text: r.name }), statusBadge(r.id), el("span", { class: "muted", text: `${t("head")}: v${r.head}` }),
-    el("span", { class: "spacer" }), ...syncButtons(r, true),
-    el("button", { text: "↶ " + t("undo"), disabled: !r.can_undo, onclick: guard(async () => applyResult(await api("POST", `api/remotes/${S.rid}/undo`, { head: r.head }))) }),
-    el("button", { text: "↷ " + t("redo"), disabled: !r.can_redo, onclick: guard(async () => applyResult(await api("POST", `api/remotes/${S.rid}/redo`, { head: r.head }))) })));
+    el("span", { class: "spacer" }), ...builderButtons(r), ...syncButtons(r, true),
+    el("button", { text: "↶ " + t("undo"), disabled: !r.can_undo || r.native_builder, onclick: guard(async () => applyResult(await api("POST", `api/remotes/${S.rid}/undo`, { head: r.head }))) }),
+    el("button", { text: "↷ " + t("redo"), disabled: !r.can_redo || r.native_builder, onclick: guard(async () => applyResult(await api("POST", `api/remotes/${S.rid}/redo`, { head: r.head }))) })));
+  const nb = nativeBanner(r); // RF16.4
+  if (nb) main.append(nb);
   if (S.drift[r.id] === "drift" && !S.ignored.has(r.id)) main.append(driftBanner());
   main.append(el("div", { class: "tabs" }, ...["editor", "simulator", "history", "sync"].map((tab) =>
     el("button", { class: S.tab === tab ? "active" : "", text: t("tab_" + tab), onclick: () => { if (tab !== "simulator") closeSim(); S.tab = tab; render(); } }))));
   if (S.tab === "editor" || S.tab === "simulator") {
     // RF15: map edits are ordinary commits (one version each, undoable)
-    if (!navmap) navmap = new NavMap({ rid: S.rid, remote: S.remote, doc: S.doc, hwKeys: S.hwKeys, onSelect: mapSelect, onCommit: commit });
+    if (!navmap) navmap = new NavMap({ rid: S.rid, remote: S.remote, doc: S.doc, hwKeys: S.hwKeys, onSelect: mapSelect, onCommit: commit,
+      canEdit: () => !(S.remote && S.remote.native_builder) });
     navmap.setDoc(S.doc, S.remote, S.tab);
     main.append(navmap.root);
   }
@@ -335,6 +348,7 @@ function renderRemote() {
         entities: () => S.entities, remote: () => S.remote, pickIcon: (cb) => openIconPicker(S.rid, cb) });
     }
     editor.root = body;
+    body.classList.toggle("readonly", !!r.native_builder); // RF16.4
     editor.onRender = (sel) => { if (navmap) navmap.highlight(sel); };
     editor.setDoc(S.doc, S.validation);
   } else if (S.tab === "simulator") {

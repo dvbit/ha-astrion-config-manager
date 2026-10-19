@@ -473,8 +473,42 @@ def _stop_refs(node: Any, path: str, out: list[tuple[str, Any]]) -> None:
             _stop_refs(val, f"{path}/{idx}", out)
 
 
+WEATHER_ENTITY = "weather.astrion"  # LocalWeather.ENTITY_ID (1.3.2-beta)
+
+
+def weather_ok(doc: Any) -> bool:
+    """DashboardLoader.parseWeather: the block counts only with valid latitude/longitude."""
+    w = doc.get("weather") if isinstance(doc, dict) else None
+    if not isinstance(w, dict):
+        return False
+    lat, lon = w.get("latitude"), w.get("longitude")
+    num = all(isinstance(v, int | float) and not isinstance(v, bool) for v in (lat, lon))
+    return num and -90 <= lat <= 90 and -180 <= lon <= 180
+
+
+def _weather(ctx: _Ctx, doc: dict[str, Any]) -> None:
+    """RF16.2 built-in weather block (1.3.2-beta); the remote ignores it when unusable."""
+    if "weather" not in doc:
+        return
+    w = doc["weather"]
+    if not isinstance(w, dict):
+        ctx.warn("/weather", "type_mismatch", expected="object")
+        return
+    for key, lo, hi in (("latitude", -90, 90), ("longitude", -180, 180)):
+        val = w.get(key)
+        if not isinstance(val, int | float) or isinstance(val, bool):
+            ctx.warn(f"/weather/{key}", "weather_coord_required")
+        elif not lo <= val <= hi:
+            ctx.warn(f"/weather/{key}", "value_range", value=str(val), min=lo, max=hi)
+    if "model" in w and w["model"] not in ("auto", "meteofrance"):
+        ctx.warn("/weather/model", "value_unexpected", value=str(w["model"]))
+    if "unit" in w and w["unit"] not in ("celsius", "fahrenheit"):
+        ctx.warn("/weather/unit", "value_unexpected", value=str(w["unit"]))
+
+
 def _rf10(ctx: _Ctx, doc: dict[str, Any]) -> None:
     """RF10.1-10.4 checks (upstream 1.2.2-1.2.7-beta)."""
+    _weather(ctx, doc)
     _block(ctx, doc, "dock", DOCK_RULES)
     _block(ctx, doc, "power", POWER_RULES)
     for idx, page in enumerate(doc.get("pages") or []):
@@ -531,6 +565,9 @@ def validate(
     """
     ctx = structural(doc)
     issues = list(ctx.issues)
+    # RF16.2: the remote publishes weather.astrion itself when the weather block is usable
+    if known_entities is not None and weather_ok(doc):
+        known_entities = known_entities | {WEATHER_ENTITY}
     if known_entities is not None:
         for ent, paths in sorted(ctx.entities.items()):
             if ent not in known_entities:

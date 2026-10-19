@@ -36,7 +36,11 @@ Open **Astrion** in the sidebar (admins only).
 6. **Navigation map** (above Editor and Simulator): every page as a live mini
    preview with the ways to reach it; click a card or a link to edit it. In the
    Editor the map is editable: drag ● anchors, key chips or tiles to create swipe
-   order, hotkeys and tile jumps; press and hold a link to remove it.
+   order, hotkeys and tile jumps; press and hold a link to remove it. Screens can
+   be dragged (layout saved per remote); switches hide keys and links.
+   **Open in builder ↗** opens the remote's own builder in a new tab; the remote
+   option *Edit with the remote's builder* makes the add-on a read-only backup
+   that imports the builder's saves when you come back.
    **Themes** tab: shared theme library (presets, save/load in the Editor, export,
    import, apply to several remotes).
 

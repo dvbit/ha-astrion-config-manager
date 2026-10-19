@@ -1,5 +1,23 @@
 # Changelog
 
+## 2.15.0 - 2026-10-19
+
+Aligned with astrion-custom-dashboard **1.3.2-beta** (1.3.1-beta included);
+spec v1.14 (RF16).
+
+- Push uses `X-Astrion-Version-Id` (1.3.1-beta) to pin/label its remote
+  version; note matching kept for 1.3.0 (RF16.1).
+- Built-in weather (1.3.2-beta): Global section with town search through the
+  remote, validation, `weather.astrion` accepted as entity (RF16.2).
+- Map: screens draggable (layout saved per remote, Reset), switches for page
+  keys / global keys / links plus per-kind toggles, key chips with the
+  simulator's icons (RF16.3).
+- "Open in builder ↗" / "History ↗": the remote's builder in a new tab at the
+  editor's selection (deep links), greyed out when unreachable (RF16.5).
+- Mode "Edit with the remote's builder" per remote: add-on read-only backup,
+  push/discard before opening, automatic import with the builder's note on
+  return, explicit choice when both sides changed (RF16.4).
+
 ## 2.14.0 - 2026-10-18
 
 Spec v1.13 (RF15): the navigation map becomes editable (Editor tab).

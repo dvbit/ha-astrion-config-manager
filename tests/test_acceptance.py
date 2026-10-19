@@ -872,3 +872,94 @@ async def test_rf14_export_import_and_apply(env):
     assert res["results"][0]["version"] == 3 and "theme" not in (await state(env, rid_a))["state"]
     again = await (await env.post("/api/themes/preset:default/apply", json={"remotes": [rid_a]})).json()
     assert again["results"][0]["version"] is None  # unchanged: no version
+
+
+# ------------------------------------------------------------- RF16 (upstream 1.3.1-1.3.2-beta, native builder mode)
+
+
+async def test_rf16_push_version_header_pins_directly(env, monkeypatch):
+    dev = env.devices["a"]
+    dev.history = []
+    rid = (await register(env, "a", "R"))["id"]
+    await env.put(f"/api/remotes/{rid}/versions/1/name", json={"name": "Base"})
+    await env.patch(f"/api/remotes/{rid}", json={"pin_named": True})
+    # emulate 1.3.1: the push reply carries X-Astrion-Version-Id; /history listing is then not needed
+    from acm import device as devmod
+
+    orig = devmod.DeviceClient.upload
+
+    async def upload(self, content, note=None):
+        await orig(self, content, note)
+        return dev.history[-1]["id"]
+
+    monkeypatch.setattr(devmod.DeviceClient, "upload", upload)
+    res = await (await env.post(f"/api/remotes/{rid}/push", json={"head": 1})).json()
+    assert res["remote_version"] == dev.history[-1]["id"] and res["remote_pinned"] == res["remote_version"]
+    assert dev.history[-1]["pinned"] is True
+    assert (await state(env, rid))["remote"]["last_push_remote_version"] == res["remote_version"]
+
+
+async def test_rf16_weather_block_and_entity():
+    from acm.validate import validate
+
+    base = {"pages": [{"name": "A", "cards": [{"type": "clock_weather", "options": {"entity_id": "weather.astrion"}}]}]}
+    res = validate(base, set())
+    assert any(i["code"] == "entity_missing" for i in res["issues"])  # no weather block: not published
+    ok = {**base, "weather": {"name": "Roma", "latitude": 41.9, "longitude": 12.5, "model": "auto", "unit": "celsius"}}
+    assert validate(ok, set())["push_allowed"] is True
+    bad = {**base, "weather": {"latitude": 100, "model": "gfs", "unit": "kelvin"}}
+    res = validate(bad, set())
+    codes = {(w["path"], w["code"]) for w in res["warnings"]}
+    assert {
+        ("/weather/latitude", "value_range"),
+        ("/weather/longitude", "weather_coord_required"),
+        ("/weather/model", "value_unexpected"),
+        ("/weather/unit", "value_unexpected"),
+    } <= codes
+    assert any(i["code"] == "entity_missing" for i in res["issues"])  # unusable block: entity not published
+
+
+async def test_rf16_map_layout_and_native_flow(env):
+    dev = env.devices["a"]
+    dev.history = []
+    rid = (await register(env, "a", "R"))["id"]
+    lay = await (
+        await env.put(f"/api/remotes/{rid}/map-layout", json={"layout": {"Home": {"x": 10, "y": -5.25}, "bad": 3}})
+    ).json()
+    assert lay["layout"] == {"Home": {"x": 10.0, "y": -5.2}}
+    assert (await state(env, rid))["remote"]["map_layout"] == lay["layout"]
+    await env.patch(f"/api/remotes/{rid}", json={"native_builder": True})
+    assert (await state(env, rid))["remote"]["native_builder"] is True
+    # nothing changed anywhere
+    assert (await (await env.get(f"/api/remotes/{rid}/native")).json())["unsynced"] is False
+    r = await (await env.post(f"/api/remotes/{rid}/native/return", json={"head": 1})).json()
+    assert r["status"] == "unchanged"
+    # add-on edit -> unsynced -> discard = restore of the synced version
+    st = await state(env, rid)
+    doc = st["state"]
+    doc["pages"][0]["name"] = "Local edit"
+    await env.post(f"/api/remotes/{rid}/commit", json={"head": 1, "state": doc})
+    assert (await (await env.get(f"/api/remotes/{rid}/native")).json())["unsynced"] is True
+    r = await (await env.post(f"/api/remotes/{rid}/native/discard", json={"head": 2})).json()
+    assert r["version"]["type"] == "restore" and r["version"]["ref"] == 1
+    assert (await (await env.get(f"/api/remotes/{rid}/native")).json())["unsynced"] is False
+    # the builder saves on the remote -> imported with the remote's note
+    remote_doc = json.loads(dev.text)
+    remote_doc["pages"][0]["name"] = "From builder"
+    new_text = json.dumps(remote_doc)
+    dev.record_save(new_text, "renamed page")
+    dev.text = new_text
+    r = await (await env.post(f"/api/remotes/{rid}/native/return", json={"head": 3})).json()
+    assert r["status"] == "imported" and r["version"]["origin"]["note"] == "renamed page"
+    assert r["state"]["pages"][0]["name"] == "From builder"
+    assert (await (await env.get(f"/api/remotes/{rid}/drift")).json())["status"] == "in_sync"
+    # both sides changed -> conflict, nothing imported
+    head = r["remote"]["head"]
+    doc = r["state"]
+    doc["pages"][0]["name"] = "Add-on side"
+    await env.post(f"/api/remotes/{rid}/commit", json={"head": head, "state": doc})
+    remote_doc["pages"][0]["name"] = "Remote side"
+    dev.text = json.dumps(remote_doc)
+    r = await (await env.post(f"/api/remotes/{rid}/native/return", json={"head": head + 1})).json()
+    assert r["status"] == "conflict"
+    assert (await state(env, rid))["state"]["pages"][0]["name"] == "Add-on side"

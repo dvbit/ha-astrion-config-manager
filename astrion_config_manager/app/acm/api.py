@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import asyncio
 import copy
+import json
 import logging
 import os
 import re
@@ -654,7 +655,7 @@ async def push(request: web.Request) -> web.Response:
         # RF12.1 / RF12.2: label the version the remote keeps for this save
         name = store.names(rid).get(str(hist.head))
         note = push_note(hist.head, name)
-        await device.upload(head_state, note)
+        remote_vid = await device.upload(head_state, note)  # RF16.1: id from app 1.3.1+
         # 4. re-read and verify
         expected = canonical_hash(head_state)
         reread = await device.pull()
@@ -664,7 +665,9 @@ async def push(request: web.Request) -> web.Response:
         store.set_sync(
             rid, baseline=expected, baseline_version=hist.head, last_push_version=hist.head, last_push_at=time.time()
         )
-        pinned = await _pin_pushed(request.app, meta, note) if name and meta.get("pin_named") else None
+        if remote_vid:
+            store.set_sync(rid, last_push_remote_version=remote_vid)
+        pinned = await _pin_pushed(request.app, meta, note, remote_vid) if name and meta.get("pin_named") else None
     _LOGGER.info("Push '%s': v%s sent and verified", meta["name"], hist.head)
     return web.json_response(
         {
@@ -672,6 +675,7 @@ async def push(request: web.Request) -> web.Response:
             "drift_overwritten": drift["status"] == DRIFT_DRIFT,
             "icons_uploaded": uploaded,
             "remote_pinned": pinned,
+            "remote_version": remote_vid,
             "remote": store.remote_info(rid),
         }
     )
@@ -852,14 +856,20 @@ async def sim_reset(request: web.Request) -> web.Response:
     return web.json_response({"active": {}, "devices": {}})
 
 
-async def _pin_pushed(app: web.Application, meta: dict[str, Any], note: str) -> str | None:
-    """RF12.2: pin the remote version just created by a push (found by its note).
+async def _pin_pushed(
+    app: web.Application, meta: dict[str, Any], note: str, remote_vid: str | None = None
+) -> str | None:
+    """RF12.2: pin the remote version just created by a push.
 
-    Never fatal: the push itself already succeeded; returns the pinned id.
+    RF16.1: the id comes from ``X-Astrion-Version-Id`` (app 1.3.1+); on 1.3.0
+    the version is found by its note. Never fatal: the push already succeeded.
     """
     try:
-        versions = await _device(app, meta).history_list() or []
-        match = next((v for v in versions if v.get("note") == note), None)
+        if remote_vid:
+            match = {"id": remote_vid}
+        else:
+            versions = await _device(app, meta).history_list() or []
+            match = next((v for v in versions if v.get("note") == note), None)
         if match and await _device(app, meta).history_pin(match["id"], True):
             _LOGGER.info("Push '%s': remote version %s pinned (%s)", meta["name"], match["id"], note)
             return match["id"]
@@ -940,6 +950,104 @@ async def remote_history_import(request: web.Request) -> web.Response:
             _LOGGER.debug("Remote version %s is the current file of '%s': baseline realigned", vid, meta["name"])
     _LOGGER.info("Remote version %s of '%s' imported: %s", vid, meta["name"], f"v{ver['id']}" if ver else "no changes")
     return await _after_version(request, rid, ver)
+
+
+# --------------------------------------------------------------------------
+# RF16: built-in weather search, map layout, native builder mode
+# --------------------------------------------------------------------------
+
+
+async def weather_search(request: web.Request) -> web.Response:
+    """RF16.2: town search through the remote (``GET /weather-search``, app 1.3.2+)."""
+    meta = request.app[K_STORE].remote_info(request.match_info["rid"])
+    query = request.query.get("q", "").strip()
+    if len(query) < 2:
+        raise StoreError("bad_request")
+    results = await _device(request.app, meta).weather_search(query, request.query.get("lang", ""))
+    if results is None:
+        _LOGGER.info("Weather search on '%s': not supported (app < 1.3.2)", meta["name"])
+        return web.json_response({"supported": False, "results": []})
+    _LOGGER.debug("Weather search on '%s' for %r: %s result(s)", meta["name"], query, len(results))
+    return web.json_response({"supported": True, "results": results})
+
+
+async def map_layout(request: web.Request) -> web.Response:
+    """RF16.3: save the map's screen positions (by page name) for this remote."""
+    data = await _body(request)
+    layout = request.app[K_STORE].set_map_layout(request.match_info["rid"], data.get("layout"))
+    return web.json_response({"layout": layout})
+
+
+def _unsynced(store: Store, rid: str) -> bool:
+    """RF16.4: the head differs from the last version synced with the remote."""
+    meta = store.remote_info(rid)
+    hist = store.history(rid)
+    base = meta.get("baseline_version")
+    if not base or base > hist.head:
+        return False
+    return canonical_hash(hist.state(base)) != canonical_hash(hist.state(hist.head))
+
+
+async def native_status(request: web.Request) -> web.Response:
+    """RF16.4: tell whether the add-on has unsynced changes before opening the builder."""
+    rid = request.match_info["rid"]
+    store = request.app[K_STORE]
+    meta = store.remote_info(rid)
+    return web.json_response(
+        {"unsynced": _unsynced(store, rid), "baseline_version": meta.get("baseline_version"), "head": meta["head"]}
+    )
+
+
+async def native_discard(request: web.Request) -> web.Response:
+    """RF16.4 Discard: a ``restore`` version back to the last synced version (nothing deleted)."""
+    rid = request.match_info["rid"]
+    data = await _body(request)
+    store = request.app[K_STORE]
+    async with request.app[K_LOCKS][rid]:
+        meta = store.remote_info(rid)
+        base = meta.get("baseline_version")
+        if not base or not _unsynced(store, rid):
+            return await _after_version(request, rid, None)
+        ver = store.restore(rid, _int(data.get("head")), base, _user(request))
+    _LOGGER.info("Native builder '%s': add-on changes discarded (restore of v%s as v%s)", meta["name"], base, ver["id"])
+    return await _after_version(request, rid, ver)
+
+
+async def native_return(request: web.Request) -> web.Response:
+    """RF16.4 back from the builder: import the remote's changes as a new version.
+
+    ``unchanged`` -> nothing to do; ``imported`` -> new ``sync-import`` version
+    carrying the note/reason of the remote's newest history entry;
+    ``conflict`` -> both sides changed: the UI asks (pull or push), never merged.
+    """
+    rid = request.match_info["rid"]
+    data = await _body(request)
+    store = request.app[K_STORE]
+    async with request.app[K_LOCKS][rid]:
+        meta = store.remote_info(rid)
+        device = _device(request.app, meta)
+        pulled = await device.pull()
+        if pulled.hash == meta.get("baseline"):
+            _LOGGER.debug("Native builder '%s': no change on the remote", meta["name"])
+            return web.json_response({"status": "unchanged", "remote": meta})
+        if _unsynced(store, rid):
+            _LOGGER.warning("Native builder '%s': changes on both sides, asking the user", meta["name"])
+            return web.json_response({"status": "conflict", "remote": meta})
+        last = await _remote_last(request.app, meta)
+        origin = (
+            {"remote_version": last["id"], "note": last.get("note") or "", "reason": last.get("reason") or ""}
+            if last
+            else None
+        )
+        ver = store.commit(rid, _int(data.get("head")), pulled.content, _user(request), T_SYNC_IMPORT, origin=origin)
+        store.set_sync(rid, baseline=pulled.hash, baseline_version=store.history(rid).head)
+    _LOGGER.info(
+        "Native builder '%s': remote changes imported as %s", meta["name"], f"v{ver['id']}" if ver else "no version"
+    )
+    res = await _after_version(request, rid, ver)
+    body = json.loads(res.text)
+    body["status"] = "imported"
+    return web.json_response(body)
 
 
 # --------------------------------------------------------------------------
@@ -1096,6 +1204,12 @@ def create_app(data_dir: Path, device_factory=DeviceClient) -> web.Application:
     r.add_post("/api/remotes/{rid}/sim/action", sim_action)
     r.add_get("/api/remotes/{rid}/sim/active", sim_active)
     r.add_post("/api/remotes/{rid}/sim/reset", sim_reset)
+    # RF16
+    r.add_get("/api/remotes/{rid}/weather-search", weather_search)
+    r.add_put("/api/remotes/{rid}/map-layout", map_layout)
+    r.add_get("/api/remotes/{rid}/native", native_status)
+    r.add_post("/api/remotes/{rid}/native/discard", native_discard)
+    r.add_post("/api/remotes/{rid}/native/return", native_return)
     # RF14: theme library
     r.add_get("/api/themes", themes_list)
     r.add_post("/api/themes", theme_save)

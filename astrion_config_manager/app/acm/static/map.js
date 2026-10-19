@@ -72,6 +72,7 @@ function buildNavGraph(doc, hwLabel, opts) {
   // selected page (opts.keysPage) from "kp:KEY"; other pages' from the page.
   const keysPage = opts && Number.isInteger(opts.keysPage) ? opts.keysPage : null;
   const chips = !!(opts && opts.chips);
+  const chipsGlobal = chips && !(opts && opts.chipsGlobal === false);
   const pages = Array.isArray(doc && doc.pages) ? doc.pages : [];
   const byName = new Map(pages.map((p, i) => [String(p.name || "").toLowerCase(), i]));
   const acts = Array.isArray(doc && doc.activities) ? doc.activities.filter((a) => a && typeof a === "object") : [];
@@ -113,13 +114,13 @@ function buildNavGraph(doc, hwLabel, opts) {
     }
   });
   for (const [g, long] of [["hotkeys", false], ["longHotkeys", true]]) {
-    (Array.isArray(doc[g]) ? doc[g] : []).forEach((hk, k) => hotkey(hk, chips ? "kg:" + String(hk && hk.key).toUpperCase() : "any", long, `/${g}/${k}`));
+    (Array.isArray(doc[g]) ? doc[g] : []).forEach((hk, k) => hotkey(hk, chipsGlobal ? "kg:" + String(hk && hk.key).toUpperCase() : "any", long, `/${g}/${k}`));
   }
   // 1.2.9 settings fallback: long MAIN opens Settings when no hotkey does
   const allHk = [...(doc.hotkeys || []), ...(doc.longHotkeys || []), ...pages.flatMap((p) => [...(p.hotkeys || []), ...(p.longHotkeys || [])])];
   const longMain = [...(doc.longHotkeys || []), ...pages.flatMap((p) => p.longHotkeys || [])].some((h) => h && String(h.key).toUpperCase() === "MAIN");
   if (!allHk.some((h) => h && String(h.openOverlay || "").toLowerCase() === "settings") && !longMain) {
-    edges.push({ from: chips ? "kg:MAIN" : "any", to: "ov_set", kind: "key", label: keyName("MAIN", true), path: null });
+    edges.push({ from: chipsGlobal ? "kg:MAIN" : "any", to: "ov_set", kind: "key", label: keyName("MAIN", true), path: null });
   }
   // 👇 swipe down from any page opens the Activities overlay; it lists the Activities
   if (acts.length) {
@@ -286,25 +287,33 @@ class NavMap {
     this.screen = { w, h, nh };
     const pos = {};
     let x = 0;
-    graph.nodes.filter((n) => n.kind === "page").forEach((n) => { pos[n.id] = { x, y: 0, w: MAP_NODE_W, h: nh }; x += MAP_NODE_W + MAP_GAP; });
+    const saved = (this.remote && this.remote.map_layout) || {};
+    graph.nodes.filter((n) => n.kind === "page").forEach((n) => {
+      const sp = saved[n.name]; // RF16.3: dragged positions, by page name
+      pos[n.id] = sp ? { x: sp.x, y: sp.y, w: MAP_NODE_W, h: nh } : { x, y: 0, w: MAP_NODE_W, h: nh };
+      x += MAP_NODE_W + MAP_GAP;
+    });
+    const pagePos = graph.nodes.filter((n) => n.kind === "page").map((n) => pos[n.id]);
+    const bottom = pagePos.reduce((m, p) => Math.max(m, p.y + p.h), nh);
+    const left = pagePos.reduce((m, p) => Math.min(m, p.x), 0);
     // under-row arcs (back links) need room before the special row
     const below = graph.edges.filter((e) => e.kind === "back").reduce((m, e) => Math.max(m, this.arcHeight(pos[e.from], pos[e.to])), 0);
-    const rowY = nh + Math.max(140, below + 80);
+    const rowY = bottom + Math.max(140, below + 80);
     const extra = graph.nodes.filter((n) => n.kind !== "page");
     const specials = extra.filter((n) => n.kind === "special" || n.kind === "missing");
     const span = Math.max(x - MAP_GAP, specials.length * (MAP_SPECIAL.w + 60));
     specials.forEach((n, i) => {
-      pos[n.id] = { x: specials.length === 1 ? span / 2 - MAP_SPECIAL.w / 2 : (span - MAP_SPECIAL.w) * i / Math.max(1, specials.length - 1), y: rowY, w: MAP_SPECIAL.w, h: MAP_SPECIAL.h };
+      pos[n.id] = { x: left + (specials.length === 1 ? span / 2 - MAP_SPECIAL.w / 2 : (span - MAP_SPECIAL.w) * i / Math.max(1, specials.length - 1)), y: rowY, w: MAP_SPECIAL.w, h: MAP_SPECIAL.h };
     });
     // RF15.3 key rows under the special row (special<->special arcs need ~140)
     // chips wrap into a grid no wider than the page row (keeps "fit all" usable)
     const cols = Math.max(6, Math.min(12, Math.floor((span + MAP_CHIP.gap) / (MAP_CHIP.w + MAP_CHIP.gap))));
     let ky = rowY + MAP_SPECIAL.h + 170;
     for (const scope of ["p", "g"]) {
-      pos["row:" + scope] = { x: 0, y: ky - 34, w: 600, h: 26 };
+      pos["row:" + scope] = { x: left, y: ky - 34, w: 600, h: 26 };
       const chips = extra.filter((c) => c.kind === "keychip" && c.scope === scope);
       chips.forEach((n, i) => {
-        pos[n.id] = { x: (i % cols) * (MAP_CHIP.w + MAP_CHIP.gap), y: ky + Math.floor(i / cols) * (MAP_CHIP.h + MAP_CHIP.gap + 6), w: MAP_CHIP.w, h: MAP_CHIP.h };
+        pos[n.id] = { x: left + (i % cols) * (MAP_CHIP.w + MAP_CHIP.gap), y: ky + Math.floor(i / cols) * (MAP_CHIP.h + MAP_CHIP.gap + 6), w: MAP_CHIP.w, h: MAP_CHIP.h };
       });
       ky += Math.ceil(chips.length / cols) * (MAP_CHIP.h + MAP_CHIP.gap + 6) + 70;
     }
@@ -312,34 +321,40 @@ class NavMap {
   }
   arcHeight(a, b) { return a && b ? 50 + 0.28 * Math.abs((a.x + a.w / 2) - (b.x + b.w / 2)) : 0; }
 
-  /* Route of one edge: quadratic curve + badge position. */
+  /* Route of one edge: curve + badge position. Works for any node position
+   * (RF16.3 screens can be dragged): page->page links arc over (back links
+   * under) the higher of the two screens; other links are vertical S-curves. */
   route(e, pos, lane) {
     const a = pos[e.from], b = pos[e.to];
     if (!a || !b) return null;
     const cx = (n) => n.x + n.w / 2;
+    const isPage = (id) => /^p\d+$/.test(id);
     if (e.kind === "swipe") {
-      const y = a.y + a.h / 2 + lane * 18;
-      return { d: `M${a.x + a.w + 6},${y} L${b.x - 6},${y}`, bx: (a.x + a.w + b.x) / 2, by: y };
+      const y1 = a.y + a.h / 2 + lane * 18, y2 = b.y + b.h / 2 + lane * 18;
+      const fwd = cx(b) >= cx(a);
+      const x1 = fwd ? a.x + a.w + 6 : a.x - 6, x2 = fwd ? b.x - 6 : b.x + b.w + 6;
+      return { d: `M${x1},${y1} L${x2},${y2}`, bx: (x1 + x2) / 2, by: (y1 + y2) / 2 };
     }
-    if (a.y === b.y && a.y === 0) {
+    if (isPage(e.from) && isPage(e.to)) {
       if (e.from === e.to) { // self loop (e.g. a popup hotkey on its own page)
         const x0 = a.x + a.w * 0.65, y0 = a.y;
         const d = `M${x0},${y0} C${x0 + 40},${y0 - 90 - lane * 20} ${x0 + 100},${y0 - 40} ${a.x + a.w},${y0 + 20}`;
         return { d, bx: x0 + 55, by: y0 - 60 - lane * 15 };
       }
       const under = e.kind === "back";
-      const y0 = under ? a.y + a.h : a.y;
-      const hgt = (this.arcHeight(a, b) + lane * 26) * (under ? 1 : -1);
-      const sx = cx(a) + (cx(b) > cx(a) ? 20 : -20), ex = cx(b) + (cx(b) > cx(a) ? -20 : 20);
-      const qx = (sx + ex) / 2, qy = y0 + hgt * 2;
-      return { d: `M${sx},${y0} Q${qx},${qy} ${ex},${y0}`, bx: qx, by: y0 + hgt };
+      const dir = cx(b) > cx(a) ? 1 : -1;
+      const sx = cx(a) + 20 * dir, ex = cx(b) - 20 * dir;
+      const sy = under ? a.y + a.h : a.y, ey = under ? b.y + b.h : b.y;
+      const hgt = this.arcHeight(a, b) + lane * 26;
+      const peak = under ? Math.max(sy, ey) + hgt : Math.min(sy, ey) - hgt;
+      const qx = (sx + ex) / 2, qy = 2 * peak - (sy + ey) / 2;
+      return { d: `M${sx},${sy} Q${qx},${qy} ${ex},${ey}`, bx: qx, by: peak };
     }
-    if (a.y === b.y) { // special <-> special: arc under the special row
+    if (a.y === b.y) { // special <-> special: arc under the row
       const y0 = a.y + a.h, sx = cx(a), ex = cx(b);
       const hgt = 40 + 0.15 * Math.abs(ex - sx) + lane * 20;
       return { d: `M${sx},${y0} Q${(sx + ex) / 2},${y0 + hgt * 2} ${ex},${y0}`, bx: (sx + ex) / 2, by: y0 + hgt };
     }
-    // special row <-> page row
     const up = a.y > b.y;
     const sx = cx(a) + lane * 14, sy = up ? a.y : a.y + a.h;
     const ex = cx(b) + lane * 14, ey = up ? b.y + b.h : b.y;
@@ -347,39 +362,86 @@ class NavMap {
     return { d: `M${sx},${sy} C${sx},${my} ${ex},${my} ${ex},${ey}`, bx: (sx + ex) / 2, by: my };
   }
 
+  /* RF16.3 switches (remembered in the browser). */
+  showOpts() {
+    if (!this.show) {
+      let saved = null;
+      try { saved = JSON.parse(mapStore("acm-map-show") || "null"); } catch (e) { saved = null; }
+      this.show = { pageKeys: true, globalKeys: true, edges: true, kinds: {}, ...(saved || {}) };
+    }
+    return this.show;
+  }
+  setShow(patch) {
+    Object.assign(this.showOpts(), patch);
+    mapStore("acm-map-show", JSON.stringify(this.show));
+    this.build();
+  }
+
   /* ---------- DOM ---------- */
   build() {
+    const show = this.showOpts();
     this.keysPageIdx = this.keysPage();
-    const graph = buildNavGraph(this.doc || {}, (k) => this.hwLabel(k), { chips: true, keysPage: this.keysPageIdx });
-    // RF15.3: one chip per hardware key, in two rows (selected page / global)
+    const graph = buildNavGraph(this.doc || {}, (k) => this.hwLabel(k),
+      { chips: true, keysPage: show.pageKeys ? this.keysPageIdx : null, chipsGlobal: show.globalKeys });
+    // RF15.3: one chip per hardware key, in two rows (selected page / global) - each row can be hidden
     const keys = (typeof HW_LAYOUT !== "undefined" ? HW_LAYOUT.flat() : []).concat(this.hwKeys || []).filter((k, i, a) => a.indexOf(k) === i);
     for (const scope of ["p", "g"]) {
+      if (!(scope === "p" ? show.pageKeys : show.globalKeys)) continue;
       graph.nodes.push({ id: "row:" + scope, kind: "rowlabel", scope });
       for (const k of keys) graph.nodes.push({ id: `k${scope}:${k}`, kind: "keychip", scope, key: k });
     }
     this.graph = graph;
-    const pos = this.layout(graph);
-    this.pos = pos;
-    const box = Object.values(pos).reduce((b, p) => ({
-      x0: Math.min(b.x0, p.x), y0: Math.min(b.y0, p.y), x1: Math.max(b.x1, p.x + p.w), y1: Math.max(b.y1, p.y + p.h),
-    }), { x0: 0, y0: 0, x1: 0, y1: 0 });
-    const maxArc = graph.edges.filter((e) => e.kind !== "back" && e.kind !== "swipe" && pos[e.from] && pos[e.to] && pos[e.from].y === 0 && pos[e.to].y === 0)
-      .reduce((m, e) => Math.max(m, this.arcHeight(pos[e.from], pos[e.to]) + 60), 60);
-    box.y0 -= maxArc + 30; box.x0 -= 60; box.x1 += 60; box.y1 += 40;
-    this.bounds = box;
-
+    this.pos = this.layout(graph);
     const world = el("div", { class: "navmap-world" });
-    const svg = svgEl("svg", { class: "navmap-edges", width: box.x1 - box.x0, height: box.y1 - box.y0,
-      viewBox: `${box.x0} ${box.y0} ${box.x1 - box.x0} ${box.y1 - box.y0}`, style: `left:${box.x0}px;top:${box.y0}px` });
+    this.svg = svgEl("svg", { class: "navmap-edges" });
     const defs = svgEl("defs");
     const marker = svgEl("marker", { id: "navmap-arrow", viewBox: "0 0 10 10", refX: "9", refY: "5", markerWidth: "7", markerHeight: "7", orient: "auto-start-reverse" });
     marker.append(svgEl("path", { d: "M0,0 L10,5 L0,10 z", class: "navmap-arrowhead" }));
     defs.append(marker);
-    svg.append(defs);
-    world.append(svg);
+    this.svg.append(defs);
+    world.append(this.svg);
+    this.nodeEls = {};
+    this.nodeDivs = {};
+    for (const n of graph.nodes) {
+      const d = this.nodeEl(n, this.pos[n.id]);
+      this.nodeDivs[n.id] = d;
+      world.append(d);
+    }
+    this.links = el("div", { class: "navmap-links" });
+    world.append(this.links);
+    this.world = world;
+    this.renderLinks();
+    this.renderShell();
+    this.drawPreviews();
+    this.applyView();
+    if (!this.fitted) requestAnimationFrame(() => { if (this.viewport && this.viewport.clientWidth) { this.fit(); this.fitted = true; } });
+    if (this.sel) this.highlight(this.sel);
+  }
+
+  /* Bounds, edges, badges and anchors from the current positions (redrawn
+   * live while a screen is dragged). */
+  renderLinks() {
+    const { graph, pos } = this;
+    const show = this.showOpts();
+    const box = Object.values(pos).reduce((b, p) => ({
+      x0: Math.min(b.x0, p.x), y0: Math.min(b.y0, p.y), x1: Math.max(b.x1, p.x + p.w), y1: Math.max(b.y1, p.y + p.h),
+    }), { x0: Infinity, y0: Infinity, x1: -Infinity, y1: -Infinity });
+    const maxArc = graph.edges.filter((e) => e.kind !== "back" && e.kind !== "swipe" && /^p\d+$/.test(e.from) && /^p\d+$/.test(e.to))
+      .reduce((m, e) => Math.max(m, this.arcHeight(pos[e.from], pos[e.to]) + 60), 60);
+    box.y0 -= maxArc + 30; box.x0 -= 60; box.x1 += 60; box.y1 += 160;
+    this.bounds = box;
+    const svg = this.svg;
+    for (const k of ["width", "height", "viewBox", "style"]) svg.removeAttribute(k);
+    svg.setAttribute("width", box.x1 - box.x0);
+    svg.setAttribute("height", box.y1 - box.y0);
+    svg.setAttribute("viewBox", `${box.x0} ${box.y0} ${box.x1 - box.x0} ${box.y1 - box.y0}`);
+    svg.setAttribute("style", `left:${box.x0}px;top:${box.y0}px`);
+    svg.querySelectorAll("path.navmap-edge").forEach((x) => x.remove());
+    this.links.replaceChildren();
     this.edgeEls = [];
     const lanes = new Map();
-    for (const e of graph.edges) {
+    const visible = (e) => show.edges && show.kinds[e.kind] !== false;
+    for (const e of graph.edges.filter(visible)) {
       const key = [e.from, e.to].sort().join("|") + (e.kind === "back" ? "b" : "");
       const lane = lanes.get(key) || 0;
       lanes.set(key, lane + 1);
@@ -404,27 +466,20 @@ class NavMap {
         this.holdTimer = setTimeout(() => { if (!this.moved) { this.holdFired = true; this.removeEdge(e); } }, MAP_HOLD_MS);
       });
       for (const ev of ["pointerup", "pointerleave", "pointercancel"]) badge.addEventListener(ev, () => clearTimeout(this.holdTimer));
-      world.append(badge);
+      this.links.append(badge);
       this.edgeEls.push({ e, path, badge });
     }
-    this.nodeEls = {};
-    for (const n of graph.nodes) world.append(this.nodeEl(n, pos[n.id]));
     // RF15.1 anchors: left/right = swipe order, top = UI jumps, bottom = hotkeys
     if (this.editable()) {
       for (const n of graph.nodes.filter((x) => x.kind === "page")) {
         const p = pos[n.id];
         for (const [side, x, y] of [["left", p.x, p.y + p.h / 2], ["right", p.x + p.w, p.y + p.h / 2], ["top", p.x + p.w / 2, p.y], ["bottom", p.x + p.w / 2, p.y + p.h]]) {
-          world.append(el("div", { class: `navmap-anchor a-${side}`, "data-p": n.p, "data-side": side, style: `left:${x}px;top:${y}px`,
+          this.links.append(el("div", { class: `navmap-anchor a-${side}`, "data-p": n.p, "data-side": side, style: `left:${x}px;top:${y}px`,
             title: t("map_anchor_" + side) }));
         }
       }
     }
-    this.world = world;
-    this.renderShell();
-    this.drawPreviews();
-    this.applyView();
-    if (!this.fitted) requestAnimationFrame(() => { if (this.viewport && this.viewport.clientWidth) { this.fit(); this.fitted = true; } });
-    if (this.sel) this.highlight(this.sel);
+    if (this.sel) this.highlight(this.sel, true);
   }
 
   edgeTitle(e) {
@@ -449,8 +504,10 @@ class NavMap {
         ? t("map_keys_page", { name: page ? page.name || `#${this.keysPageIdx + 1}` : "—" }) : t("map_keys_global"));
     }
     if (n.kind === "keychip") {
+      // RF16.3: the simulator's key icons (HW_LABEL), name as tooltip
+      const icon = (typeof HW_LABEL !== "undefined" && HW_LABEL[n.key]) || n.key;
       const d = el("div", { class: `navmap-chip s-${n.scope}`, style, title: `${this.hwLabel(n.key)} (${n.key})` },
-        el("strong", { text: this.hwLabel(n.key) }), el("small", { text: n.key }));
+        el("strong", { class: "navmap-chip-icon", text: icon }), el("small", { text: this.hwLabel(n.key) }));
       if (this.editable()) d.append(el("div", { class: "navmap-anchor a-key", "data-scope": n.scope, "data-key": n.key, title: t("map_anchor_key") }));
       return d;
     }
@@ -459,7 +516,7 @@ class NavMap {
     }
     const badges = [n.start ? el("span", { title: t("map_start"), text: "⭐" }) : null,
       n.hidden ? el("span", { class: n.hidden.full ? "crossed" : "", title: `${t("map_hidden")} ${n.hidden.activity}${n.hidden.full ? " (hideMode: full)" : ""}`, text: "👁" }) : null];
-    const label = el("div", { class: "navmap-label" }, el("span", { class: "navmap-idx", text: String(n.p + 1) }), el("strong", { text: n.name }), ...badges);
+    const label = el("div", { class: "navmap-label", title: t("map_drag_screen") }, el("span", { class: "navmap-idx", text: String(n.p + 1) }), el("strong", { text: n.name }), ...badges);
     const screen = el("div", { class: "navmap-screen" });
     const d = el("div", { class: "navmap-node", style, "data-p": n.p }, label, screen);
     d.addEventListener("click", (ev) => {
@@ -514,6 +571,8 @@ class NavMap {
       el("span", { class: "muted", text: this.mode === "simulator" ? t("map_hint_sim") : t("map_hint_editor"),
         title: this.editable() ? t("map_hint_edit") : null }),
       el("span", { class: "spacer" }),
+      ...(this.open ? this.switches() : []),
+      this.open ? el("button", { class: "icon", title: t("map_reset_layout"), text: "⟲", onclick: () => this.saveLayout(true) }) : null,
       this.open ? el("button", { class: "icon", title: t("map_zoom_out"), text: "−", onclick: () => this.zoomBy(1 / 1.25) }) : null,
       this.open ? el("button", { class: "icon", title: t("map_zoom_in"), text: "+", onclick: () => this.zoomBy(1.25) }) : null,
       this.open ? el("button", { class: "icon", title: t("map_fit"), text: "⤢ " + t("map_fit"), onclick: () => this.fit() }) : null,
@@ -534,12 +593,26 @@ class NavMap {
     this.ro.observe(vp);
   }
 
+  /* RF16.3 switches: page keys, global keys, connections (state kept in the browser). */
+  switches() {
+    const sh = this.showOpts();
+    const tog = (key, icon, label) => el("button", { class: "icon navmap-toggle" + (sh[key] ? " on" : ""), title: label, "aria-pressed": sh[key] ? "true" : "false",
+      onclick: () => this.setShow({ [key]: !sh[key] }) }, `${icon} ${label}`);
+    return [tog("pageKeys", "☰", t("map_show_page_keys")), tog("globalKeys", "⏻", t("map_show_global_keys")), tog("edges", "〰", t("map_show_edges"))];
+  }
+
   legend() {
     return el("div", { class: "navmap-legend" }, el("strong", { text: t("map_legend") }),
       this.editable() ? el("p", { class: "msg", text: "✎ " + t("map_hint_edit") }) : null,
       this.editable() ? el("div", { class: "row" }, el("span", { class: "navmap-anchor static", style: "position:static;margin:0;transform:none" }),
         el("span", { text: t("map_legend_anchors") })) : null,
-      ...Object.entries(MAP_KINDS).map(([k, v]) => el("div", { class: "row" }, el("span", { class: `navmap-badge static k-${k}`, text: v.icon }), el("span", { text: t("map_k_" + k) }))),
+      ...Object.entries(MAP_KINDS).map(([k, v]) => {
+        // RF16.3: per-kind toggle
+        const cb = el("input", { type: "checkbox", title: t("map_show_kind") });
+        cb.checked = this.showOpts().kinds[k] !== false;
+        cb.onchange = () => this.setShow({ kinds: { ...this.showOpts().kinds, [k]: cb.checked } });
+        return el("label", { class: "row" }, cb, el("span", { class: `navmap-badge static k-${k}`, text: v.icon }), el("span", { text: t("map_k_" + k) }));
+      }),
       el("div", { class: "row" }, el("span", { class: "navmap-badge static popup", text: "👆▣" }), el("span", { text: t("map_popup") })),
       el("div", { class: "row" }, el("span", { text: "⭐" }), el("span", { text: t("map_start") })),
       el("div", { class: "row" }, el("span", { text: "👁" }), el("span", { text: t("map_hidden") })),
@@ -582,7 +655,7 @@ class NavMap {
     vp.addEventListener("pointerdown", (e) => {
       if (e.button !== 0 && e.pointerType === "mouse") return;
       // RF15: a drag that starts on an anchor or on a grid tile draws a link, not a pan
-      const src = this.editable() ? this.linkSource(e) : null;
+      const src = this.linkSource(e);
       if (src) { this.link = { ...src, sx: e.clientX, sy: e.clientY, id: e.pointerId, started: false }; this.moved = false; return; }
       pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
       this.moved = false;
@@ -621,7 +694,7 @@ class NavMap {
   }
 
   /* ---------- RF15 editing ---------- */
-  editable() { return this.mode === "editor" && typeof this.onCommit === "function"; }
+  editable() { return this.mode === "editor" && typeof this.onCommit === "function" && (!this.canEdit || this.canEdit()); }
   keysPage() {
     const n = ((this.doc && this.doc.pages) || []).length;
     const p = this.sel && Number.isInteger(this.sel.p) ? this.sel.p : 0;
@@ -634,6 +707,10 @@ class NavMap {
 
   /* Where a link drag may start: side anchors, key chip anchors, grid tiles. */
   linkSource(e) {
+    // RF16.3: the title bar of a screen moves it (any mode: layout only, not the dashboard)
+    const lbl = e.target.closest && e.target.closest(".navmap-label");
+    if (lbl) { const node = lbl.closest(".navmap-node"); return { kind: "move", p: +node.dataset.p, el: node }; }
+    if (!this.editable()) return null;
     const a = e.target.closest && e.target.closest(".navmap-anchor");
     if (a && (a.dataset.side === "left" || a.dataset.side === "right")) return { kind: "side", p: +a.dataset.p, side: a.dataset.side, el: a };
     if (a && a.dataset.key) return { kind: "key", scope: a.dataset.scope, key: a.dataset.key, el: a };
@@ -682,6 +759,7 @@ class NavMap {
   }
   linkMove(e, vp) {
     const L = this.link;
+    if (L.kind === "move") return this.moveScreen(e, vp);
     if (!L.started) {
       if (Math.hypot(e.clientX - L.sx, e.clientY - L.sy) < 6) return;
       L.started = true;
@@ -707,6 +785,12 @@ class NavMap {
     const L = this.link;
     this.link = null;
     if (!L.started) return; // a plain click: the node's click handler selects the card
+    if (L.kind === "move") {
+      L.el.classList.remove("dragging");
+      this.moved = true;
+      setTimeout(() => { this.moved = false; }, 0);
+      return this.saveLayout();
+    }
     this.moved = true;
     setTimeout(() => { this.moved = false; }, 0);
     if (L.line) L.line.remove();
@@ -715,6 +799,33 @@ class NavMap {
     const hit = this.anchorAt(e.clientX, e.clientY);
     if (!hit || !this.dropOk(hit, L)) return;
     this.drop(L, +hit.dataset.p).catch((err) => toast(err.message, true));
+  }
+
+  /* RF16.3: drag a screen by its title bar; links follow live. */
+  moveScreen(e, vp) {
+    const L = this.link;
+    if (!L.started) {
+      if (Math.hypot(e.clientX - L.sx, e.clientY - L.sy) < 5) return;
+      L.started = true; L.lx = L.sx; L.ly = L.sy;
+      vp.setPointerCapture(e.pointerId);
+      L.el.classList.add("dragging");
+    }
+    const p = this.pos["p" + L.p];
+    p.x += (e.clientX - L.lx) / this.view.k; p.y += (e.clientY - L.ly) / this.view.k;
+    L.lx = e.clientX; L.ly = e.clientY;
+    L.el.style.left = `${p.x}px`; L.el.style.top = `${p.y}px`;
+    if (!this.linksFrame) this.linksFrame = requestAnimationFrame(() => { this.linksFrame = null; this.renderLinks(); });
+  }
+  /* Positions of every screen, by page name, saved in the add-on (per remote). */
+  async saveLayout(reset) {
+    const layout = {};
+    if (!reset) for (const n of this.graph.nodes.filter((x) => x.kind === "page")) layout[n.name] = { x: this.pos[n.id].x, y: this.pos[n.id].y };
+    try {
+      const res = await api("PUT", `api/remotes/${this.rid}/map-layout`, { layout });
+      if (this.remote) this.remote.map_layout = res.layout;
+      this.build(); // special/key rows move below the lowest screen
+      if (reset) this.fit();
+    } catch (err) { toast(err.message, true); }
   }
 
   /* RF15.2-15.4: apply a drop (asking what is needed), then one commit. */
@@ -774,11 +885,11 @@ class NavMap {
   }
 
   /* Highlights the editor's selection (or the simulator's current page). */
-  highlight(sel) {
+  highlight(sel, noRebuild) {
     this.sel = sel;
     if (!this.nodeEls) return;
     // RF15.3: the upper key row follows the page selected in the editor
-    if (this.graph && this.keysPage() !== this.keysPageIdx) return this.build();
+    if (!noRebuild && this.graph && this.showOpts().pageKeys && this.keysPage() !== this.keysPageIdx) return this.build();
     for (const { d, screen } of Object.values(this.nodeEls)) {
       d.classList.remove("sel");
       screen.querySelectorAll(".navmap-card-sel").forEach((x) => x.classList.remove("navmap-card-sel"));

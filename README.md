@@ -20,7 +20,7 @@ against your HA entities, push/pull with drift detection, live simulator.
 3. Install **Astrion Config Manager**, start it, open **Astrion** in the sidebar.
 
 On each remote, enable the app's **config server** (port 8080, settings page).
-Schema followed: upstream release **1.3.0** (card fields regenerated with `tools/extract_card_schema.py`; card fields regenerated with `tools/extract_card_schema.py`). Keys added by the betas are ignored by older apps.
+Schema followed: upstream release **1.3.0** and beta **1.3.2-beta** (card fields regenerated with `tools/extract_card_schema.py`; card fields regenerated with `tools/extract_card_schema.py`). Keys added by the betas are ignored by older apps.
 
 ## Features
 
@@ -229,7 +229,9 @@ map; drag its bottom edge to resize it.
   *Long* + *Popup* → `{"key": "PLAY", "page": "TV", "pageMode": "popup"}` in `longHotkeys`;
 - drag the *Movie* tile of a scene grid onto *Cinema*'s top ● → choose *Tap* →
   the tile gets `"page": "Cinema"`;
-- press and hold a connection's icon → confirm → the link is removed.
+- press and hold a connection's icon → confirm → the link is removed;
+- drag a screen by its title bar to arrange the map (saved per remote, **⟲** resets it);
+  **Page keys / Global keys / Links** show or hide those parts.
 
 Each change is one version: **Undo** reverts it.
 
@@ -246,6 +248,30 @@ a version, ready to push. **Export** gives a file like:
 ```
 
 that **Import from file** reads back (a whole `dashboard.json` works too).
+
+### 14. The remote's own builder
+
+**Open in builder ↗** (remote header) opens `http://<ip>:8080/builder/` in a new
+tab at what you selected here, e.g. page *TV* → `/builder/#page=TV`, a card →
+`#page=TV&card=2`, an Activity → `#activity=watch_tv`; **History ↗** opens
+`#history`. Both are greyed out when the remote can't be reached (local network
+only).
+
+Prefer the builder? **Edit remote → Edit with the remote's builder**: the add-on
+becomes the read-only backup. **Edit in builder** first asks to push or discard
+add-on changes not yet sent; save in the builder, come back to this tab (or
+press **Done**) and the change is imported as a version with the note you typed
+in the builder. Changes on both sides? You choose which to keep — never merged.
+
+### 15. Built-in weather (app 1.3.2-beta)
+
+**Editor → Global → Built-in weather** → *Find a town* "Bracciano" → pick it →
+the block below is written; then use `weather.astrion` in a clock & weather card
+or the dock clock.
+
+```json
+"weather": { "name": "Bracciano", "latitude": 42.12, "longitude": 12.17, "model": "auto", "unit": "celsius" }
+```
 
 ## Data and backups
 

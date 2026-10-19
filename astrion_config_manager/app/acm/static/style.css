@@ -238,3 +238,15 @@ a.button.icon { padding: 2px 8px; }
 .navmap-dialog .row { gap: 8px; }
 .navmap-dialog input[type=radio] { width: auto; }
 button.danger-fill { background: var(--err); border-color: var(--err); }
+/* RF16.3 */
+.navmap-label { cursor: move; }
+.navmap-node.dragging { opacity: .85; box-shadow: 0 0 0 4px var(--accent), 0 10px 30px rgba(0,0,0,.4); z-index: 3; }
+.navmap-toggle { opacity: .55; }
+.navmap-toggle.on { opacity: 1; border-color: var(--accent); }
+.navmap-chip-icon { font-size: 18px; }
+.navmap-legend input[type=checkbox] { width: auto; }
+.navmap-head { flex-wrap: wrap; row-gap: 4px; }
+/* RF16.4 / RF16.5 */
+.nb-banner { border-left: 4px solid var(--accent); }
+.readonly input, .readonly select, .readonly textarea { pointer-events: none; opacity: .65; }
+.readonly .row button:not(.icon):not(.item), .readonly .danger { pointer-events: none; opacity: .5; }

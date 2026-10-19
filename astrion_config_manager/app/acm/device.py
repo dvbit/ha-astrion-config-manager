@@ -24,7 +24,11 @@ browser on ``http://<host>:<port>``, as implemented upstream in
   restoredFrom, size, pages, cards}]}`` newest first; ``GET /history/<id>``
   -> that version's content; ``POST /history/pin`` (form ``id``,
   ``pinned=true|false``).  ``POST /dashboard.json`` also takes a ``note``
-  form field, stored with the version the remote keeps for that save.
+  form field, stored with the version the remote keeps for that save;
+* 1.3.1-beta: the reply of ``POST /dashboard.json`` carries
+  ``X-Astrion-Version-Id`` (the history version it created) (RF16.1);
+* 1.3.2-beta: ``GET /weather-search?q=&lang=`` -> ``{"results": [{name,
+  admin1, country, latitude, longitude}]}`` (Open-Meteo geocoding, RF16.2).
 """
 
 from __future__ import annotations
@@ -205,11 +209,13 @@ class DeviceClient:
         except (aiohttp.ClientError, TimeoutError) as err:
             raise DeviceError("unreachable", str(err) or type(err).__name__) from err
 
-    async def upload(self, content: Any, note: str | None = None) -> None:
+    async def upload(self, content: Any, note: str | None = None) -> str | None:
         """Upload ``content`` the same way the device's own form does (RF5.4).
 
         ``note`` (RF12.1): label of the version the remote keeps for this save
         (app 1.3.0+; older apps ignore the extra field).
+        Returns the remote's history version id (``X-Astrion-Version-Id``,
+        app 1.3.1+) or None.
         """
         url = f"{self._base}/dashboard.json"
         form = aiohttp.FormData()
@@ -227,6 +233,7 @@ class DeviceClient:
                 # Success is a redirect back to the config home page.
                 if resp.status >= 400:
                     raise DeviceError("http_error", f"HTTP {resp.status}")
+                return resp.headers.get("X-Astrion-Version-Id") or None
         except (aiohttp.ClientError, TimeoutError) as err:
             raise DeviceError("unreachable", str(err) or type(err).__name__) from err
 
@@ -286,3 +293,24 @@ class DeviceClient:
                 return True
         except (aiohttp.ClientError, TimeoutError) as err:
             raise DeviceError("unreachable", str(err) or type(err).__name__) from err
+
+    async def weather_search(self, query: str, lang: str = "") -> list[dict[str, Any]] | None:
+        """RF16.2 town search through the remote (app 1.3.2+); None when unsupported (404)."""
+        url = f"{self._base}/weather-search"
+        _LOGGER.debug("GET %s (q=%s)", url, query)
+        try:
+            async with self._session.get(url, params={"q": query, "lang": lang[:2]}, timeout=TIMEOUT) as resp:
+                if resp.status in (404, 405):
+                    return None
+                if resp.status == 503:
+                    raise DeviceError("weather_search_failed", (await resp.text())[:200])
+                if resp.status != 200:
+                    raise DeviceError("http_error", f"HTTP {resp.status}")
+                raw = json.loads((await resp.read()).decode("utf-8"))
+        except (aiohttp.ClientError, TimeoutError) as err:
+            raise DeviceError("unreachable", str(err) or type(err).__name__) from err
+        except (UnicodeDecodeError, json.JSONDecodeError) as err:
+            raise DeviceError("invalid_json", str(err)) from err
+        keys = ("name", "admin1", "country", "latitude", "longitude")
+        results = raw.get("results") if isinstance(raw, dict) else None
+        return [{k: r.get(k) for k in keys} for r in results or [] if isinstance(r, dict)]

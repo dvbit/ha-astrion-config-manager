@@ -20,7 +20,7 @@ push/pull con rilevamento della deriva, simulatore live.
 3. Installa **Astrion Config Manager**, avvialo e apri **Astrion** nella barra laterale.
 
 Su ogni telecomando abilita il **config server** dell'app (porta 8080, pagina impostazioni).
-Schema seguito: release upstream **1.3.0** ( campi delle card rigenerati con `tools/extract_card_schema.py`). Le chiavi aggiunte dalle beta sono ignorate dalle app più vecchie.
+Schema seguito: release upstream **1.3.0** e beta **1.3.2-beta** ( campi delle card rigenerati con `tools/extract_card_schema.py`). Le chiavi aggiunte dalle beta sono ignorate dalle app più vecchie.
 
 ## Funzioni
 
@@ -236,7 +236,9 @@ la mappa; trascina il bordo inferiore per ridimensionarla.
   *Lunga* + *Popup* → `{"key": "PLAY", "page": "TV", "pageMode": "popup"}` in `longHotkeys`;
 - trascina la tile *Film* di una scene grid sul ● superiore di *Cinema* → scegli *Tocco* →
   la tile riceve `"page": "Cinema"`;
-- tieni premuta l'icona di un collegamento → conferma → il collegamento è rimosso.
+- tieni premuta l'icona di un collegamento → conferma → il collegamento è rimosso;
+- trascina uno schermo dalla barra del titolo per disporre la mappa (salvata per telecomando, **⟲** la ripristina);
+  **Tasti pagina / Tasti globali / Collegamenti** mostrano o nascondono quelle parti.
 
 Ogni modifica è una versione: **Annulla** la ripristina.
 
@@ -253,6 +255,31 @@ come…** salva i colori attuali come *Salotto*. Nella schermata principale,
 ```
 
 che **Importa da file** rilegge (va bene anche un intero `dashboard.json`).
+
+### 14. Il builder del telecomando
+
+**Apri nel builder ↗** (intestazione) apre `http://<ip>:8080/builder/` in una
+nuova scheda sul punto selezionato qui, es. pagina *TV* → `/builder/#page=TV`,
+una card → `#page=TV&card=2`, un'Activity → `#activity=guarda_tv`;
+**Cronologia ↗** apre `#history`. Sono disattivati quando il telecomando non è
+raggiungibile (solo rete locale).
+
+Preferisci il builder? **Modifica telecomando → Modifica con il builder del
+telecomando**: l'add-on diventa il backup in sola lettura. **Modifica nel
+builder** chiede prima di inviare o scartare le modifiche non ancora inviate;
+salva nel builder, torna su questa scheda (o premi **Fatto**) e la modifica è
+importata come versione con la nota scritta nel builder. Modifiche su entrambi i
+lati? Scegli tu quale tenere: mai unite.
+
+### 15. Meteo integrato (app 1.3.2-beta)
+
+**Editor → Globale → Meteo integrato** → *Cerca una località* "Bracciano" →
+selezionala → viene scritto il blocco qui sotto; poi usa `weather.astrion` in
+una card orologio e meteo o nell'orologio dock.
+
+```json
+"weather": { "name": "Bracciano", "latitude": 42.12, "longitude": 12.17, "model": "auto", "unit": "celsius" }
+```
 
 ## Dati e backup
 

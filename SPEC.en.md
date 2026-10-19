@@ -1,9 +1,9 @@
-# Requirement — Astrion Config Manager (HA add-on) v1.13
+# Requirement — Astrion Config Manager (HA add-on) v1.14
 
 > English translation of [SPEC.md](SPEC.md). The Italian document is the
 > reference; in case of discrepancy the Italian text prevails.
 
-Status: approved by the requester. v1.3: added RF6.12 (navigation-only mode). v1.4: added RF7 (icons and entity catalog). v1.5: added RF8 (multiple Harmony hubs and IR targets). v1.6: added RF3.5 (dropdowns and palettes). v1.7: added RF3.6 (structured lists) and RF9 (upstream 1.2.0, direct Apple TV). v1.8: RF9.6–RF9.7 (upstream 1.2.1-beta and 1.2.0 recheck). v1.9: RF10 (upstream 1.2.2–1.2.7-beta). v1.10: RF11 (upstream 1.2.8–1.2.9-beta, push/pull on the main screen). v1.11: RF12 (upstream 1.3.0, integration with the remote's version history). v1.12: RF13 (navigation map) and RF14 (theme library). v1.13: RF15 (editable navigation map). Supersedes v1.0: Harmony and IR are now in scope; named versions added (RF2.11–RF2.13). Original document language: Italian.
+Status: approved by the requester. v1.3: added RF6.12 (navigation-only mode). v1.4: added RF7 (icons and entity catalog). v1.5: added RF8 (multiple Harmony hubs and IR targets). v1.6: added RF3.5 (dropdowns and palettes). v1.7: added RF3.6 (structured lists) and RF9 (upstream 1.2.0, direct Apple TV). v1.8: RF9.6–RF9.7 (upstream 1.2.1-beta and 1.2.0 recheck). v1.9: RF10 (upstream 1.2.2–1.2.7-beta). v1.10: RF11 (upstream 1.2.8–1.2.9-beta, push/pull on the main screen). v1.11: RF12 (upstream 1.3.0, integration with the remote's version history). v1.12: RF13 (navigation map) and RF14 (theme library). v1.13: RF15 (editable navigation map). v1.14: RF16 (upstream 1.3.1–1.3.2-beta, map layout and switches, the remote's builder). Supersedes v1.0: Harmony and IR are now in scope; named versions added (RF2.11–RF2.13). Original document language: Italian.
 
 ## 1. Purpose
 
@@ -15,7 +15,7 @@ Home Assistant add-on with an Ingress panel that manages the configurations (`da
 
 ## 3. References
 
-- Reference schema: `dashboard.json` as defined by the most recent release of the repo at development time (last observed: 1.3.0). Card and action behaviour: Kotlin sources (`cards/impl/`, `config/DashboardLoader.kt`) and web editor (`docs/index.html`, `cards.js`).
+- Reference schema: `dashboard.json` as defined by the most recent release of the repo at development time (last observed: 1.3.0 stable, 1.3.2-beta). Card and action behaviour: Kotlin sources (`cards/impl/`, `config/DashboardLoader.kt`) and web editor (`docs/index.html`, `cards.js`).
 - Remote: the device exposes no API. The add-on issues the same HTTP requests as the browser on the configuration page `http://<host>:<port>` (download and upload of `dashboard.json`), derived from the repo's `web/` sources. Editing happens only in the add-on's web interface.
 - Home Assistant: WebSocket API via the add-on's Supervisor token; no token entered by the user.
 - Harmony Hub: the Hub's local protocol as used by the app's Harmony client (Kotlin sources of the repo).
@@ -205,6 +205,14 @@ Editor tab only (the Simulator's map stays read-only). Every change is one versi
 - RF15.3 Hardware key chips under the map in two rows: keys of the page selected in the editor and global keys; bound keys start their links from their chip. Dragging a chip's anchor onto a screen's bottom anchor asks short/long press and page/popup, then writes `{key, page, pageMode}` in that page's (or the global) `hotkeys`/`longHotkeys`; an existing binding of that key there asks to be replaced.
 - RF15.4 Dragging a `button_grid`/`scene_grid` tile of a preview (also inside `row` cards) onto a screen's top anchor asks tap/long tap and page/popup and writes `page`/`pageMode` on the tile or in its `long_press` block; an existing target asks to be replaced; a scene tile that starts an Activity warns that its tap shows the Activity's page.
 - RF15.5 Press and hold (600 ms, mouse or touch) on a connection, then confirm: tap → removes `page`/`pageMode`; long tap → the same in `long_press` (dropped if empty); hotkey → the binding; swipe up → `linkedPage`/`linkedPageMode`; back → `parent`/`parentKey`; HA → `openWhenEntity`/`openWhenState`/`closeWhenState`/`openMode`. Activity and overlay links are read-only (edit them in the forms).
+
+### RF16 — Upstream 1.3.1–1.3.2-beta, map layout, the remote's builder
+
+- RF16.1 Push reads `X-Astrion-Version-Id` (app 1.3.1+) to pin/label the remote version it created; on 1.3.0 the version is found by its note.
+- RF16.2 Built-in weather (1.3.2-beta): Global section "Built-in weather" (`name`, `latitude`, `longitude`, `model` auto/meteofrance, `unit` celsius/fahrenheit) with **Find a town**, searched by the remote (`GET /weather-search`). Latitude/longitude are required and in range, otherwise the remote ignores the block (warning); unknown model/unit warned. `weather.astrion` counts as an existing entity when the block is usable and is offered in entity fields; the simulator shows it as "built-in, remote only".
+- RF16.3 Map: screens dragged by their title bar, links following live; positions saved per remote in the add-on (by page name; in HA backups, never in `dashboard.json`), **Reset layout**; dragging never changes the swipe order. Switches **Page keys**, **Global keys**, **Links** (all) and one toggle per kind in the legend (kept in the browser). Key chips use the simulator's icons.
+- RF16.4 Per-remote mode "Edit with the remote's builder" (remote option): the remote is the editor, the add-on the backup. While on: editor, map editing, undo/redo and theme loading are read-only, a banner offers **Edit in builder**, **Done**, **Turn mode off**. Before opening: unsynced add-on changes → **Push** / **Discard** (a `restore` version of the last synced one) / Cancel. Back in the tab (visible again, or Done): pull; changes are imported as a `sync-import` version carrying the note/reason of the remote's newest history entry; if the add-on also changed → the user keeps the remote's file (import) or the add-on's (push); never merged.
+- RF16.5 **Open in builder ↗** / **History ↗** in the remote header: `http://<ip>:<port>/builder/` in a new tab (never an iframe: HA is HTTPS, the builder plain HTTP on the LAN), at the editor's selection with the 1.3.1-beta deep links (`#page=<name>`, `&card=<i>`, `#activity=<id>`, `#hotkeys`, `#history`). Greyed out with the reason when the remote is unreachable. Outside native mode, coming back re-checks drift.
 
 ## 6. Non-functional requirements
 

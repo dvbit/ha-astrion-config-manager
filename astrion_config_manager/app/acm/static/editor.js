@@ -551,7 +551,7 @@ class Editor {
     if (m) this.sel = m[2] !== undefined ? { kind: "card", p: +m[1], c: +m[2] } : { kind: "page", p: +m[1] };
     else {
       const g = path.split("/")[1];
-      this.sel = ["hotkeys", "longHotkeys", "irDevices", "haDevices", "activities", "theme", "dock", "power"].includes(g) ? { kind: "global", g } : { kind: "raw" };
+      this.sel = ["hotkeys", "longHotkeys", "irDevices", "haDevices", "activities", "theme", "dock", "power", "weather"].includes(g) ? { kind: "global", g } : { kind: "raw" };
     }
     this.sel.path = path; // RF13.5: lets the map highlight the connection
     this.render();
@@ -582,7 +582,7 @@ class Editor {
         onclick: () => this.change((d) => d.pages.push({ name: `${t("page")} ${d.pages.length + 1}`, cards: [] })) }));
       tree.append(el("h3", { text: t("global") }));
       for (const [g, label] of [["hotkeys", "hotkeys"], ["longHotkeys", "long_hotkeys"], ["irDevices", "ir_devices"],
-        ["haDevices", "ha_devices"], ["activities", "activities"], ["theme", "theme"], ["dock", "dock_screen"], ["power", "power_battery"]]) {
+        ["haDevices", "ha_devices"], ["activities", "activities"], ["theme", "theme"], ["dock", "dock_screen"], ["power", "power_battery"], ["weather", "weather_builtin"]]) {
         tree.append(item(t(label), { kind: "global", g }, s.kind === "global" && s.g === g, this.issuesAt("/" + g).length));
       }
     }
@@ -761,6 +761,14 @@ class Editor {
         (a) => `${a.name || a.id || "?"} (${a.room || ""})`,
         (a, ip, get) => this.form(a, ACTIVITY_FIELDS, ip, get),
         () => ({ id: `activity_${(this.doc.activities || []).length + 1}`, room: "room", devices: [{ deviceId: "", source: "ir" }] })));
+    } else if (g === "weather") {
+      // RF16.2 (1.3.2-beta): the remote fetches Open-Meteo itself and publishes weather.astrion
+      const specs = (this.hints && this.hints.weather) || [];
+      const w = this.doc.weather && typeof this.doc.weather === "object" ? this.doc.weather : {};
+      panel.append(el("h2", { text: t("weather_builtin") }), el("p", { class: "muted", text: t("weather_hint") }),
+        this.weatherSearch(),
+        this.form(w, specs, "/weather", (d) => { if (!d.weather || typeof d.weather !== "object") d.weather = {}; return d.weather; }),
+        this.doc.weather ? el("button", { class: "danger", text: t("weather_remove"), onclick: () => this.change((d) => { delete d.weather; }) }) : null);
     } else if (g === "dock" || g === "power") {
       // RF10.1: DashboardLoader.parseDock / parsePower; every key optional
       const specs = ((this.hints && this.hints[g]) || []).map(([k, kind, o]) => [k, kind, o]);
@@ -777,6 +785,28 @@ class Editor {
         this.form(th, Object.entries(defaults).map(([k, dv]) => [k, "color", { default: dv }]), "/theme", (d) => { if (!d.theme || typeof d.theme !== "object") d.theme = {}; return d.theme; }));
     }
     return panel;
+  }
+
+  /* RF16.2 town search through the remote (GET /weather-search, app 1.3.2+). */
+  weatherSearch() {
+    const q = el("input", { type: "search", placeholder: t("weather_search_ph") });
+    const out = el("div", { class: "weather-results" });
+    const go = async () => {
+      if (q.value.trim().length < 2) return;
+      out.replaceChildren(el("span", { class: "muted", text: t("loading") }));
+      try {
+        const res = await api("GET", `api/remotes/${S.rid}/weather-search?q=${encodeURIComponent(q.value.trim())}&lang=${LANG}`);
+        if (!res.supported) return out.replaceChildren(el("span", { class: "muted", text: t("weather_search_unsupported") }));
+        if (!res.results.length) return out.replaceChildren(el("span", { class: "muted", text: t("empty_list") }));
+        out.replaceChildren(...res.results.map((r) => el("button", { class: "icon", text: [r.name, r.admin1, r.country].filter(Boolean).join(", "),
+          onclick: () => this.change((d) => {
+            d.weather = { ...(d.weather && typeof d.weather === "object" ? d.weather : {}), name: r.name, latitude: r.latitude, longitude: r.longitude };
+          }) })));
+      } catch (e) { out.replaceChildren(el("span", { class: "msg", text: t("err_" + ((e.data && e.data.error) || "internal")) })); }
+    };
+    q.onkeydown = (e) => { if (e.key === "Enter") go(); };
+    return el("div", { class: "field" }, el("label", { text: t("weather_search") }),
+      el("div", { class: "row" }, q, el("button", { text: "🔎", onclick: go })), out);
   }
 
   /* RF7.5: catalog entry; the entity list is filtered by the chosen type. */
