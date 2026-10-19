@@ -444,7 +444,11 @@ const I18N = {
   "bigprev_hint": "Click a card to edit it · nothing is executed",
   "nb_ready_title": "Ready to edit in the builder",
   "nb_ready_text": "The remote and the add-on now match. Open the builder; when you come back here the changes you save are imported.",
-  "map_any_swipe": "Any page · swipe down"
+  "map_any_swipe": "Any page · swipe down",
+  "map_new_page": "New page",
+  "map_delete_page": "Delete page",
+  "map_delete_last": "The last page can't be deleted",
+  "map_delete_confirm": "Delete the page \"{name}\"? {n} link(s) point to it: they will be shown as missing pages until you change them. Undo brings the page back."
  },
  "it": {
   "app_title": "Astrion Config Manager",
@@ -888,7 +892,11 @@ const I18N = {
   "bigprev_hint": "Clic su una card per modificarla · nulla viene eseguito",
   "nb_ready_title": "Pronto per modificare nel builder",
   "nb_ready_text": "Telecomando e add-on ora coincidono. Apri il builder; quando torni qui le modifiche salvate vengono importate.",
-  "map_any_swipe": "Qualsiasi pagina · swipe in basso"
+  "map_any_swipe": "Qualsiasi pagina · swipe in basso",
+  "map_new_page": "Nuova pagina",
+  "map_delete_page": "Elimina pagina",
+  "map_delete_last": "L'ultima pagina non si può eliminare",
+  "map_delete_confirm": "Eliminare la pagina \"{name}\"? {n} collegamento/i puntano a essa: verranno mostrati come pagine mancanti finché non li modifichi. Annulla riporta la pagina."
  },
  "fr": {
   "app_title": "Astrion Config Manager",
@@ -1332,7 +1340,11 @@ const I18N = {
   "bigprev_hint": "Cliquez une carte pour la modifier · rien n'est exécuté",
   "nb_ready_title": "Prêt à modifier dans le builder",
   "nb_ready_text": "La télécommande et l'add-on correspondent. Ouvrez le builder ; à votre retour ici, les modifications enregistrées sont importées.",
-  "map_any_swipe": "Toute page · balayage vers le bas"
+  "map_any_swipe": "Toute page · balayage vers le bas",
+  "map_new_page": "Nouvelle page",
+  "map_delete_page": "Supprimer la page",
+  "map_delete_last": "La dernière page ne peut pas être supprimée",
+  "map_delete_confirm": "Supprimer la page « {name} » ? {n} lien(s) y mènent : ils seront signalés comme pages manquantes jusqu'à leur modification. Annuler rétablit la page."
  },
  "es": {
   "app_title": "Astrion Config Manager",
@@ -1776,7 +1788,11 @@ const I18N = {
   "bigprev_hint": "Haz clic en una tarjeta para editarla · no se ejecuta nada",
   "nb_ready_title": "Listo para editar en el editor",
   "nb_ready_text": "El mando y el complemento ya coinciden. Abre el editor; al volver aquí se importan los cambios guardados.",
-  "map_any_swipe": "Cualquier página · deslizar hacia abajo"
+  "map_any_swipe": "Cualquier página · deslizar hacia abajo",
+  "map_new_page": "Nueva página",
+  "map_delete_page": "Eliminar página",
+  "map_delete_last": "La última página no se puede eliminar",
+  "map_delete_confirm": "¿Eliminar la página «{name}»? {n} enlace(s) apuntan a ella: se mostrarán como páginas inexistentes hasta que los cambies. Deshacer recupera la página."
  },
  "de": {
   "app_title": "Astrion Config Manager",
@@ -2220,7 +2236,11 @@ const I18N = {
   "bigprev_hint": "Karte anklicken zum Bearbeiten · nichts wird ausgeführt",
   "nb_ready_title": "Bereit zum Bearbeiten im Builder",
   "nb_ready_text": "Fernbedienung und Add-on stimmen jetzt überein. Builder öffnen; beim Zurückkehren werden gespeicherte Änderungen importiert.",
-  "map_any_swipe": "Jede Seite · nach unten wischen"
+  "map_any_swipe": "Jede Seite · nach unten wischen",
+  "map_new_page": "Neue Seite",
+  "map_delete_page": "Seite löschen",
+  "map_delete_last": "Die letzte Seite kann nicht gelöscht werden",
+  "map_delete_confirm": "Seite „{name}“ löschen? {n} Verbindung(en) zeigen darauf: sie werden als fehlende Seiten angezeigt, bis du sie änderst. Rückgängig stellt die Seite wieder her."
  }
 };
 

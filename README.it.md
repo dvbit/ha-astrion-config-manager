@@ -236,6 +236,7 @@ la mappa; trascina il bordo inferiore per ridimensionarla.
   *Lunga* + *Popup* → `{"key": "PLAY", "page": "TV", "pageMode": "popup"}` in `longHotkeys`;
 - trascina la tile *Film* di una scene grid sul ● superiore di *Cinema* → scegli *Tocco* →
   la tile riceve `"page": "Cinema"`;
+- **＋ Nuova pagina** / **🗑 Elimina pagina** nella barra della mappa aggiungono una pagina vuota o eliminano quella selezionata;
 - tieni premuta l'icona di un collegamento → conferma → il collegamento è rimosso;
 - trascina uno schermo dalla barra del titolo per disporre la mappa (salvata per telecomando, **⟲** la ripristina);
   **Tasti pagina / Tasti globali / Collegamenti** mostrano o nascondono quelle parti.

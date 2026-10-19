@@ -247,6 +247,27 @@ function mapRemoveEdge(doc, e) {
   return d;
 }
 
+/* RF15.6 add a page like the editor's "+ Add page" (empty, name made unique). */
+function mapAddPage(doc, base) {
+  const d = clone(doc);
+  if (!Array.isArray(d.pages)) d.pages = [];
+  const used = new Set(d.pages.map((p) => String(p && p.name || "").toLowerCase()));
+  let n = d.pages.length + 1;
+  while (used.has(`${base} ${n}`.toLowerCase())) n++;
+  d.pages.push({ name: `${base} ${n}`, cards: [] });
+  return d;
+}
+/* RF15.6 delete a page like the editor's ✕ (links pointing to it stay and are
+ * reported as missing pages); startPage keeps pointing to the same page. */
+function mapDeletePage(doc, p) {
+  const d = clone(doc);
+  if (!d.pages || !d.pages[p] || d.pages.length < 2) return null;
+  const start = Number.isInteger(d.startPage) ? d.startPage : null;
+  d.pages.splice(p, 1);
+  if (start !== null) d.startPage = start === p ? 0 : start > p ? start - 1 : start;
+  return d;
+}
+
 /* ---------- view ---------- */
 
 class NavMap {
@@ -581,6 +602,7 @@ class NavMap {
       el("span", { class: "muted", text: this.mode === "simulator" ? t("map_hint_sim") : t("map_hint_editor"),
         title: this.editable() ? t("map_hint_edit") : null }),
       el("span", { class: "spacer" }),
+      ...(this.open && this.editable() ? this.pageButtons() : []),
       ...(this.open ? this.switches() : []),
       this.open ? el("button", { class: "icon", title: t("map_reset_layout"), text: "⟲", onclick: () => this.saveLayout(true) }) : null,
       this.open ? el("button", { class: "icon", title: t("map_zoom_out"), text: "−", onclick: () => this.zoomBy(1 / 1.25) }) : null,
@@ -601,6 +623,29 @@ class NavMap {
       if (hgt && hgt !== this.height) { this.height = hgt; mapStore(MAP_STORE.height, hgt); }
     });
     this.ro.observe(vp);
+  }
+
+  /* RF15.6: big "+ New page" / "Delete page" buttons (same as the editor's). */
+  pageButtons() {
+    const pages = (this.doc && this.doc.pages) || [];
+    const p = this.keysPage();
+    const cur = p !== null ? pages[p] : null;
+    return [
+      el("button", { class: "navmap-big primary", text: "＋ " + t("map_new_page"), onclick: async () => {
+        const next = mapAddPage(this.doc, t("page"));
+        await this.onCommit(next);
+        this.onSelect({ kind: "page", p: next.pages.length - 1 }); // the new page is selected
+      } }),
+      el("button", { class: "navmap-big danger", text: "🗑 " + t("map_delete_page"), disabled: !cur || pages.length < 2,
+        title: pages.length < 2 ? t("map_delete_last") : cur ? `${t("map_delete_page")}: ${cur.name || ""}` : null,
+        onclick: async () => {
+          const name = cur.name || `#${p + 1}`;
+          const incoming = (this.graph ? this.graph.edges : []).filter((e) => e.to === "p" + p && e.kind !== "swipe" && e.from !== e.to).length;
+          if (!(await mapConfirm(t("map_delete_confirm", { name, n: incoming }), false, t("map_remove_btn")))) return;
+          const next = mapDeletePage(this.doc, p);
+          if (next) { await this.onCommit(next); this.onSelect({ kind: "page", p: Math.max(0, p - 1) }); }
+        } }),
+    ];
   }
 
   /* RF16.3 switches: page keys, global keys, connections (state kept in the browser). */

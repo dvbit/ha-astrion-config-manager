@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.18.0 - 2026-10-19
+
+- Map (RF15.6): big "＋ New page" and "🗑 Delete page" buttons on the map bar,
+  same as the editor's. The new page is selected; deleting asks first and says
+  how many links point to the page; startPage follows; undoable.
+
 ## 2.17.0 - 2026-10-19
 
 - Fix (RF16.3): global keys appeared twice on the map, in the "Global keys" row

@@ -12,7 +12,7 @@ vm.createContext(ctx);
 const src = fs.readFileSync(path.join(__dirname, "../astrion_config_manager/app/acm/static/map.js"), "utf8");
 // only the pure part (graph model + document changes), before the DOM view
 vm.runInContext(src.split("/* ---------- view ---------- */")[0] +
-  "\nthis.api = {buildNavGraph, mapMovePage, mapSetHotkey, mapHotkeyOf, mapSetTileTarget, mapRemoveEdge, mapAt};", ctx);
+  "\nthis.api = {buildNavGraph, mapAddPage, mapDeletePage, mapMovePage, mapSetHotkey, mapHotkeyOf, mapSetTileTarget, mapRemoveEdge, mapAt};", ctx);
 const M = ctx.api;
 
 const doc = {
@@ -79,6 +79,16 @@ assert.strictEqual(M.mapRemoveEdge(doc, edge("activity", "/activities/0")), null
 assert.strictEqual(M.mapRemoveEdge(doc, { kind: "swipe", path: null }), null);
 d = M.mapRemoveEdge(doc, { kind: "broken", orig: "tap", path: "/pages/0/cards/0/options/scenes/0" });
 assert.strictEqual(d.pages[0].cards[0].options.scenes[0].page, undefined);
+
+// RF15.6 add / delete pages
+d = M.mapAddPage({ pages: [{ name: "Page 2" }] }, "Page");
+eq(d.pages.map((p) => p.name), ["Page 2", "Page 3"]);
+d = M.mapDeletePage(doc, 0); // start page B (index 1) -> index 0
+eq(d.pages.map((p) => p.name), ["B", "C"]);
+assert.strictEqual(d.startPage, 0);
+d = M.mapDeletePage(doc, 1); // deleting the start page -> 0
+assert.strictEqual(d.startPage, 0);
+assert.strictEqual(M.mapDeletePage({ pages: [{ name: "only" }] }, 0), null);
 
 // the original document is never modified
 assert.strictEqual(doc.pages[0].cards[0].options.scenes[0].page, "C");

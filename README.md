@@ -229,6 +229,7 @@ map; drag its bottom edge to resize it.
   *Long* + *Popup* → `{"key": "PLAY", "page": "TV", "pageMode": "popup"}` in `longHotkeys`;
 - drag the *Movie* tile of a scene grid onto *Cinema*'s top ● → choose *Tap* →
   the tile gets `"page": "Cinema"`;
+- **＋ New page** / **🗑 Delete page** on the map bar add an empty page or delete the selected one;
 - press and hold a connection's icon → confirm → the link is removed;
 - drag a screen by its title bar to arrange the map (saved per remote, **⟲** resets it);
   **Page keys / Global keys / Links** show or hide those parts.
