@@ -250,3 +250,17 @@ button.danger-fill { background: var(--err); border-color: var(--err); }
 .nb-banner { border-left: 4px solid var(--accent); }
 .readonly input, .readonly select, .readonly textarea { pointer-events: none; opacity: .65; }
 .readonly .row button:not(.icon):not(.item), .readonly .danger { pointer-events: none; opacity: .5; }
+
+/* ---------- RF17 big preview pane ---------- */
+.editor-wrap { display: flex; gap: 12px; align-items: flex-start; }
+.editor-wrap > div:last-child { flex: 1; min-width: 0; }
+.bigprev { position: sticky; top: 64px; flex: none; resize: horizontal; overflow: hidden; min-width: 220px; max-width: 520px; padding: 10px 12px; margin: 0; }
+.bigprev.closed { min-width: 0; resize: none; padding: 0; background: none; border: 0; }
+.bigprev-tab { writing-mode: vertical-rl; padding: 10px 4px; }
+.bigprev-head { gap: 6px; margin-bottom: 8px; }
+.bigprev-screen { position: relative; overflow: hidden; border-radius: 14px; box-shadow: 0 0 0 5px #000; cursor: pointer; }
+.bigprev-screen .sim-screen, .bigprev-screen .sim-screen * { pointer-events: none !important; }
+.bigprev-foot { font-size: 11px; margin-top: 8px; }
+a.button { display: inline-block; padding: 6px 12px; }
+a.button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+@media (max-width: 900px) { .editor-wrap { flex-direction: column; } .bigprev { position: static; } }

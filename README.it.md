@@ -258,6 +258,9 @@ che **Importa da file** rilegge (va bene anche un intero `dashboard.json`).
 
 ### 14. Il builder del telecomando
 
+I link aprono una normale nuova scheda (nessun pop-up), quindi funzionano anche
+nel frame di Home Assistant e nell'app companion.
+
 **Apri nel builder ↗** (intestazione) apre `http://<ip>:8080/builder/` in una
 nuova scheda sul punto selezionato qui, es. pagina *TV* → `/builder/#page=TV`,
 una card → `#page=TV&card=2`, un'Activity → `#activity=guarda_tv`;
@@ -280,6 +283,12 @@ una card orologio e meteo o nell'orologio dock.
 ```json
 "weather": { "name": "Bracciano", "latitude": 42.12, "longitude": 12.17, "model": "auto", "unit": "celsius" }
 ```
+
+### 16. Anteprima grande
+
+Nell'Editor il pannello a sinistra mostra in grande lo schermo selezionato con
+stati live; clic su una card per modificarla. Trascina il bordo destro per
+ridimensionarlo, **◂** lo nasconde (**▸ Anteprima** lo riporta).
 
 ## Dati e backup
 

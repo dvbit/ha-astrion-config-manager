@@ -548,7 +548,7 @@ class NavMap {
     this.previewTimer = setTimeout(() => { this.previewTimer = null; this.drawPreviews(); }, 3000);
   }
   drawPreviews() {
-    if (!this.nodeEls || !this.screen || !this.open) return;
+    if (!this.nodeEls || !this.screen || !this.open) { if (this.onPreviews) this.onPreviews(); return; }
     const sim = this.preview;
     const th = sim.theme();
     const { w, h } = this.screen;
@@ -561,6 +561,7 @@ class NavMap {
       screen.replaceChildren(s);
     }
     if (this.sel) this.highlight(this.sel);
+    if (this.onPreviews) this.onPreviews(); // RF17 big preview pane
   }
 
   renderShell() {
@@ -955,4 +956,78 @@ function mapConfirm(text, infoOnly, okLabel) {
     document.body.append(dlg);
     dlg.showModal();
   });
+}
+
+/* ---------- RF17 big preview pane (Editor tab, left) ---------- */
+
+/* A large, live picture of the screen selected in the editor, drawn by the
+ * map's preview renderer (same live states). Clicking a card opens its form
+ * (nothing is executed). Resizable by its right edge, hideable; width and
+ * visibility are remembered in the browser. */
+class BigPreview {
+  /* opts: {map: NavMap, onSelect(target)} */
+  constructor(opts) {
+    Object.assign(this, opts);
+    this.open = mapStore("acm-bigprev-open") !== "0";
+    this.width = Math.min(520, Math.max(220, parseInt(mapStore("acm-bigprev-w") || "320", 10) || 320));
+    this.sel = null;
+    this.root = el("aside", { class: "bigprev" });
+    this.map.onPreviews = () => this.draw(); // refreshed together with the map's previews
+  }
+
+  setSel(sel) { this.sel = sel; this.draw(); }
+
+  page() {
+    const pages = (this.map.doc && this.map.doc.pages) || [];
+    const p = this.sel && Number.isInteger(this.sel.p) ? this.sel.p : 0;
+    return pages[p] ? { page: pages[p], p } : null;
+  }
+
+  draw() {
+    if (!this.open) {
+      this.root.className = "bigprev closed";
+      this.root.style.width = "";
+      this.root.replaceChildren(el("button", { class: "bigprev-tab", title: t("bigprev_show"), text: "▸ " + t("bigprev_title"),
+        onclick: () => { this.open = true; mapStore("acm-bigprev-open", "1"); this.draw(); } }));
+      return;
+    }
+    this.root.className = "bigprev card";
+    this.root.style.width = `${this.width}px`;
+    const cur = this.page();
+    const head = el("div", { class: "row bigprev-head" }, el("strong", { text: cur ? `${cur.p + 1}. ${cur.page.name || ""}` : t("bigprev_title") }),
+      el("span", { class: "spacer" }),
+      el("button", { class: "icon", title: t("bigprev_hide"), text: "◂", onclick: () => { this.open = false; mapStore("acm-bigprev-open", "0"); this.draw(); } }));
+    if (!cur) { this.root.replaceChildren(head, el("p", { class: "muted", text: t("empty_list") })); return; }
+    const sim = this.map.preview;
+    const r = this.map.remote || {};
+    let w = r.width || 480, h = r.height || 800;
+    if (((r.orientation || "portrait") === "portrait") !== (h >= w)) [w, h] = [h, w];
+    const inner = this.width - 26;
+    const scale = inner / w;
+    const th = sim.theme();
+    const screen = el("div", { class: "sim-screen", style: `width:${w}px;height:${h}px;transform:scale(${scale});background:${th.background};color:${th.primaryText};--card:${th.cardSurface};--inset:${th.insetSurface};--ctl:${th.controlBackground};--muted:${th.mutedText};--acc:${th.accent};--amber:${th.amber};--danger:${th.danger};--ok:${th.success}` });
+    try { screen.append(sim.renderPage(cur.page, cur.p, false)); } catch (e) { screen.append(el("p", { text: e.message })); }
+    const frame = el("div", { class: "bigprev-screen", style: `width:${inner}px;height:${Math.round(h * scale)}px`, title: t("bigprev_hint") }, screen);
+    frame.addEventListener("click", (ev) => {
+      const c = this.map.cardAt(frame, ev.clientX, ev.clientY);
+      this.onSelect(c !== null ? { kind: "card", p: cur.p, c } : { kind: "page", p: cur.p });
+    });
+    if (this.sel && this.sel.kind === "card") {
+      const kid = screen.querySelector(".sim-page") && screen.querySelector(".sim-page").children[this.sel.c];
+      if (kid) kid.classList.add("navmap-card-sel");
+    }
+    this.root.replaceChildren(head, frame, el("div", { class: "muted bigprev-foot", text: t("bigprev_hint") }));
+    // RF17: width follows the drag handle (CSS resize) and is remembered
+    if (!this.ro) {
+      this.ro = new ResizeObserver(() => {
+        const nw = Math.round(this.root.getBoundingClientRect().width);
+        if (this.open && nw && Math.abs(nw - this.width) > 4) {
+          this.width = Math.min(520, Math.max(220, nw));
+          mapStore("acm-bigprev-w", this.width);
+          clearTimeout(this.rt); this.rt = setTimeout(() => this.draw(), 120);
+        }
+      });
+      this.ro.observe(this.root);
+    }
+  }
 }

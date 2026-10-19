@@ -1,5 +1,16 @@
 # Changelog
 
+## 2.16.0 - 2026-10-19
+
+Spec v1.15 (RF17).
+
+- Fix: "Open in builder", "History" and "Edit in builder" are now real links
+  (new tab on click) instead of script-opened tabs, which Home Assistant's
+  frame / companion app blocked as pop-ups. In native mode with unsent changes,
+  Push / Discard comes first, then a dialog with the link.
+- Large preview pane on the left of the Editor: the selected screen, live,
+  click a card to edit it, resizable and hideable (remembered).
+
 ## 2.15.0 - 2026-10-19
 
 Aligned with astrion-custom-dashboard **1.3.2-beta** (1.3.1-beta included);

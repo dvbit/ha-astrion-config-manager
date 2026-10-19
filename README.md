@@ -251,6 +251,9 @@ that **Import from file** reads back (a whole `dashboard.json` works too).
 
 ### 14. The remote's own builder
 
+The links open a normal new tab (no pop-up), so they also work inside Home
+Assistant's frame and in the companion app.
+
 **Open in builder ↗** (remote header) opens `http://<ip>:8080/builder/` in a new
 tab at what you selected here, e.g. page *TV* → `/builder/#page=TV`, a card →
 `#page=TV&card=2`, an Activity → `#activity=watch_tv`; **History ↗** opens
@@ -272,6 +275,12 @@ or the dock clock.
 ```json
 "weather": { "name": "Bracciano", "latitude": 42.12, "longitude": 12.17, "model": "auto", "unit": "celsius" }
 ```
+
+### 16. Large preview
+
+In the Editor, the pane on the left shows the selected screen in large size with
+live states; click a card in it to edit that card. Drag its right edge to resize
+it, **◂** hides it (**▸ Preview** brings it back).
 
 ## Data and backups
 

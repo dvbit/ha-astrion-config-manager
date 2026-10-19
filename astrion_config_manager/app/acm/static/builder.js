@@ -1,6 +1,8 @@
 /* The remote's own builder (spec RF16.4 / RF16.5).
  *
- * - RF16.5 "Open in builder ↗": http://<ip>:<port>/builder/ in a NEW TAB (never
+ * - RF16.5 "Open in builder ↗": http://<ip>:<port>/builder/ in a NEW TAB via a
+ *          real link (never window.open: blocked as a pop-up in HA's frame;
+ *          never
  *          an iframe: HA is served over HTTPS and the builder is plain HTTP on
  *          the local network), at the place selected in the editor
  *          (upstream 1.3.1-beta deep links: #page=<name>&card=<i>,
@@ -37,47 +39,67 @@ function builderHash() {
 
 const remoteUnreachable = (rid) => S.drift[rid] === "unreachable";
 
-/* Header buttons: Open in builder ↗ and History ↗ (disabled with a reason when unreachable). */
-function builderButtons(r) {
+/* RF16.5 (2.15.1): the builder is opened by a REAL LINK (<a target="_blank">)
+ * followed on the user's click. A script-opened tab (window.open) is treated
+ * as a pop-up and blocked inside Home Assistant's frame and in the companion
+ * app; a clicked link never is. rel="opener" keeps window.opener for a future
+ * "saved" message from the builder. */
+function builderLink(r, hashFn, label, cls, hint) {
   const off = remoteUnreachable(r.id);
   const why = off ? t("builder_unreachable", { host: `${r.host}:${r.port || 8080}` }) : null;
-  return [
-    el("button", { class: "builder-btn", text: "🛠 " + t("builder_open") + " ↗", disabled: off, title: why || t("builder_open_hint"),
-      onclick: guard(() => openBuilder(builderHash())) }),
-    el("button", { class: "icon", text: "🕘 " + t("builder_history") + " ↗", disabled: off, title: why || t("builder_history_hint"),
-      onclick: guard(() => openBuilder("#history")) }),
-  ];
-}
-
-/* RF16.4/16.5: the tab is opened synchronously (popup blockers), then pointed
- * at the builder once the native-mode checks are done (or closed on Cancel). */
-async function openBuilder(hash) {
-  const r = S.remote;
-  const tab = window.open("", "_blank");
-  if (!tab) return toast(t("builder_popup_blocked"), true);
-  try {
-    tab.document.title = t("builder_open");
-    tab.document.body.textContent = t("loading");
-  } catch (e) { /* cross-origin later: fine */ }
-  if (r.native_builder) {
-    const st = await api("GET", `api/remotes/${S.rid}/native`);
-    if (st.unsynced) {
-      const choice = await nbChoice(t("nb_unsynced_title"), t("nb_unsynced_text"),
-        [["push", "⬆ " + t("push")], ["discard", t("nb_discard")]]);
-      if (!choice) { tab.close(); return; }
-      if (choice === "push") {
-        try { const res = await pushRemote(S.rid, S.remote.head); S.remote = res.remote; } catch (e) { tab.close(); throw e; }
-      } else {
-        applyResult(await api("POST", `api/remotes/${S.rid}/native/discard`, { head: S.remote.head }));
-        toast(t("nb_discarded"));
-      }
+  if (off) return el("button", { class: cls, text: label, disabled: true, title: why });
+  const a = el("a", { class: "button " + cls, href: builderBase(r) + hashFn(), target: "_blank", rel: "opener", title: hint, text: label });
+  // the editor selection may have changed since this header was drawn
+  a.addEventListener("pointerdown", () => { a.href = builderBase(S.remote) + hashFn(); });
+  a.addEventListener("click", (e) => {
+    a.href = builderBase(S.remote) + hashFn();
+    if (!S.remote.native_builder) { NB.check = S.rid; return; } // follow the link; re-check drift on return
+    if (S.nativeUnsynced) { // RF16.4: push / discard first, then a link to click
+      e.preventDefault();
+      nativePrepare(hashFn).catch(handleError);
+      return;
     }
     NB.open = { rid: S.rid };
+  });
+  return a;
+}
+function builderButtons(r) {
+  return [builderLink(r, builderHash, "🛠 " + t("builder_open") + " ↗", "builder-btn", t("builder_open_hint")),
+    builderLink(r, () => "#history", "🕘 " + t("builder_history") + " ↗", "icon", t("builder_history_hint"))];
+}
+
+/* RF16.4: unsynced add-on changes -> Push / Discard; then a real link to click. */
+async function nativePrepare(hashFn) {
+  const choice = await nbChoice(t("nb_unsynced_title"), t("nb_unsynced_text"),
+    [["push", "⬆ " + t("push")], ["discard", t("nb_discard")]]);
+  if (!choice) return;
+  if (choice === "push") {
+    const res = await pushRemote(S.rid, S.remote.head);
+    S.remote = res.remote;
   } else {
-    NB.check = S.rid; // not in native mode: only re-check drift when coming back
+    applyResult(await api("POST", `api/remotes/${S.rid}/native/discard`, { head: S.remote.head }));
+    toast(t("nb_discarded"));
   }
-  tab.location.href = builderBase(r) + hash;
+  S.nativeUnsynced = false;
   render();
+  const dlg = el("dialog", { class: "navmap-dialog" }, el("h3", { text: t("nb_ready_title") }), el("p", { text: t("nb_ready_text") }));
+  const close = () => { dlg.close(); dlg.remove(); };
+  // the hash is computed now: a discard may have renamed the selected page
+  const link = el("a", { class: "button primary", href: builderBase(S.remote) + hashFn(), target: "_blank", rel: "opener", text: "🛠 " + t("builder_open") + " ↗",
+    onclick: () => { NB.open = { rid: S.rid }; setTimeout(close, 0); } });
+  dlg.append(el("div", { class: "row" }, el("span", { class: "spacer" }), el("button", { text: t("cancel"), onclick: close }), link));
+  document.body.append(dlg);
+  dlg.showModal();
+}
+
+/* RF16.4: whether the add-on holds changes not sent to the remote (asked
+ * before following the builder link; refreshed after every load/commit). */
+async function refreshNativeUnsynced() {
+  if (!S.remote || !S.remote.native_builder) { S.nativeUnsynced = false; return; }
+  try {
+    const st = await api("GET", `api/remotes/${S.rid}/native`);
+    S.nativeUnsynced = !!st.unsynced;
+  } catch (e) { S.nativeUnsynced = false; }
 }
 
 /* Back from the builder: the tab is visible again, or "Done" was pressed. */
@@ -113,12 +135,10 @@ document.addEventListener("visibilitychange", () => {
 /* RF16.4 banner shown while the remote is in "Edit with the remote's builder" mode. */
 function nativeBanner(r) {
   if (!r.native_builder) return null;
-  const off = remoteUnreachable(r.id);
   return el("div", { class: "card banner row nb-banner" },
     el("div", {}, el("strong", { text: "🛠 " + t("nb_banner_title") }), el("div", { class: "muted", text: t("nb_banner_text") })),
     el("span", { class: "spacer" }),
-    el("button", { class: "primary", text: t("nb_edit") + " ↗", disabled: off, title: off ? t("builder_unreachable", { host: `${r.host}:${r.port || 8080}` }) : null,
-      onclick: guard(() => openBuilder(builderHash())) }),
+    builderLink(r, builderHash, t("nb_edit") + " ↗", "primary", t("builder_open_hint")),
     el("button", { text: "✓ " + t("nb_done"), onclick: guard(() => nativeReturn(true)) }),
     el("button", { text: t("nb_turn_off"), onclick: guard(async () => {
       await api("PATCH", `api/remotes/${r.id}`, { native_builder: false });

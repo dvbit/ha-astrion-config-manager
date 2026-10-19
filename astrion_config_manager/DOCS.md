@@ -40,7 +40,8 @@ Open **Astrion** in the sidebar (admins only).
    be dragged (layout saved per remote); switches hide keys and links.
    **Open in builder ↗** opens the remote's own builder in a new tab; the remote
    option *Edit with the remote's builder* makes the add-on a read-only backup
-   that imports the builder's saves when you come back.
+   that imports the builder's saves when you come back. A large preview of the
+   selected screen sits on the left of the Editor.
    **Themes** tab: shared theme library (presets, save/load in the Editor, export,
    import, apply to several remotes).
 

@@ -437,7 +437,13 @@ const I18N = {
   "weather_search_ph": "Town or postcode",
   "weather_search_unsupported": "Not available: the remote's app is older than 1.3.2",
   "v_weather_coord_required": "Required: without valid latitude and longitude the remote ignores the weather block",
-  "err_weather_search_failed": "The remote couldn't search (no internet on the remote?)"
+  "err_weather_search_failed": "The remote couldn't search (no internet on the remote?)",
+  "bigprev_title": "Preview",
+  "bigprev_show": "Show the large preview of the selected screen",
+  "bigprev_hide": "Hide the preview (drag the right edge to resize it)",
+  "bigprev_hint": "Click a card to edit it · nothing is executed",
+  "nb_ready_title": "Ready to edit in the builder",
+  "nb_ready_text": "The remote and the add-on now match. Open the builder; when you come back here the changes you save are imported."
  },
  "it": {
   "app_title": "Astrion Config Manager",
@@ -874,7 +880,13 @@ const I18N = {
   "weather_search_ph": "Località o CAP",
   "weather_search_unsupported": "Non disponibile: l'app del telecomando è precedente alla 1.3.2",
   "v_weather_coord_required": "Obbligatorio: senza latitudine e longitudine valide il telecomando ignora il blocco meteo",
-  "err_weather_search_failed": "Il telecomando non è riuscito a cercare (niente internet sul telecomando?)"
+  "err_weather_search_failed": "Il telecomando non è riuscito a cercare (niente internet sul telecomando?)",
+  "bigprev_title": "Anteprima",
+  "bigprev_show": "Mostra l'anteprima grande dello schermo selezionato",
+  "bigprev_hide": "Nascondi l'anteprima (trascina il bordo destro per ridimensionarla)",
+  "bigprev_hint": "Clic su una card per modificarla · nulla viene eseguito",
+  "nb_ready_title": "Pronto per modificare nel builder",
+  "nb_ready_text": "Telecomando e add-on ora coincidono. Apri il builder; quando torni qui le modifiche salvate vengono importate."
  },
  "fr": {
   "app_title": "Astrion Config Manager",
@@ -1311,7 +1323,13 @@ const I18N = {
   "weather_search_ph": "Ville ou code postal",
   "weather_search_unsupported": "Indisponible : l'app de la télécommande est antérieure à 1.3.2",
   "v_weather_coord_required": "Obligatoire : sans latitude et longitude valides, la télécommande ignore le bloc météo",
-  "err_weather_search_failed": "La télécommande n'a pas pu chercher (pas d'internet ?)"
+  "err_weather_search_failed": "La télécommande n'a pas pu chercher (pas d'internet ?)",
+  "bigprev_title": "Aperçu",
+  "bigprev_show": "Afficher le grand aperçu de l'écran sélectionné",
+  "bigprev_hide": "Masquer l'aperçu (glissez le bord droit pour le redimensionner)",
+  "bigprev_hint": "Cliquez une carte pour la modifier · rien n'est exécuté",
+  "nb_ready_title": "Prêt à modifier dans le builder",
+  "nb_ready_text": "La télécommande et l'add-on correspondent. Ouvrez le builder ; à votre retour ici, les modifications enregistrées sont importées."
  },
  "es": {
   "app_title": "Astrion Config Manager",
@@ -1748,7 +1766,13 @@ const I18N = {
   "weather_search_ph": "Localidad o código postal",
   "weather_search_unsupported": "No disponible: la app del mando es anterior a 1.3.2",
   "v_weather_coord_required": "Obligatorio: sin latitud y longitud válidas el mando ignora el bloque de tiempo",
-  "err_weather_search_failed": "El mando no pudo buscar (¿sin internet?)"
+  "err_weather_search_failed": "El mando no pudo buscar (¿sin internet?)",
+  "bigprev_title": "Vista previa",
+  "bigprev_show": "Mostrar la vista previa grande de la pantalla seleccionada",
+  "bigprev_hide": "Ocultar la vista previa (arrastra el borde derecho para cambiar su tamaño)",
+  "bigprev_hint": "Haz clic en una tarjeta para editarla · no se ejecuta nada",
+  "nb_ready_title": "Listo para editar en el editor",
+  "nb_ready_text": "El mando y el complemento ya coinciden. Abre el editor; al volver aquí se importan los cambios guardados."
  },
  "de": {
   "app_title": "Astrion Config Manager",
@@ -2185,7 +2209,13 @@ const I18N = {
   "weather_search_ph": "Ort oder Postleitzahl",
   "weather_search_unsupported": "Nicht verfügbar: App der Fernbedienung älter als 1.3.2",
   "v_weather_coord_required": "Erforderlich: ohne gültige Koordinaten ignoriert die Fernbedienung den Wetterblock",
-  "err_weather_search_failed": "Die Fernbedienung konnte nicht suchen (kein Internet?)"
+  "err_weather_search_failed": "Die Fernbedienung konnte nicht suchen (kein Internet?)",
+  "bigprev_title": "Vorschau",
+  "bigprev_show": "Große Vorschau des gewählten Bildschirms zeigen",
+  "bigprev_hide": "Vorschau ausblenden (rechten Rand ziehen zum Ändern der Größe)",
+  "bigprev_hint": "Karte anklicken zum Bearbeiten · nichts wird ausgeführt",
+  "nb_ready_title": "Bereit zum Bearbeiten im Builder",
+  "nb_ready_text": "Fernbedienung und Add-on stimmen jetzt überein. Builder öffnen; beim Zurückkehren werden gespeicherte Änderungen importiert."
  }
 };
 

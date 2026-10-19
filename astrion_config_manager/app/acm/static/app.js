@@ -137,6 +137,8 @@ function applyResult(data) {
   S.validation = data.validation;
   refreshEntityList();
   render();
+  // RF16.4: unsynced state decides whether the builder link asks push/discard first
+  refreshNativeUnsynced().then(() => { if (S.remote && S.remote.native_builder) render(); });
 }
 
 /* Commit from the editor (RF2.3). */
@@ -307,7 +309,8 @@ function closeSim() { if (sim) { sim.close(); sim = null; } }
 
 /* RF13: navigation map above the Editor and the Simulator (one per open remote). */
 let navmap = null;
-function closeMap() { if (navmap) { navmap.close(); navmap = null; } }
+let bigprev = null; // RF17
+function closeMap() { if (navmap) { navmap.close(); navmap = null; } bigprev = null; }
 function mapSelect(target) {
   if (S.tab === "simulator") {
     if (sim && target.p !== undefined) { sim.cur = target.p; sim.popup = null; sim.overlay = null; sim.render(); }
@@ -341,7 +344,11 @@ function renderRemote() {
     main.append(navmap.root);
   }
   const body = el("div", {});
-  main.append(body);
+  if (S.tab === "editor") {
+    // RF17: big preview of the selected screen in a pane on the left
+    if (!bigprev) bigprev = new BigPreview({ map: navmap, onSelect: mapSelect });
+    main.append(el("div", { class: "editor-wrap" }, bigprev.root, body));
+  } else main.append(body);
   if (S.tab === "editor") {
     if (!editor) {
       editor = new Editor({ schema: S.schema, hints: S.hints, hwKeys: S.hwKeys, commit, copy: copyDialog, rid: S.rid,
@@ -349,7 +356,7 @@ function renderRemote() {
     }
     editor.root = body;
     body.classList.toggle("readonly", !!r.native_builder); // RF16.4
-    editor.onRender = (sel) => { if (navmap) navmap.highlight(sel); };
+    editor.onRender = (sel) => { if (navmap) navmap.highlight(sel); if (bigprev) bigprev.setSel(sel); };
     editor.setDoc(S.doc, S.validation);
   } else if (S.tab === "simulator") {
     // RF6.1: the simulator follows the head and is refreshed on every version.

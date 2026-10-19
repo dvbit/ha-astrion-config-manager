@@ -1,9 +1,9 @@
-# Requirement — Astrion Config Manager (HA add-on) v1.14
+# Requirement — Astrion Config Manager (HA add-on) v1.15
 
 > English translation of [SPEC.md](SPEC.md). The Italian document is the
 > reference; in case of discrepancy the Italian text prevails.
 
-Status: approved by the requester. v1.3: added RF6.12 (navigation-only mode). v1.4: added RF7 (icons and entity catalog). v1.5: added RF8 (multiple Harmony hubs and IR targets). v1.6: added RF3.5 (dropdowns and palettes). v1.7: added RF3.6 (structured lists) and RF9 (upstream 1.2.0, direct Apple TV). v1.8: RF9.6–RF9.7 (upstream 1.2.1-beta and 1.2.0 recheck). v1.9: RF10 (upstream 1.2.2–1.2.7-beta). v1.10: RF11 (upstream 1.2.8–1.2.9-beta, push/pull on the main screen). v1.11: RF12 (upstream 1.3.0, integration with the remote's version history). v1.12: RF13 (navigation map) and RF14 (theme library). v1.13: RF15 (editable navigation map). v1.14: RF16 (upstream 1.3.1–1.3.2-beta, map layout and switches, the remote's builder). Supersedes v1.0: Harmony and IR are now in scope; named versions added (RF2.11–RF2.13). Original document language: Italian.
+Status: approved by the requester. v1.3: added RF6.12 (navigation-only mode). v1.4: added RF7 (icons and entity catalog). v1.5: added RF8 (multiple Harmony hubs and IR targets). v1.6: added RF3.5 (dropdowns and palettes). v1.7: added RF3.6 (structured lists) and RF9 (upstream 1.2.0, direct Apple TV). v1.8: RF9.6–RF9.7 (upstream 1.2.1-beta and 1.2.0 recheck). v1.9: RF10 (upstream 1.2.2–1.2.7-beta). v1.10: RF11 (upstream 1.2.8–1.2.9-beta, push/pull on the main screen). v1.11: RF12 (upstream 1.3.0, integration with the remote's version history). v1.12: RF13 (navigation map) and RF14 (theme library). v1.13: RF15 (editable navigation map). v1.14: RF16 (upstream 1.3.1–1.3.2-beta, map layout and switches, the remote's builder). v1.15: RF17 (large preview pane, builder opened by a link). Supersedes v1.0: Harmony and IR are now in scope; named versions added (RF2.11–RF2.13). Original document language: Italian.
 
 ## 1. Purpose
 
@@ -213,6 +213,11 @@ Editor tab only (the Simulator's map stays read-only). Every change is one versi
 - RF16.3 Map: screens dragged by their title bar, links following live; positions saved per remote in the add-on (by page name; in HA backups, never in `dashboard.json`), **Reset layout**; dragging never changes the swipe order. Switches **Page keys**, **Global keys**, **Links** (all) and one toggle per kind in the legend (kept in the browser). Key chips use the simulator's icons.
 - RF16.4 Per-remote mode "Edit with the remote's builder" (remote option): the remote is the editor, the add-on the backup. While on: editor, map editing, undo/redo and theme loading are read-only, a banner offers **Edit in builder**, **Done**, **Turn mode off**. Before opening: unsynced add-on changes → **Push** / **Discard** (a `restore` version of the last synced one) / Cancel. Back in the tab (visible again, or Done): pull; changes are imported as a `sync-import` version carrying the note/reason of the remote's newest history entry; if the add-on also changed → the user keeps the remote's file (import) or the add-on's (push); never merged.
 - RF16.5 **Open in builder ↗** / **History ↗** in the remote header: `http://<ip>:<port>/builder/` in a new tab (never an iframe: HA is HTTPS, the builder plain HTTP on the LAN), at the editor's selection with the 1.3.1-beta deep links (`#page=<name>`, `&card=<i>`, `#activity=<id>`, `#hotkeys`, `#history`). Greyed out with the reason when the remote is unreachable. Outside native mode, coming back re-checks drift.
+
+### RF17 — Large preview pane, builder opened by a link
+
+- RF17.1 Editor tab: a pane on the left shows the screen selected in the editor (tree or map) in large size, drawn by the simulator's renderer with live states, sticky while the forms scroll. Clicking a card opens its form (nothing is executed); the selected card is highlighted. Resizable by its right edge (220–520 px) and hideable; both remembered in the browser.
+- RF17.2 "Open in builder ↗", "History ↗" and "Edit in builder ↗" are real links (`target="_blank"`, `rel="opener"`) followed on the user's click, never `window.open`: a script-opened tab is blocked as a pop-up inside Home Assistant's frame and in the companion app. In "Edit with the remote's builder" mode with unsynced changes the link first asks Push / Discard, then shows a dialog with the link to click.
 
 ## 6. Non-functional requirements
 
