@@ -233,6 +233,7 @@ la mappa; trascina il bordo inferiore per ridimensionarla.
 
 - trascina il ● destro di *Home* sul ● sinistro di *TV* → *TV* diventa la vicina di swipe di *Home*;
 - ogni tasto compare una sola volta nella riga dei tasti, con due ancore: ◧ sinistra = solo questa pagina, ◨ destra = globale;
+  ⚡ indica un tasto assegnato a un'azione che non apre pagine (es. un servizio): non ha collegamento;
 - trascina l'**ancora destra (globale) ◨** del tasto **Play / Pausa** sul ● inferiore di *TV* → scegli
   *Lunga* + *Popup* → `{"key": "PLAY", "page": "TV", "pageMode": "popup"}` in `longHotkeys`;
 - trascina la tile *Film* di una scene grid sul ● superiore di *Cinema* → scegli *Tocco* →

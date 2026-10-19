@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.21.0 - 2026-10-19
+
+- Map (RF15.3): a key bound to an action that opens no page (service,
+  Harmony, IR, event, stop Activity) has no link to draw: it now shows ⚡ on
+  the side of its scope (left = this page, right = global), tooltip = the
+  action. Legend entry added; clearer action summaries in tooltips.
+
 ## 2.20.0 - 2026-10-19
 
 - Fix (RF16.3): with "Global keys" OFF the global hotkeys were still drawn,

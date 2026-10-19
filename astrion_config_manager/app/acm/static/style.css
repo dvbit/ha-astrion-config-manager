@@ -274,3 +274,7 @@ a.button.primary { background: var(--accent); border-color: var(--accent); color
 .navmap-big { font-size: 15px; font-weight: 600; padding: 8px 16px; }
 .navmap-big.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
 .navmap-big.danger { border-color: var(--err); }
+/* 2.21: ⚡ = key bound to an action that opens no page (no link to draw) */
+.navmap-chip-act { position: absolute; bottom: 1px; font-size: 11px; line-height: 1; }
+.navmap-chip-act.s-p { left: 4px; }
+.navmap-chip-act.s-g { right: 4px; }

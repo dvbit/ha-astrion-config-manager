@@ -543,12 +543,17 @@ class NavMap {
       const scopes = [["p", show.pageKeys, (this.doc.pages || [])[this.keysPageIdx]], ["g", show.globalKeys, this.doc]].filter((x) => x[1]);
       const info = scopes.map(([sc, , owner]) => {
         const hk = owner ? [...(owner.hotkeys || []), ...(owner.longHotkeys || [])].filter((h) => h && String(h.key).toUpperCase() === n.key) : [];
-        return { sc, bound: hk.length > 0, what: hk.map((h) => hotkeySummary(h)).join(" · ") };
+        // 2.21: bindings that open no page (service, Harmony, IR, event...) have
+        // no link to draw: marked with ⚡ on the scope's side instead
+        const acts = hk.filter((h) => !mapHotkeyNavigates(h));
+        return { sc, bound: hk.length > 0, act: acts.map((h) => hotkeySummary(h)).join(" · "), what: hk.map((h) => hotkeySummary(h)).join(" · ") };
       });
       const cls = info.filter((x) => x.bound).map((x) => " bound-" + x.sc).join("");
       const tip = info.filter((x) => x.bound).map((x) => `\n${x.sc === "p" ? "◧ " + t("map_scope_page") : "◨ " + t("map_scope_global")}: ${x.what}`).join("");
       const d = el("div", { class: `navmap-chip${cls ? " bound" + cls : ""}`, style, title: `${this.hwLabel(n.key)} (${n.key})${tip}` },
-        el("strong", { class: "navmap-chip-icon", text: icon }), el("small", { text: this.hwLabel(n.key) }));
+        el("strong", { class: "navmap-chip-icon", text: icon }), el("small", { text: this.hwLabel(n.key) }),
+        ...info.filter((x) => x.act).map((x) => el("span", { class: `navmap-chip-act s-${x.sc}`, text: "⚡",
+          title: `${x.sc === "p" ? t("map_scope_page") : t("map_scope_global")}: ${x.act}` })));
       if (this.editable()) {
         for (const x of info) {
           d.append(el("div", { class: `navmap-anchor a-key s-${x.sc}`, "data-scope": x.sc, "data-key": n.key,
@@ -677,6 +682,7 @@ class NavMap {
       this.editable() ? el("p", { class: "msg", text: "✎ " + t("map_hint_edit") }) : null,
       this.editable() ? el("div", { class: "row" }, el("span", { class: "navmap-anchor static", style: "position:static;margin:0;transform:none" }),
         el("span", { text: t("map_legend_anchors") })) : null,
+      el("div", { class: "row" }, el("span", { text: "⚡" }), el("span", { text: t("map_legend_action") })),
       ...Object.entries(MAP_KINDS).map(([k, v]) => {
         // RF16.3: per-kind toggle
         const cb = el("input", { type: "checkbox", title: t("map_show_kind") });
@@ -985,9 +991,21 @@ class NavMap {
 /* ---------- RF15 dialogs ---------- */
 
 /* Short summary of what a hotkey does (replace confirmation). */
+/* Whether a hotkey opens a page/overlay (= has a link on the map). */
+function mapHotkeyNavigates(h) {
+  const ov = String((h && h.openOverlay) || "").toLowerCase();
+  return !!(h && (h.page || h.openCurrentActivityRoom || ov === "activities" || ov === "settings"));
+}
 function hotkeySummary(h) {
-  return h.page ? `→ ${h.page}${h.pageMode === "popup" ? " ▣" : ""}` : h.service || h.harmonyActivity || h.harmonyCommand || h.irCommand
-    || h.event || h.openOverlay || h.stopActivity || JSON.stringify(h);
+  if (h.page) return `→ ${h.page}${h.pageMode === "popup" ? " ▣" : ""}`;
+  if (h.service) return `${h.service}${h.entityId ? " " + h.entityId : ""}`;
+  if (h.harmonyActivity) return `Harmony ▶ ${h.harmonyActivity}`;
+  if (h.harmonyCommand) return `Harmony ${h.harmonyCommand}`;
+  if (h.irCommand) return `IR ${h.irCommand}`;
+  if (h.event) return `event ${h.event}`;
+  if (h.openOverlay) return `overlay ${h.openOverlay}`;
+  if (h.stopActivity) return `■ Activity ${h.stopActivity}`;
+  return JSON.stringify(h);
 }
 
 /* Radio choices -> {name: value} or null on cancel. */

@@ -226,6 +226,7 @@ map; drag its bottom edge to resize it.
 
 - drag *Home*'s right ● onto *TV*'s left ● → *TV* becomes *Home*'s swipe neighbour;
 - each key appears once in the key row, with two anchors: ◧ left = this page only, ◨ right = global;
+  ⚡ marks a key bound to an action that opens no page (e.g. a service): it has no link;
 - drag the **right (global) ◨ anchor** of the **Play / Pause** key onto *TV*'s bottom ● → choose
   *Long* + *Popup* → `{"key": "PLAY", "page": "TV", "pageMode": "popup"}` in `longHotkeys`;
 - drag the *Movie* tile of a scene grid onto *Cinema*'s top ● → choose *Tap* →
