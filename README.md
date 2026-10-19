@@ -223,7 +223,7 @@ mini screen. Icons on the lines tell how a page is reached: 👋 swipe,
 🎬 Activity, 🏠 Home Assistant state, ↩ back; a dashed line with ▣ opens a
 popup. Click a card in a preview to edit it, or a line to open the tile or
 hotkey behind it. While simulating, clicking a page jumps there. ▴ hides the
-map; drag its bottom edge to resize it.
+map; drag the border between the map and the panel below (the ▬ grip) to resize both.
 
 **Editing on the map** (Editor tab):
 

@@ -162,7 +162,7 @@ a.button.icon { padding: 2px 8px; }
 .navmap-head { flex-wrap: nowrap; }
 .navmap-viewport { position: relative; overflow: hidden; margin-top: 8px; border: 1px solid var(--line); border-radius: 8px;
   background: radial-gradient(circle, var(--line) 1px, transparent 1px) 0 0 / 22px 22px, var(--bg);
-  resize: vertical; min-height: 160px; max-height: 85vh; cursor: grab; touch-action: none; user-select: none; }
+  min-height: 160px; max-height: 85vh; cursor: grab; touch-action: none; user-select: none; }
 .navmap-viewport:active { cursor: grabbing; }
 .navmap-world { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
 .navmap-edges { position: absolute; overflow: visible; pointer-events: none; }
@@ -288,3 +288,8 @@ a.button.primary { background: var(--accent); border-color: var(--accent); color
 .segmented button.seg.active { background: var(--accent); color: #fff; }
 .segmented button.seg.exec.active { background: var(--err); }
 .editor-head { flex-wrap: wrap; }
+/* RF13.1 (2.24): drag the border between the map and the lower pane */
+.navmap-splitter { height: 12px; margin: 4px -12px -8px; cursor: row-resize; display: flex; align-items: center; justify-content: center;
+  touch-action: none; border-radius: 0 0 10px 10px; }
+.navmap-splitter:hover, .navmap-splitter:focus-visible, .navmap-splitter.dragging { background: var(--line); outline: none; }
+.navmap-grip { width: 48px; height: 4px; border-radius: 2px; background: var(--muted); opacity: .6; }

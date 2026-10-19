@@ -229,7 +229,7 @@ raggiunge una pagina: 👋 swipe, ☝️ swipe in alto, 👆 tocco, ✋ pression
 Assistant, ↩ indietro; una linea tratteggiata con ▣ apre un popup. Clic su una
 card in anteprima per modificarla, o su una linea per aprire la tile o la
 hotkey che la crea. In simulazione il clic su una pagina la mostra. ▴ nasconde
-la mappa; trascina il bordo inferiore per ridimensionarla.
+la mappa; trascina il bordo tra la mappa e il pannello sotto (la maniglia ▬) per ridimensionarli.
 
 **Modifiche sulla mappa** (scheda Editor):
 

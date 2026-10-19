@@ -640,10 +640,42 @@ class NavMap {
     // RF13.1: the height follows the drag handle (CSS resize) and is remembered
     if (this.ro) this.ro.disconnect();
     this.ro = new ResizeObserver(() => {
-      const hgt = vp.clientHeight;
+      const hgt = vp.offsetHeight; // border-box: offsetHeight round-trips with style.height (clientHeight lost 2px per load)
       if (hgt && hgt !== this.height) { this.height = hgt; mapStore(MAP_STORE.height, hgt); }
     });
     this.ro.observe(vp);
+    // RF13.1 (2.24): splitter on the border between the map and the lower pane
+    // (Editor / simulator): drag it (or ↑/↓ when focused) to resize both
+    this.root.append(this.splitter(vp));
+  }
+
+  splitter(vp) {
+    const MIN = 160, max = () => Math.round(window.innerHeight * 0.85);
+    const set = (h) => { vp.style.height = `${Math.max(MIN, Math.min(max(), Math.round(h)))}px`; };
+    const bar = el("div", { class: "navmap-splitter", role: "separator", "aria-orientation": "horizontal", tabindex: "0", title: t("map_splitter") },
+      el("span", { class: "navmap-grip" }));
+    bar.addEventListener("pointerdown", (e) => {
+      e.preventDefault();
+      const y0 = e.clientY, h0 = vp.offsetHeight;
+      bar.setPointerCapture(e.pointerId);
+      bar.classList.add("dragging");
+      const move = (ev) => set(h0 + ev.clientY - y0);
+      const up = () => {
+        bar.classList.remove("dragging");
+        bar.removeEventListener("pointermove", move);
+        bar.removeEventListener("pointerup", up);
+        bar.removeEventListener("pointercancel", up);
+        console.debug(`[acm] map height ${vp.clientHeight}px`);
+        if (this.fitted) this.applyView();
+      };
+      bar.addEventListener("pointermove", move);
+      bar.addEventListener("pointerup", up);
+      bar.addEventListener("pointercancel", up);
+    });
+    bar.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowUp" || e.key === "ArrowDown") { e.preventDefault(); set(vp.offsetHeight + (e.key === "ArrowDown" ? 20 : -20)); }
+    });
+    return bar;
   }
 
   /* RF15.6: big "+ New page" / "Delete page" buttons (same as the editor's). */

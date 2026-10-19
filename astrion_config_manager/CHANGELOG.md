@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.24.0 - 2026-10-19
+
+- RF13.1: the map and the lower pane (Editor / simulator) are resized by
+  dragging the border between them (▬ grip; ↑/↓ when focused), replacing the
+  small corner handle. Fix: the saved map height no longer shrinks by 2 px at
+  every load.
+
 ## 2.23.0 - 2026-10-19
 
 - RF18: Editor and Simulator merged into one tab. The "✎ Editor" bar under the

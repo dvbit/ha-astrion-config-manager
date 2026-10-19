@@ -458,7 +458,8 @@ const I18N = {
   "ed_mode_sim": "Simulate",
   "ed_mode_sim_hint": "Simulate the remote: navigation only, no action is executed",
   "ed_mode_exec": "Simulate & run",
-  "ed_mode_exec_hint": "Simulate the remote and really execute the actions (Home Assistant, Harmony Hub, IR)"
+  "ed_mode_exec_hint": "Simulate the remote and really execute the actions (Home Assistant, Harmony Hub, IR)",
+  "map_splitter": "Drag to resize the map and the panel below (↑/↓ when focused)"
  },
  "it": {
   "app_title": "Astrion Config Manager",
@@ -916,7 +917,8 @@ const I18N = {
   "ed_mode_sim": "Simula",
   "ed_mode_sim_hint": "Simula il telecomando: solo navigazione, nessuna azione viene eseguita",
   "ed_mode_exec": "Simula ed esegui",
-  "ed_mode_exec_hint": "Simula il telecomando ed esegue davvero le azioni (Home Assistant, Harmony Hub, IR)"
+  "ed_mode_exec_hint": "Simula il telecomando ed esegue davvero le azioni (Home Assistant, Harmony Hub, IR)",
+  "map_splitter": "Trascina per ridimensionare la mappa e il pannello sotto (↑/↓ con il focus)"
  },
  "fr": {
   "app_title": "Astrion Config Manager",
@@ -1374,7 +1376,8 @@ const I18N = {
   "ed_mode_sim": "Simuler",
   "ed_mode_sim_hint": "Simuler la télécommande : navigation seule, aucune action n'est exécutée",
   "ed_mode_exec": "Simuler et exécuter",
-  "ed_mode_exec_hint": "Simuler la télécommande et exécuter réellement les actions (Home Assistant, Harmony Hub, IR)"
+  "ed_mode_exec_hint": "Simuler la télécommande et exécuter réellement les actions (Home Assistant, Harmony Hub, IR)",
+  "map_splitter": "Faites glisser pour redimensionner la carte et le panneau du dessous (↑/↓ avec le focus)"
  },
  "es": {
   "app_title": "Astrion Config Manager",
@@ -1832,7 +1835,8 @@ const I18N = {
   "ed_mode_sim": "Simular",
   "ed_mode_sim_hint": "Simular el mando: solo navegación, no se ejecuta ninguna acción",
   "ed_mode_exec": "Simular y ejecutar",
-  "ed_mode_exec_hint": "Simular el mando y ejecutar realmente las acciones (Home Assistant, Harmony Hub, IR)"
+  "ed_mode_exec_hint": "Simular el mando y ejecutar realmente las acciones (Home Assistant, Harmony Hub, IR)",
+  "map_splitter": "Arrastra para redimensionar el mapa y el panel inferior (↑/↓ con el foco)"
  },
  "de": {
   "app_title": "Astrion Config Manager",
@@ -2290,7 +2294,8 @@ const I18N = {
   "ed_mode_sim": "Simulieren",
   "ed_mode_sim_hint": "Fernbedienung simulieren: nur Navigation, keine Aktion wird ausgeführt",
   "ed_mode_exec": "Simulieren und ausführen",
-  "ed_mode_exec_hint": "Fernbedienung simulieren und Aktionen wirklich ausführen (Home Assistant, Harmony Hub, IR)"
+  "ed_mode_exec_hint": "Fernbedienung simulieren und Aktionen wirklich ausführen (Home Assistant, Harmony Hub, IR)",
+  "map_splitter": "Ziehen, um Karte und unteres Feld anzupassen (↑/↓ mit Fokus)"
  }
 };
 
