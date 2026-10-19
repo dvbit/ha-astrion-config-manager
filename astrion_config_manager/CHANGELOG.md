@@ -1,5 +1,15 @@
 # Changelog
 
+## 2.23.0 - 2026-10-19
+
+- RF18: Editor and Simulator merged into one tab. The "✎ Editor" bar under the
+  map has ✎ Modify / ▶ Simulate (navigation only) / ⚡ Simulate & run (real
+  execution); the lower pane becomes the simulator with all its options
+  (Docked, Reset device states, live state, keys, device states). One session:
+  switching Simulate <-> Simulate & run keeps page and states. The
+  "Navigation only" switch is replaced by the selector. Mode kept in the
+  browser. While simulating, map clicks navigate the simulator.
+
 ## 2.22.0 - 2026-10-19
 
 - UI: the Editor (with its big preview pane) can be collapsed with a ▴/▾

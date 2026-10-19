@@ -30,10 +30,11 @@ Open **Astrion** in the sidebar (admins only).
    Pull and Push are also on each remote of the list and in the open remote's header.
    Changes made on the device are reported (drift) and never applied automatically.
 
-5. **Simulator**: live preview of the head; taps and HA100 keys are executed
+5. **Simulator** (Editor tab, **▶ Simulate** = navigation only, **⚡ Simulate & run** = real):
+   live preview of the head; taps and HA100 keys are executed
    for real (HA, the remote's Harmony hubs, IR via its `remote.*` entity or extenders).
 
-6. **Navigation map** (above Editor and Simulator): every page as a live mini
+6. **Navigation map** (above the Editor): every page as a live mini
    preview with the ways to reach it; click a card or a link to edit it. In the
    Editor the map is editable: drag ● anchors, key chips or tiles to create swipe
    order, hotkeys and tile jumps; press and hold a link to remove it. Screens can

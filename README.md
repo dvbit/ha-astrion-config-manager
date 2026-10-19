@@ -29,7 +29,7 @@ Schema followed: upstream release **1.3.0** and beta **1.3.2-beta** (card fields
 | Remotes | Register many remotes (name, IP, port, screen size, orientation, Harmony IP, IR entity). Archive instead of delete. |
 | History | Every change is a version stored as a JSON Patch delta; snapshots every 50. Undo/redo are versions too. Restore any version in one step. |
 | Remote history (1.3.0) | The remote's own versions listed in History: pushes labelled `ACM v<n>`, named ones optionally pinned, drift explained, any remote version comparable and importable. |
-| Navigation map | Above the Editor and the Simulator: every page as a live mini preview, one icon per way to reach it (swipe, tap, long press, key, Activity, HA state, popup, back); zoom, pan, click to edit. |
+| Navigation map | Above the Editor (Modify / Simulate): every page as a live mini preview, one icon per way to reach it (swipe, tap, long press, key, Activity, HA state, popup, back); zoom, pan, click to edit. |
 | Themes | Shared theme library with presets: load / save / delete in the Editor, a Themes tab to preview, export, import and apply to several remotes. |
 | Named versions | Label milestones ("Before TV change"), filter them, restore them. Labels never alter history. |
 | Editor | Dropdowns for fixed values, colour palettes (cards and theme). Forms for pages, cards (21 types, fields extracted from upstream renderers), hotkeys, IR devices, Activities, theme; raw JSON for everything. Unknown cards/fields survive untouched. |
@@ -37,7 +37,7 @@ Schema followed: upstream release **1.3.0** and beta **1.3.2-beta** (card fields
 | Sync | Pull and Push from the Sync tab, the remote list or the remote's header; push with re-read verification, drift detection by canonical SHA-256. Drift is reported, never auto-applied. |
 | Icons | Shared library (backed up), picker with thumbnails, automatic upload of missing icons on push, import from a remote. |
 | Entity catalog | Form for `haDevices` (named entities used by the remote's web builder), validated against HA. |
-| Simulator | The head rendered at the remote's resolution with live HA states; taps and HA100 keys run **for real** on HA, the Harmony Hub and the Broadlink IR emitter. |
+| Simulator | In the Editor tab (**▶ Simulate** / **⚡ Simulate & run**): the head rendered at the remote's resolution with live HA states; taps and HA100 keys run **for real** on HA, the Harmony Hub and the Broadlink IR emitter. |
 | Dock & standby (1.2.7) | "Dock screen" and "Standby & battery" sections; pages hidden completely (`hideMode: full`); Off buttons (`stopActivity`); hotkey events to HA; Apple TV compact/full layouts with app shortcuts; remote identity and duplicate detection; icon deletion on the remotes. |
 | Languages | English, Italian, French, Spanish, German (follows your HA language). |
 
@@ -83,12 +83,15 @@ Assistant* shown on the field; **Push** stays disabled until fixed.
 
 ### 7. Simulator
 
-Open the **Simulator** tab. The screen shows the head with live states. Tap a
+In the **Editor** tab press **⚡ Simulate & run** in the "✎ Editor" bar (under
+the map): the lower pane becomes the simulator. The screen shows the head with live states. Tap a
 light tile → `light.toggle` runs on HA and the tile updates. A scene tile with
 `"activity": "watch_tv"` runs the composed Activity (power on, inputs, delays)
 and jumps to its page. Swipe sideways for pages, up for the linked page; hold an
-HA100 key for its long-press hotkey. Turn on **Navigation only** to try the
+HA100 key for its long-press hotkey. Press **▶ Simulate** to try the
 flow without touching your devices: actions are listed instead of executed.
+Switching between the two keeps the page and states; **✎ Modify** goes back to
+the editor. While simulating, clicking a screen on the map opens it in the simulator.
 
 Optional fields of the remote enable the other actions:
 
@@ -129,7 +132,7 @@ in every entity field.
 "power": { "screen_timeout_seconds": 60, "screen_off_entities": ["binary_sensor.tv_on"] }
 ```
 
-In the **Simulator**, tick **Docked** to preview it (tap the screen to leave).
+While simulating, tick **Docked** to preview it (tap the screen to leave).
 
 **Harmony-style Off button** — a scene tile with `"stopActivity": "Living room"`
 (or `"*"` for every room) stops that room's Activity: composed stop or Harmony
@@ -168,7 +171,7 @@ If a device was switched by hand, press **Reset device states**.
 ### 10. Quick push / pull and 1.2.8–1.2.9 options
 
 **Push / Pull** are on every remote of the list and in the header of an open
-remote, so a change made in the Editor or tried in the Simulator can be sent
+remote, so a change made in the Editor or tried in simulation can be sent
 without opening Sync. A push over a remote changed on its own side asks first.
 
 **Hotkey popup** (blue key opens the AV page over the current one; press again to close):
@@ -219,7 +222,7 @@ mini screen. Icons on the lines tell how a page is reached: 👋 swipe,
 ☝️ swipe up, 👆 tap, ✋ long press, 🎛 key ("Menu ⏱" = long press of Menu),
 🎬 Activity, 🏠 Home Assistant state, ↩ back; a dashed line with ▣ opens a
 popup. Click a card in a preview to edit it, or a line to open the tile or
-hotkey behind it. In the Simulator, clicking a page jumps there. ▴ hides the
+hotkey behind it. While simulating, clicking a page jumps there. ▴ hides the
 map; drag its bottom edge to resize it.
 
 **Editing on the map** (Editor tab):

@@ -305,6 +305,22 @@ let editor = null;
 let sim = null;
 
 /* Stop the simulator live stream when leaving the remote/tab. */
+/* RF18.1 mode of the Editor tab: "edit" | "sim" (navigation only) | "exec"
+ * (real execution); remembered in the browser. */
+function edMode() {
+  const m = mapStore("acm-ed-mode");
+  return m === "sim" || m === "exec" ? m : "edit";
+}
+function modeSelector(mode) {
+  const b = (m, icon, key) => el("button", { class: "seg" + (mode === m ? " active" : "") + (m === "exec" ? " exec" : ""), text: `${icon} ${t(key)}`,
+    title: t(key + "_hint"), "aria-pressed": mode === m ? "true" : "false", onclick: () => {
+      if (m === mode) return;
+      mapStore("acm-ed-mode", m);
+      console.info(`[acm] editor mode: ${mode} -> ${m}`);
+      render();
+    } });
+  return el("div", { class: "segmented" }, b("edit", "✎", "ed_mode_edit"), b("sim", "▶", "ed_mode_sim"), b("exec", "⚡", "ed_mode_exec"));
+}
 function closeSim() { if (sim) { sim.close(); sim = null; } }
 
 /* RF13: navigation map above the Editor and the Simulator (one per open remote). */
@@ -312,12 +328,13 @@ let navmap = null;
 let bigprev = null; // RF17
 function closeMap() { if (navmap) { navmap.close(); navmap = null; } bigprev = null; }
 function mapSelect(target) {
-  if (S.tab === "simulator") {
+  // RF18.4: while simulating, a click on a screen of the map navigates the simulator
+  if (S.tab === "editor" && edMode() !== "edit") {
     if (sim && target.p !== undefined) { sim.cur = target.p; sim.popup = null; sim.overlay = null; sim.render(); }
     return;
   }
   if (!editor) return;
-  // 2.22: a click on the map reopens a collapsed Editor (the selection must be visible)
+  // RF17.3: a click on the map reopens a collapsed Editor (the selection must be visible)
   const wrap = document.querySelector(".editor-wrap");
   if (wrap && wrap.hidden) document.querySelector(".editor-head button").click();
   if (target.kind === "path") return editor.reveal(target.path);
@@ -337,34 +354,38 @@ function renderRemote() {
   const nb = nativeBanner(r); // RF16.4
   if (nb) main.append(nb);
   if (S.drift[r.id] === "drift" && !S.ignored.has(r.id)) main.append(driftBanner());
-  main.append(el("div", { class: "tabs" }, ...["editor", "simulator", "history", "sync"].map((tab) =>
-    el("button", { class: S.tab === tab ? "active" : "", text: t("tab_" + tab), onclick: () => { if (tab !== "simulator") closeSim(); S.tab = tab; render(); } }))));
-  if (S.tab === "editor" || S.tab === "simulator") {
+  // RF18.1: the Simulator tab is merged into the Editor tab (mode selector below the map)
+  main.append(el("div", { class: "tabs" }, ...["editor", "history", "sync"].map((tab) =>
+    el("button", { class: S.tab === tab ? "active" : "", text: t("tab_" + tab), onclick: () => { if (tab !== "editor") closeSim(); S.tab = tab; render(); } }))));
+  const mode = edMode();
+  if (S.tab === "editor") {
     // RF15: map edits are ordinary commits (one version each, undoable)
     if (!navmap) navmap = new NavMap({ rid: S.rid, remote: S.remote, doc: S.doc, hwKeys: S.hwKeys, onSelect: mapSelect, onCommit: commit,
       canEdit: () => !(S.remote && S.remote.native_builder) });
-    navmap.setDoc(S.doc, S.remote, S.tab);
+    navmap.setDoc(S.doc, S.remote, mode === "edit" ? "editor" : "simulator");
     main.append(navmap.root);
   }
   const body = el("div", {});
   if (S.tab === "editor") {
-    // RF17: big preview of the selected screen in a pane on the left
+    // RF17: big preview of the selected screen in a pane on the left (Modify mode only)
     if (!bigprev) bigprev = new BigPreview({ map: navmap, onSelect: mapSelect });
-    // 2.22: the Editor can be collapsed like the map (chevron, remembered in the browser)
-    const wrap = el("div", { class: "editor-wrap" }, bigprev.root, body);
+    // RF17.3: the panel collapses like the map (chevron, remembered in the browser)
+    const wrap = el("div", { class: "editor-wrap" }, mode === "edit" ? bigprev.root : null, body);
     const edOpen = () => mapStore("acm-editor-open") !== "0";
     const edToggle = el("button", { class: "icon", title: t("editor_toggle"), text: edOpen() ? "▴" : "▾", onclick: () => {
       const open = !edOpen();
       mapStore("acm-editor-open", open ? "1" : "0");
       edToggle.textContent = open ? "▴" : "▾";
       wrap.hidden = !open;
-      console.debug(`[acm] editor ${open ? "shown" : "hidden"}`);
+      console.debug(`[acm] editor panel ${open ? "shown" : "hidden"}`);
     } });
     wrap.hidden = !edOpen();
     main.append(el("div", { class: "card editor-head row" }, edToggle, el("strong", { text: "✎ " + t("tab_editor") }),
-      el("span", { class: "muted", text: t("editor_hint") })), wrap);
+      el("span", { class: "muted", text: t(mode === "edit" ? "editor_hint" : mode === "sim" ? "ed_mode_sim_hint" : "ed_mode_exec_hint") }),
+      el("span", { class: "spacer" }), modeSelector(mode)), wrap);
   } else main.append(body);
-  if (S.tab === "editor") {
+  if (S.tab === "editor" && mode === "edit") {
+    if (sim) sim.onRender = null; // a kept simulator session must not move the map's highlight
     if (!editor) {
       editor = new Editor({ schema: S.schema, hints: S.hints, hwKeys: S.hwKeys, commit, copy: copyDialog, rid: S.rid,
         entities: () => S.entities, remote: () => S.remote, pickIcon: (cb) => openIconPicker(S.rid, cb) });
@@ -373,10 +394,13 @@ function renderRemote() {
     body.classList.toggle("readonly", !!r.native_builder); // RF16.4
     editor.onRender = (sel) => { if (navmap) navmap.highlight(sel); if (bigprev) bigprev.setSel(sel); };
     editor.setDoc(S.doc, S.validation);
-  } else if (S.tab === "simulator") {
-    // RF6.1: the simulator follows the head and is refreshed on every version.
-    if (!sim) sim = new Simulator({ rid: S.rid, remote: S.remote, doc: S.doc });
+  } else if (S.tab === "editor") {
+    // RF6.1 / RF18.2: the simulator follows the head and is refreshed on every
+    // version; Simulate = navigation only (RF6.12), Simulate & run = real execution.
+    // One session for both modes: page, popups and states survive a switch.
+    if (!sim) sim = new Simulator({ rid: S.rid, remote: S.remote, doc: S.doc, embedded: true });
     sim.root = body;
+    sim.navOnly = mode === "sim";
     sim.onRender = (cur) => { if (navmap) navmap.highlight({ kind: "page", p: cur }); };
     sim.setDoc(S.doc, S.remote);
   } else if (S.tab === "history") {

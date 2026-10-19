@@ -459,7 +459,8 @@ class Simulator {
     this.root.replaceChildren(
       el("div", { class: "card banner row sim-real" + (this.navOnly ? " nav-only" : "") },
         el("strong", { text: this.navOnly ? "🧭 " + t("sim_nav_banner") : "⚡ " + t("sim_real") }), el("span", { class: "spacer" }),
-        el("label", { class: "row" }, sw, t("sim_nav_only")), el("label", { class: "row" }, dk, t("sim_docked")), reset, liveBadge),
+        // RF18.2: embedded in the Editor tab the mode comes from its selector (no switch here)
+        this.embedded ? null : el("label", { class: "row" }, sw, t("sim_nav_only")), el("label", { class: "row" }, dk, t("sim_docked")), reset, liveBadge),
       el("div", { class: "sim-layout" }, el("div", { class: "sim-col" }, wrap,
         el("div", { class: "row sim-nav" },
           el("button", { text: "◀", onclick: () => this.swipe(-1) }), el("button", { text: "▲ " + t("sim_linked"), onclick: () => this.swipeUp() }),

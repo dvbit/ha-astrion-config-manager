@@ -281,3 +281,10 @@ a.button.primary { background: var(--accent); border-color: var(--accent); color
 /* 2.22: collapsible Editor header (same chevron as the map) */
 .editor-head { gap: 8px; padding: 8px 12px; margin-bottom: 8px; }
 .editor-wrap[hidden] { display: none; }
+/* RF18: Modify / Simulate / Simulate & run selector in the Editor bar */
+.segmented { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.segmented button.seg { border: 0; border-radius: 0; margin: 0; }
+.segmented button.seg + button.seg { border-left: 1px solid var(--line); }
+.segmented button.seg.active { background: var(--accent); color: #fff; }
+.segmented button.seg.exec.active { background: var(--err); }
+.editor-head { flex-wrap: wrap; }

@@ -34,10 +34,10 @@ Schema seguito: release upstream **1.3.0** e beta **1.3.2-beta** ( campi delle c
 | Sync | Pull e Push dalla scheda Sincronizzazione, dall'elenco o dall'intestazione del telecomando; push con verifica tramite rilettura, deriva via SHA-256 canonico. La deriva è solo segnalata. |
 | Icone | Libreria condivisa (nei backup), selettore con anteprime, caricamento automatico delle icone mancanti al push, importazione da un telecomando. |
 | Catalogo entità | Form per `haDevices` (entità con nome usate dal web builder del telecomando), validato su HA. |
-| Simulatore | La testa resa alla risoluzione del telecomando con stati HA live; tocchi e tasti HA100 eseguono **realmente** su HA, Hub Harmony ed emettitore IR Broadlink. |
+| Simulatore | Nella scheda Editor (**▶ Simula** / **⚡ Simula ed esegui**): la testa resa alla risoluzione del telecomando con stati HA live; tocchi e tasti HA100 eseguono **realmente** su HA, Hub Harmony ed emettitore IR Broadlink. |
 | Dock e standby (1.2.7) | Sezioni "Schermo dock" e "Standby e batteria"; pagine nascoste del tutto (`hideMode: full`); pulsanti Off (`stopActivity`); eventi hotkey verso HA; layout Apple TV compact/full con scorciatoie app; identità del telecomando e rilevamento duplicati; eliminazione icone sui telecomandi. |
 | Cronologia telecomando (1.3.0) | Le versioni conservate dal telecomando elencate nello Storico: push etichettati `ACM v<n>`, versioni con nome fissabili, disallineamento spiegato, ogni versione confrontabile e importabile. |
-| Mappa di navigazione | Sopra Editor e Simulatore: ogni pagina come anteprima live, un'icona per ogni modo di raggiungerla (swipe, tocco, pressione lunga, tasto, Activity, stato HA, popup, indietro); zoom, spostamento, clic per modificare. |
+| Mappa di navigazione | Sopra l'Editor (Modifica / Simula): ogni pagina come anteprima live, un'icona per ogni modo di raggiungerla (swipe, tocco, pressione lunga, tasto, Activity, stato HA, popup, indietro); zoom, spostamento, clic per modificare. |
 | Temi | Libreria di temi condivisa con predefiniti: carica / salva / elimina nell'Editor, scheda Temi per anteprima, esporta, importa e applica a più telecomandi. |
 | Lingue | Inglese, italiano, francese, spagnolo, tedesco (segue la lingua di HA). |
 
@@ -84,13 +84,15 @@ Assistant* sul campo; **Invia** resta disabilitato finché non si corregge.
 
 ### 7. Simulatore
 
-Apri la scheda **Simulatore**. Lo schermo mostra la testa con gli stati live.
+Nella scheda **Editor** premi **⚡ Simula ed esegui** nella barra "✎ Editor"
+(sotto la mappa): il pannello inferiore diventa il simulatore. Lo schermo mostra la testa con gli stati live.
 Tocca una luce → `light.toggle` viene eseguito su HA e la card si aggiorna. Una
 scena con `"activity": "guarda_tv"` esegue l'Attività composta (accensioni,
 ingressi, ritardi) e passa alla sua pagina. Scorri di lato per le pagine, in
-alto per la pagina collegata; tieni premuto un tasto HA100 per l'hotkey lungo. Attiva **Solo navigazione**
+alto per la pagina collegata; tieni premuto un tasto HA100 per l'hotkey lungo. Premi **▶ Simula**
 per provare il flusso senza agire sui dispositivi: le azioni vengono elencate,
-non eseguite.
+non eseguite. Passando dall'uno all'altro pagina e stati restano; **✎ Modifica**
+torna all'editor. In simulazione il clic su uno schermo della mappa lo apre nel simulatore.
 
 I campi opzionali del telecomando abilitano le altre azioni:
 
@@ -131,7 +133,7 @@ con ★ in tutti i campi entità.
 "power": { "screen_timeout_seconds": 60, "screen_off_entities": ["binary_sensor.tv_on"] }
 ```
 
-Nel **Simulatore** spunta **Sulla base** per vederne l'anteprima (tocca lo schermo per uscire).
+In simulazione spunta **Sulla base** per vederne l'anteprima (tocca lo schermo per uscire).
 
 **Pulsante Off stile Harmony** — una tile scena con `"stopActivity": "Salotto"`
 (o `"*"` per tutte le stanze) ferma l'Activity della stanza: stop composto o
@@ -226,7 +228,7 @@ raggiunge una pagina: 👋 swipe, ☝️ swipe in alto, 👆 tocco, ✋ pression
 🎛 tasto ("Menu ⏱" = pressione lunga di Menu), 🎬 Activity, 🏠 stato di Home
 Assistant, ↩ indietro; una linea tratteggiata con ▣ apre un popup. Clic su una
 card in anteprima per modificarla, o su una linea per aprire la tile o la
-hotkey che la crea. Nel Simulatore il clic su una pagina la mostra. ▴ nasconde
+hotkey che la crea. In simulazione il clic su una pagina la mostra. ▴ nasconde
 la mappa; trascina il bordo inferiore per ridimensionarla.
 
 **Modifiche sulla mappa** (scheda Editor):

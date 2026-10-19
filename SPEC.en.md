@@ -1,9 +1,9 @@
-# Requirement — Astrion Config Manager (HA add-on) v1.16
+# Requirement — Astrion Config Manager (HA add-on) v1.17
 
 > English translation of [SPEC.md](SPEC.md). The Italian document is the
 > reference; in case of discrepancy the Italian text prevails.
 
-Status: approved by the requester. v1.3: added RF6.12 (navigation-only mode). v1.4: added RF7 (icons and entity catalog). v1.5: added RF8 (multiple Harmony hubs and IR targets). v1.6: added RF3.5 (dropdowns and palettes). v1.7: added RF3.6 (structured lists) and RF9 (upstream 1.2.0, direct Apple TV). v1.8: RF9.6–RF9.7 (upstream 1.2.1-beta and 1.2.0 recheck). v1.9: RF10 (upstream 1.2.2–1.2.7-beta). v1.10: RF11 (upstream 1.2.8–1.2.9-beta, push/pull on the main screen). v1.11: RF12 (upstream 1.3.0, integration with the remote's version history). v1.12: RF13 (navigation map) and RF14 (theme library). v1.13: RF15 (editable navigation map). v1.14: RF16 (upstream 1.3.1–1.3.2-beta, map layout and switches, the remote's builder). v1.15: RF17 (large preview pane, builder opened by a link). v1.16: RF15.3 one key row with two anchors. Supersedes v1.0: Harmony and IR are now in scope; named versions added (RF2.11–RF2.13). Original document language: Italian.
+Status: approved by the requester. v1.3: added RF6.12 (navigation-only mode). v1.4: added RF7 (icons and entity catalog). v1.5: added RF8 (multiple Harmony hubs and IR targets). v1.6: added RF3.5 (dropdowns and palettes). v1.7: added RF3.6 (structured lists) and RF9 (upstream 1.2.0, direct Apple TV). v1.8: RF9.6–RF9.7 (upstream 1.2.1-beta and 1.2.0 recheck). v1.9: RF10 (upstream 1.2.2–1.2.7-beta). v1.10: RF11 (upstream 1.2.8–1.2.9-beta, push/pull on the main screen). v1.11: RF12 (upstream 1.3.0, integration with the remote's version history). v1.12: RF13 (navigation map) and RF14 (theme library). v1.13: RF15 (editable navigation map). v1.14: RF16 (upstream 1.3.1–1.3.2-beta, map layout and switches, the remote's builder). v1.15: RF17 (large preview pane, builder opened by a link). v1.16: RF15.3 one key row with two anchors. v1.17: RF18 (Editor and Simulator merged). Supersedes v1.0: Harmony and IR are now in scope; named versions added (RF2.11–RF2.13). Original document language: Italian.
 
 ## 1. Purpose
 
@@ -93,7 +93,7 @@ Home Assistant add-on with an Ingress panel that manages the configurations (`da
 - RF6.8 IR action: really executed through the remote's `remote.*` entity (RF1.1) with `send_command`; the add-on converts the configuration's IR codes into the format accepted by the entity. Without a configured entity the action is disabled with the reason shown; errors are shown.
 - RF6.9 Panel with the HA100's physical buttons, clickable: they execute the configured hotkey with the same rules as RF6.5–RF6.8.
 - RF6.10 The simulator shows a permanent indicator "Real execution: Home Assistant, Harmony Hub, IR".
-- RF6.12 "Navigation only" switch: when on, actions (HA, Harmony, IR) are not executed, only listed; navigation, linked pages, popups and composed Activities (updated locally) are still simulated. The RF6.10 indicator shows the mode. Default: off.
+- RF6.12 (since v1.17 the **▶ Simulate** button, RF18) "Navigation only" switch: when on, actions (HA, Harmony, IR) are not executed, only listed; navigation, linked pages, popups and composed Activities (updated locally) are still simulated. The RF6.10 indicator shows the mode. Default: off.
 - RF6.11 The simulator reproduces the behaviour the app has on the remote (conditional visibility of pages and cards, linked pages, overlays, popups, response to physical buttons), not just command sending. The editor is for designing the configuration; testing happens only in the simulator.
 
 ### RF7 — Icons and entity catalog
@@ -220,6 +220,15 @@ Editor tab only (the Simulator's map stays read-only). Every change is one versi
 - RF17.1 Editor tab: a pane on the left shows the screen selected in the editor (tree or map) in large size, drawn by the simulator's renderer with live states, sticky while the forms scroll. Clicking a card opens its form (nothing is executed); the selected card is highlighted. Resizable by its right edge (220–520 px) and hideable; both remembered in the browser.
 - RF17.2 "Open in builder ↗", "History ↗" and "Edit in builder ↗" are real links (`target="_blank"`, `rel="opener"`) followed on the user's click, never `window.open`: a script-opened tab is blocked as a pop-up inside Home Assistant's frame and in the companion app. In "Edit with the remote's builder" mode with unsynced changes the link first asks Push / Discard, then shows a dialog with the link to click.
 - RF17.3 (2.22) The Editor (with its preview pane) collapses with a ▴/▾ chevron like the map, choice kept in the browser; a click on the map reopens it.
+
+### RF18 — Editor and Simulator merged
+
+Starting requirement: "merge the Simulator and Editor screens; add Simulate and Simulate & run that replace the lower pane with the simulation, including all the options of the tab".
+
+- RF18.1 One **Editor** tab (the Simulator tab is removed). The "✎ Editor" bar under the map has the selector **✎ Modify** / **▶ Simulate** / **⚡ Simulate & run** and the ▴/▾ chevron (RF17.3); the chosen mode is kept in the browser.
+- RF18.2 Modify = editor with the big preview (RF17). Simulate = simulator in navigation only (RF6.12: actions listed, not executed). Simulate & run = real execution (HA, Harmony, IR). One simulation session: switching between Simulate and Simulate & run keeps page, popups and states. The "Navigation only" switch is replaced by the selector; Docked, Reset device states, live state, hardware keys, device states, ◀ ▲ ▶ navigation stay.
+- RF18.3 In the remote's-builder mode (RF16.4) the editor is read-only but simulation stays available.
+- RF18.4 While simulating, a click on a screen of the map moves the simulator to that page and the map highlights the current page; the map is not editable. In Modify a click selects in the editor.
 
 ## 6. Non-functional requirements
 

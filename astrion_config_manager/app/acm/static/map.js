@@ -17,11 +17,11 @@
  *           creates a connection (via Editor.reveal); Simulator -> jump there.
  * - RF13.6  redrawn on every new version, keeping the current zoom.
  *
- * - RF15    editable map (Editor tab only): side anchors = swipe order (drag
+ * - RF15    editable map (Editor tab, Modify mode only - RF18): side anchors = swipe order (drag
  *           A.right -> B.left moves B after A), top anchor = UI jumps (drag a
  *           grid tile onto it), bottom anchor = hotkeys (drag a key chip onto
- *           it); hardware key chips in two rows (keys of the selected page,
- *           global keys); press and hold a connection to remove it. Every
+ *           it); hardware key chips in one row, each key once with two
+ *           anchors (selected page / global, RF15.3 2.19); press and hold a connection to remove it. Every
  *           change is one version (app commit), so it can be undone.
  *
  * Navigation sent by Home Assistant's page selector or by calls to the

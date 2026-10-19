@@ -1,6 +1,6 @@
-# Requisito — Astrion Config Manager (add-on HA) v1.16
+# Requisito — Astrion Config Manager (add-on HA) v1.17
 
-Stato: approvato dal richiedente. v1.3: aggiunto RF6.12 (modalità solo navigazione). v1.4: aggiunto RF7 (icone e catalogo entità). v1.5: aggiunto RF8 (più hub Harmony e destinazioni IR). v1.6: aggiunto RF3.5 (menu e tavolozze). v1.7: aggiunti RF3.6 (liste strutturate) e RF9 (allineamento a upstream 1.2.0, Apple TV diretto). v1.8: RF9.6–RF9.7 (upstream 1.2.1-beta e ricontrollo 1.2.0). v1.9: RF10 (upstream 1.2.2–1.2.7-beta). v1.10: RF11 (upstream 1.2.8–1.2.9-beta, push/pull nella schermata principale). v1.11: RF12 (upstream 1.3.0, integrazione con la cronologia versioni del telecomando). v1.12: RF13 (mappa di navigazione) e RF14 (libreria temi). v1.13: RF15 (mappa di navigazione modificabile). v1.14: RF16 (upstream 1.3.1–1.3.2-beta, disposizione e interruttori della mappa, builder del telecomando). v1.15: RF17 (pannello anteprima grande, builder aperto da un link). v1.16: RF15.3 una riga di tasti con due ancore. Sostituisce la v1.0: Harmony e IR rientrano nell'ambito; aggiunte le versioni con nome (RF2.11–RF2.13). Lingua del documento: italiano. Traduzione inglese: [SPEC.en.md](SPEC.en.md).
+Stato: approvato dal richiedente. v1.3: aggiunto RF6.12 (modalità solo navigazione). v1.4: aggiunto RF7 (icone e catalogo entità). v1.5: aggiunto RF8 (più hub Harmony e destinazioni IR). v1.6: aggiunto RF3.5 (menu e tavolozze). v1.7: aggiunti RF3.6 (liste strutturate) e RF9 (allineamento a upstream 1.2.0, Apple TV diretto). v1.8: RF9.6–RF9.7 (upstream 1.2.1-beta e ricontrollo 1.2.0). v1.9: RF10 (upstream 1.2.2–1.2.7-beta). v1.10: RF11 (upstream 1.2.8–1.2.9-beta, push/pull nella schermata principale). v1.11: RF12 (upstream 1.3.0, integrazione con la cronologia versioni del telecomando). v1.12: RF13 (mappa di navigazione) e RF14 (libreria temi). v1.13: RF15 (mappa di navigazione modificabile). v1.14: RF16 (upstream 1.3.1–1.3.2-beta, disposizione e interruttori della mappa, builder del telecomando). v1.15: RF17 (pannello anteprima grande, builder aperto da un link). v1.16: RF15.3 una riga di tasti con due ancore. v1.17: RF18 (Editor e Simulatore uniti). Sostituisce la v1.0: Harmony e IR rientrano nell'ambito; aggiunte le versioni con nome (RF2.11–RF2.13). Lingua del documento: italiano. Traduzione inglese: [SPEC.en.md](SPEC.en.md).
 
 ## 1. Scopo
 
@@ -90,7 +90,7 @@ Add-on di Home Assistant con pannello Ingress che gestisce le configurazioni (`d
 - RF6.8 Azione IR: eseguita realmente tramite l'entità `remote.*` del telecomando (RF1.1) con `send_command`; l'add-on converte i codici IR della configurazione nel formato accettato dall'entità. Senza entità configurata l'azione è disabilitata con indicazione del motivo; gli errori sono mostrati.
 - RF6.9 Pannello con i tasti fisici dell'HA100, cliccabili: eseguono l'hotkey configurato con le stesse regole di RF6.5–RF6.8.
 - RF6.10 Il simulatore espone un indicatore permanente «Esecuzione reale: Home Assistant, Hub Harmony, IR».
-- RF6.12 Interruttore «Solo navigazione»: se attivo, le azioni (HA, Harmony, IR) non vengono eseguite ma solo elencate; navigazione, pagine collegate, popup e Attività composte (aggiornate localmente) restano simulate. L'indicatore di RF6.10 segnala la modalità. Predefinito: disattivato.
+- RF6.12 (dalla v1.17 è il pulsante **▶ Simula**, RF18) Interruttore «Solo navigazione»: se attivo, le azioni (HA, Harmony, IR) non vengono eseguite ma solo elencate; navigazione, pagine collegate, popup e Attività composte (aggiornate localmente) restano simulate. L'indicatore di RF6.10 segnala la modalità. Predefinito: disattivato.
 - RF6.11 Il simulatore riproduce il comportamento che l'app ha sul telecomando (visibilità condizionale di pagine e card, pagine collegate, overlay, popup, risposta ai tasti fisici), non soltanto l'invio dei comandi. L'editor serve a progettare la configurazione; la prova avviene solo nel simulatore.
 
 ### RF7 — Icone e catalogo entità
@@ -217,6 +217,15 @@ Solo nella scheda Editor (la mappa del Simulatore resta in sola lettura). Ogni m
 - RF17.1 Scheda Editor: un pannello a sinistra mostra in grande lo schermo selezionato nell'editor (albero o mappa), disegnato dal renderer del simulatore con stati live, fisso mentre i form scorrono. Il clic su una card apre il suo form (nulla viene eseguito); la card selezionata è evidenziata. Ridimensionabile dal bordo destro (220–520 px) e nascondibile; entrambi ricordati dal browser.
 - RF17.2 "Apri nel builder ↗", "Cronologia ↗" e "Modifica nel builder ↗" sono link veri (`target="_blank"`, `rel="opener"`) seguiti al clic dell'utente, mai `window.open`: una scheda aperta da script viene bloccata come pop-up nel frame di Home Assistant e nell'app companion. In modalità "Modifica con il builder del telecomando" con modifiche non inviate il link chiede prima Invia / Scarta, poi mostra una finestra con il link da cliccare.
 - RF17.3 (2.22) L'Editor (con il pannello anteprima) si comprime con una freccetta ▴/▾ come la mappa, scelta ricordata dal browser; un clic sulla mappa lo riapre.
+
+### RF18 — Editor e Simulatore uniti
+
+Requisito di partenza: "unire le schermate Simulatore ed Editor; aggiungere Simula e Simula ed esegui che sostituiscono il pannello inferiore con la simulazione, con tutte le opzioni della scheda".
+
+- RF18.1 Scheda unica **Editor** (la scheda Simulatore è rimossa). La barra "✎ Editor" sotto la mappa ha il selettore **✎ Modifica** / **▶ Simula** / **⚡ Simula ed esegui** e la freccetta ▴/▾ (RF17.3); la modalità scelta è ricordata dal browser.
+- RF18.2 Modifica = editor con anteprima grande (RF17). Simula = simulatore in sola navigazione (RF6.12: azioni elencate, non eseguite). Simula ed esegui = esecuzione reale (HA, Harmony, IR). Una sola sessione di simulazione: passando da Simula a Simula ed esegui pagina, popup e stati restano. Lo switch «Solo navigazione» è sostituito dal selettore; restano Sulla base, Azzera stati dispositivi, stato live, tasti fisici, stati dispositivi, navigazione ◀ ▲ ▶.
+- RF18.3 In modalità builder del telecomando (RF16.4) l'editor è in sola lettura ma la simulazione resta disponibile.
+- RF18.4 In simulazione il clic su uno schermo della mappa porta il simulatore su quella pagina e la mappa evidenzia la pagina corrente; la mappa non è modificabile. In Modifica il clic seleziona nell'editor.
 
 ## 6. Requisiti non funzionali
 

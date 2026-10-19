@@ -452,7 +452,13 @@ const I18N = {
   "map_scope_global": "Global",
   "map_legend_action": "Key bound to an action that opens no page (service, Harmony, IR, event…): no link to draw — left = this page, right = global",
   "editor_toggle": "Show / hide the editor",
-  "editor_hint": "Sections, cards and settings of the dashboard"
+  "editor_hint": "Sections, cards and settings of the dashboard",
+  "ed_mode_edit": "Modify",
+  "ed_mode_edit_hint": "Edit the dashboard (forms and big preview)",
+  "ed_mode_sim": "Simulate",
+  "ed_mode_sim_hint": "Simulate the remote: navigation only, no action is executed",
+  "ed_mode_exec": "Simulate & run",
+  "ed_mode_exec_hint": "Simulate the remote and really execute the actions (Home Assistant, Harmony Hub, IR)"
  },
  "it": {
   "app_title": "Astrion Config Manager",
@@ -904,7 +910,13 @@ const I18N = {
   "map_scope_global": "Globale",
   "map_legend_action": "Tasto assegnato a un'azione che non apre pagine (servizio, Harmony, IR, evento…): nessun collegamento da disegnare — sinistra = questa pagina, destra = globale",
   "editor_toggle": "Mostra / nascondi l'editor",
-  "editor_hint": "Sezioni, card e impostazioni della dashboard"
+  "editor_hint": "Sezioni, card e impostazioni della dashboard",
+  "ed_mode_edit": "Modifica",
+  "ed_mode_edit_hint": "Modifica la dashboard (form e anteprima grande)",
+  "ed_mode_sim": "Simula",
+  "ed_mode_sim_hint": "Simula il telecomando: solo navigazione, nessuna azione viene eseguita",
+  "ed_mode_exec": "Simula ed esegui",
+  "ed_mode_exec_hint": "Simula il telecomando ed esegue davvero le azioni (Home Assistant, Harmony Hub, IR)"
  },
  "fr": {
   "app_title": "Astrion Config Manager",
@@ -1356,7 +1368,13 @@ const I18N = {
   "map_scope_global": "Globale",
   "map_legend_action": "Touche liée à une action qui n'ouvre aucune page (service, Harmony, IR, événement…) : pas de lien à dessiner — gauche = cette page, droite = globale",
   "editor_toggle": "Afficher / masquer l'éditeur",
-  "editor_hint": "Sections, cartes et réglages du tableau de bord"
+  "editor_hint": "Sections, cartes et réglages du tableau de bord",
+  "ed_mode_edit": "Modifier",
+  "ed_mode_edit_hint": "Modifier le tableau de bord (formulaires et grand aperçu)",
+  "ed_mode_sim": "Simuler",
+  "ed_mode_sim_hint": "Simuler la télécommande : navigation seule, aucune action n'est exécutée",
+  "ed_mode_exec": "Simuler et exécuter",
+  "ed_mode_exec_hint": "Simuler la télécommande et exécuter réellement les actions (Home Assistant, Harmony Hub, IR)"
  },
  "es": {
   "app_title": "Astrion Config Manager",
@@ -1808,7 +1826,13 @@ const I18N = {
   "map_scope_global": "Global",
   "map_legend_action": "Tecla asignada a una acción que no abre páginas (servicio, Harmony, IR, evento…): ningún enlace que dibujar — izquierda = esta página, derecha = global",
   "editor_toggle": "Mostrar / ocultar el editor",
-  "editor_hint": "Secciones, tarjetas y ajustes del panel"
+  "editor_hint": "Secciones, tarjetas y ajustes del panel",
+  "ed_mode_edit": "Editar",
+  "ed_mode_edit_hint": "Editar el panel (formularios y vista previa grande)",
+  "ed_mode_sim": "Simular",
+  "ed_mode_sim_hint": "Simular el mando: solo navegación, no se ejecuta ninguna acción",
+  "ed_mode_exec": "Simular y ejecutar",
+  "ed_mode_exec_hint": "Simular el mando y ejecutar realmente las acciones (Home Assistant, Harmony Hub, IR)"
  },
  "de": {
   "app_title": "Astrion Config Manager",
@@ -2260,7 +2284,13 @@ const I18N = {
   "map_scope_global": "Global",
   "map_legend_action": "Taste mit einer Aktion ohne Seite (Dienst, Harmony, IR, Ereignis…): keine Verbindung zu zeichnen — links = diese Seite, rechts = global",
   "editor_toggle": "Editor ein-/ausblenden",
-  "editor_hint": "Abschnitte, Karten und Einstellungen des Dashboards"
+  "editor_hint": "Abschnitte, Karten und Einstellungen des Dashboards",
+  "ed_mode_edit": "Bearbeiten",
+  "ed_mode_edit_hint": "Dashboard bearbeiten (Formulare und große Vorschau)",
+  "ed_mode_sim": "Simulieren",
+  "ed_mode_sim_hint": "Fernbedienung simulieren: nur Navigation, keine Aktion wird ausgeführt",
+  "ed_mode_exec": "Simulieren und ausführen",
+  "ed_mode_exec_hint": "Fernbedienung simulieren und Aktionen wirklich ausführen (Home Assistant, Harmony Hub, IR)"
  }
 };
 
