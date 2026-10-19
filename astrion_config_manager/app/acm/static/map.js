@@ -164,7 +164,10 @@ function buildNavGraph(doc, hwLabel, opts) {
 
   // special boxes only when something uses them
   const used = new Set(edges.flatMap((e) => [e.from, e.to]));
-  const specials = [["any", "map_any_page", "🎛"], ["ov_act", "map_overlay_activities", "🎬"], ["ov_set", "map_overlay_settings", "⚙"], ["ha", "map_ha", "🏠"]]
+  // with the global key row shown, global hotkeys start from their chips: the
+  // "any page" box then only stands for the swipe down (no duplicated keys)
+  const anyBox = chipsGlobal ? ["any", "map_any_swipe", "👇"] : ["any", "map_any_page", "🎛"];
+  const specials = [anyBox, ["ov_act", "map_overlay_activities", "🎬"], ["ov_set", "map_overlay_settings", "⚙"], ["ha", "map_ha", "🏠"]]
     .filter(([id]) => used.has(id)).map(([id, label, icon]) => ({ id, kind: "special", label, icon }));
   return { nodes: [...nodes, ...specials, ...missing.values()], edges };
 }
@@ -493,7 +496,7 @@ class NavMap {
       const d = el("button", { class: "navmap-special", style }, el("span", { class: "navmap-sicon", text: n.icon }), el("span", { text: t(n.label) }));
       d.addEventListener("click", () => {
         if (this.moved) return;
-        if (n.id === "any") this.onSelect({ kind: "path", path: "/hotkeys" });
+        if (n.id === "any" && n.label === "map_any_page") this.onSelect({ kind: "path", path: "/hotkeys" });
         else if (n.id === "ov_act") this.onSelect({ kind: "path", path: "/activities" });
       });
       return d;
@@ -506,7 +509,13 @@ class NavMap {
     if (n.kind === "keychip") {
       // RF16.3: the simulator's key icons (HW_LABEL), name as tooltip
       const icon = (typeof HW_LABEL !== "undefined" && HW_LABEL[n.key]) || n.key;
-      const d = el("div", { class: `navmap-chip s-${n.scope}`, style, title: `${this.hwLabel(n.key)} (${n.key})` },
+      // keys with a binding stand out; unbound ones are dimmed (drop targets only)
+      // (any binding counts, also non-navigation ones: service, Harmony, IR, event...)
+      const owner = n.scope === "g" ? this.doc : (this.doc.pages || [])[this.keysPageIdx];
+      const hk = owner ? [...(owner.hotkeys || []), ...(owner.longHotkeys || [])].filter((h) => h && String(h.key).toUpperCase() === n.key) : [];
+      const bound = hk.length > 0;
+      const what = hk.map((h) => hotkeySummary(h)).join(" · ");
+      const d = el("div", { class: `navmap-chip s-${n.scope}${bound ? " bound" : ""}`, style, title: `${this.hwLabel(n.key)} (${n.key})${what ? " — " + what : ""}` },
         el("strong", { class: "navmap-chip-icon", text: icon }), el("small", { text: this.hwLabel(n.key) }));
       if (this.editable()) d.append(el("div", { class: "navmap-anchor a-key", "data-scope": n.scope, "data-key": n.key, title: t("map_anchor_key") }));
       return d;

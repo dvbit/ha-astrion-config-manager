@@ -377,8 +377,8 @@ const I18N = {
   "map_anchor_top": "Drop a grid tile here: tap / long tap opens this screen",
   "map_anchor_bottom": "Drop a key here: the key opens this screen",
   "map_anchor_key": "Drag onto a screen's bottom anchor",
-  "map_keys_page": "Keys of page \"{name}\"",
-  "map_keys_global": "Global keys",
+  "map_keys_page": "Keys of page \"{name}\" (override the global ones)",
+  "map_keys_global": "Global keys (every page)",
   "map_drop_key_title": "{key} → {page}",
   "map_drop_tile_title": "Tile \"{name}\" → {page}",
   "map_press": "Press",
@@ -443,7 +443,8 @@ const I18N = {
   "bigprev_hide": "Hide the preview (drag the right edge to resize it)",
   "bigprev_hint": "Click a card to edit it · nothing is executed",
   "nb_ready_title": "Ready to edit in the builder",
-  "nb_ready_text": "The remote and the add-on now match. Open the builder; when you come back here the changes you save are imported."
+  "nb_ready_text": "The remote and the add-on now match. Open the builder; when you come back here the changes you save are imported.",
+  "map_any_swipe": "Any page · swipe down"
  },
  "it": {
   "app_title": "Astrion Config Manager",
@@ -820,8 +821,8 @@ const I18N = {
   "map_anchor_top": "Rilascia qui una tile: tocco / tocco lungo apre questo schermo",
   "map_anchor_bottom": "Rilascia qui un tasto: il tasto apre questo schermo",
   "map_anchor_key": "Trascina sull'ancora inferiore di uno schermo",
-  "map_keys_page": "Tasti della pagina \"{name}\"",
-  "map_keys_global": "Tasti globali",
+  "map_keys_page": "Tasti della pagina \"{name}\" (sostituiscono quelli globali)",
+  "map_keys_global": "Tasti globali (tutte le pagine)",
   "map_drop_key_title": "{key} → {page}",
   "map_drop_tile_title": "Tile \"{name}\" → {page}",
   "map_press": "Pressione",
@@ -886,7 +887,8 @@ const I18N = {
   "bigprev_hide": "Nascondi l'anteprima (trascina il bordo destro per ridimensionarla)",
   "bigprev_hint": "Clic su una card per modificarla · nulla viene eseguito",
   "nb_ready_title": "Pronto per modificare nel builder",
-  "nb_ready_text": "Telecomando e add-on ora coincidono. Apri il builder; quando torni qui le modifiche salvate vengono importate."
+  "nb_ready_text": "Telecomando e add-on ora coincidono. Apri il builder; quando torni qui le modifiche salvate vengono importate.",
+  "map_any_swipe": "Qualsiasi pagina · swipe in basso"
  },
  "fr": {
   "app_title": "Astrion Config Manager",
@@ -1263,8 +1265,8 @@ const I18N = {
   "map_anchor_top": "Déposez une tuile ici : appui / appui long ouvre cet écran",
   "map_anchor_bottom": "Déposez une touche ici : la touche ouvre cet écran",
   "map_anchor_key": "Glissez vers l'ancre du bas d'un écran",
-  "map_keys_page": "Touches de la page « {name} »",
-  "map_keys_global": "Touches globales",
+  "map_keys_page": "Touches de la page « {name} » (remplacent les globales)",
+  "map_keys_global": "Touches globales (toutes les pages)",
   "map_drop_key_title": "{key} → {page}",
   "map_drop_tile_title": "Tuile « {name} » → {page}",
   "map_press": "Appui",
@@ -1329,7 +1331,8 @@ const I18N = {
   "bigprev_hide": "Masquer l'aperçu (glissez le bord droit pour le redimensionner)",
   "bigprev_hint": "Cliquez une carte pour la modifier · rien n'est exécuté",
   "nb_ready_title": "Prêt à modifier dans le builder",
-  "nb_ready_text": "La télécommande et l'add-on correspondent. Ouvrez le builder ; à votre retour ici, les modifications enregistrées sont importées."
+  "nb_ready_text": "La télécommande et l'add-on correspondent. Ouvrez le builder ; à votre retour ici, les modifications enregistrées sont importées.",
+  "map_any_swipe": "Toute page · balayage vers le bas"
  },
  "es": {
   "app_title": "Astrion Config Manager",
@@ -1706,8 +1709,8 @@ const I18N = {
   "map_anchor_top": "Suelta aquí un mosaico: toque / toque largo abre esta pantalla",
   "map_anchor_bottom": "Suelta aquí una tecla: la tecla abre esta pantalla",
   "map_anchor_key": "Arrastra al ancla inferior de una pantalla",
-  "map_keys_page": "Teclas de la página «{name}»",
-  "map_keys_global": "Teclas globales",
+  "map_keys_page": "Teclas de la página «{name}» (sustituyen a las globales)",
+  "map_keys_global": "Teclas globales (todas las páginas)",
   "map_drop_key_title": "{key} → {page}",
   "map_drop_tile_title": "Mosaico «{name}» → {page}",
   "map_press": "Pulsación",
@@ -1772,7 +1775,8 @@ const I18N = {
   "bigprev_hide": "Ocultar la vista previa (arrastra el borde derecho para cambiar su tamaño)",
   "bigprev_hint": "Haz clic en una tarjeta para editarla · no se ejecuta nada",
   "nb_ready_title": "Listo para editar en el editor",
-  "nb_ready_text": "El mando y el complemento ya coinciden. Abre el editor; al volver aquí se importan los cambios guardados."
+  "nb_ready_text": "El mando y el complemento ya coinciden. Abre el editor; al volver aquí se importan los cambios guardados.",
+  "map_any_swipe": "Cualquier página · deslizar hacia abajo"
  },
  "de": {
   "app_title": "Astrion Config Manager",
@@ -2149,8 +2153,8 @@ const I18N = {
   "map_anchor_top": "Kachel hier ablegen: Tippen / langes Tippen öffnet diesen Bildschirm",
   "map_anchor_bottom": "Taste hier ablegen: die Taste öffnet diesen Bildschirm",
   "map_anchor_key": "Auf den unteren Anker eines Bildschirms ziehen",
-  "map_keys_page": "Tasten der Seite „{name}“",
-  "map_keys_global": "Globale Tasten",
+  "map_keys_page": "Tasten der Seite „{name}“ (ersetzen die globalen)",
+  "map_keys_global": "Globale Tasten (alle Seiten)",
   "map_drop_key_title": "{key} → {page}",
   "map_drop_tile_title": "Kachel „{name}“ → {page}",
   "map_press": "Drücken",
@@ -2215,7 +2219,8 @@ const I18N = {
   "bigprev_hide": "Vorschau ausblenden (rechten Rand ziehen zum Ändern der Größe)",
   "bigprev_hint": "Karte anklicken zum Bearbeiten · nichts wird ausgeführt",
   "nb_ready_title": "Bereit zum Bearbeiten im Builder",
-  "nb_ready_text": "Fernbedienung und Add-on stimmen jetzt überein. Builder öffnen; beim Zurückkehren werden gespeicherte Änderungen importiert."
+  "nb_ready_text": "Fernbedienung und Add-on stimmen jetzt überein. Builder öffnen; beim Zurückkehren werden gespeicherte Änderungen importiert.",
+  "map_any_swipe": "Jede Seite · nach unten wischen"
  }
 };
 

@@ -264,3 +264,5 @@ button.danger-fill { background: var(--err); border-color: var(--err); }
 a.button { display: inline-block; padding: 6px 12px; }
 a.button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
 @media (max-width: 900px) { .editor-wrap { flex-direction: column; } .bigprev { position: static; } }
+.navmap-chip { opacity: .5; }
+.navmap-chip.bound { opacity: 1; font-weight: 600; box-shadow: 0 0 0 2px #ef6c00; }

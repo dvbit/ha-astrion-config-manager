@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.17.0 - 2026-10-19
+
+- Fix (RF16.3): global keys appeared twice on the map, in the "Global keys" row
+  and in the "Any page (global keys)" box. With the row shown, that box now only
+  stands for the swipe down ("Any page · swipe down").
+- Map key chips: keys with a binding stand out (tooltip shows what they do),
+  unbound keys are dimmed; row titles say that page keys override the global
+  ones.
+
 ## 2.16.0 - 2026-10-19
 
 Spec v1.15 (RF17).
