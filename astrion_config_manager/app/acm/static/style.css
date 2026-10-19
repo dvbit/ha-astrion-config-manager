@@ -224,7 +224,10 @@ a.button.icon { padding: 2px 8px; }
   border: 3px solid var(--accent); z-index: 2; cursor: crosshair; box-shadow: 0 1px 3px rgba(0,0,0,.3); transform: scale(var(--bs, 1)); }
 .navmap-anchor.a-top { border-color: #7c4dff; }
 .navmap-anchor.a-bottom { border-color: #ef6c00; }
-.navmap-anchor.a-key { left: 50%; top: 0; border-color: #ef6c00; }
+/* RF15.3 (2.19): one chip, two anchors - left "this page only", right "global" */
+.navmap-anchor.a-key { top: 0; }
+.navmap-anchor.a-key.s-p { left: 25%; border-color: #ef6c00; }
+.navmap-anchor.a-key.s-g { left: 75%; border-color: #1e88e5; }
 .navmap-anchor.drop-ok { background: #fff59d; transform: scale(calc(var(--bs, 1) * 1.4)); }
 .navmap-anchor.hover { background: var(--ok); }
 .navmap-anchor.dragging, .navmap-node .dragging { outline: 3px solid var(--accent); }
@@ -232,7 +235,6 @@ a.button.icon { padding: 2px 8px; }
 .navmap-chip { position: absolute; display: flex; flex-direction: column; align-items: center; justify-content: center; border-radius: 10px;
   border: 1px solid var(--line); background: var(--card); font-size: 13px; line-height: 1.1; }
 .navmap-chip small { color: var(--muted); font-size: 10px; }
-.navmap-chip.s-p { border-color: #ef6c00; }
 .navmap-rowlabel { position: absolute; font-weight: 600; color: var(--muted); white-space: nowrap; }
 .navmap-dialog fieldset { border: 1px solid var(--line); border-radius: 8px; margin: 8px 0; }
 .navmap-dialog .row { gap: 8px; }
@@ -265,7 +267,9 @@ a.button { display: inline-block; padding: 6px 12px; }
 a.button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
 @media (max-width: 900px) { .editor-wrap { flex-direction: column; } .bigprev { position: static; } }
 .navmap-chip { opacity: .5; }
-.navmap-chip.bound { opacity: 1; font-weight: 600; box-shadow: 0 0 0 2px #ef6c00; }
+.navmap-chip.bound { opacity: 1; font-weight: 600; }
+.navmap-chip.bound-p { border-left: 4px solid #ef6c00; }
+.navmap-chip.bound-g { border-right: 4px solid #1e88e5; }
 /* RF15.6 big page buttons on the map bar */
 .navmap-big { font-size: 15px; font-weight: 600; padding: 8px 16px; }
 .navmap-big.primary { background: var(--accent); border-color: var(--accent); color: #fff; }

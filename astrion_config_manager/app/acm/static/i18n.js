@@ -377,8 +377,6 @@ const I18N = {
   "map_anchor_top": "Drop a grid tile here: tap / long tap opens this screen",
   "map_anchor_bottom": "Drop a key here: the key opens this screen",
   "map_anchor_key": "Drag onto a screen's bottom anchor",
-  "map_keys_page": "Keys of page \"{name}\" (override the global ones)",
-  "map_keys_global": "Global keys (every page)",
   "map_drop_key_title": "{key} → {page}",
   "map_drop_tile_title": "Tile \"{name}\" → {page}",
   "map_press": "Press",
@@ -448,7 +446,10 @@ const I18N = {
   "map_new_page": "New page",
   "map_delete_page": "Delete page",
   "map_delete_last": "The last page can't be deleted",
-  "map_delete_confirm": "Delete the page \"{name}\"? {n} link(s) point to it: they will be shown as missing pages until you change them. Undo brings the page back."
+  "map_delete_confirm": "Delete the page \"{name}\"? {n} link(s) point to it: they will be shown as missing pages until you change them. Undo brings the page back.",
+  "map_keys_row": "Keys — ◧ left anchor: page \"{name}\" only (overrides) · ◨ right anchor: global (every page)",
+  "map_scope_page": "This page only",
+  "map_scope_global": "Global"
  },
  "it": {
   "app_title": "Astrion Config Manager",
@@ -825,8 +826,6 @@ const I18N = {
   "map_anchor_top": "Rilascia qui una tile: tocco / tocco lungo apre questo schermo",
   "map_anchor_bottom": "Rilascia qui un tasto: il tasto apre questo schermo",
   "map_anchor_key": "Trascina sull'ancora inferiore di uno schermo",
-  "map_keys_page": "Tasti della pagina \"{name}\" (sostituiscono quelli globali)",
-  "map_keys_global": "Tasti globali (tutte le pagine)",
   "map_drop_key_title": "{key} → {page}",
   "map_drop_tile_title": "Tile \"{name}\" → {page}",
   "map_press": "Pressione",
@@ -896,7 +895,10 @@ const I18N = {
   "map_new_page": "Nuova pagina",
   "map_delete_page": "Elimina pagina",
   "map_delete_last": "L'ultima pagina non si può eliminare",
-  "map_delete_confirm": "Eliminare la pagina \"{name}\"? {n} collegamento/i puntano a essa: verranno mostrati come pagine mancanti finché non li modifichi. Annulla riporta la pagina."
+  "map_delete_confirm": "Eliminare la pagina \"{name}\"? {n} collegamento/i puntano a essa: verranno mostrati come pagine mancanti finché non li modifichi. Annulla riporta la pagina.",
+  "map_keys_row": "Tasti — ◧ ancora sinistra: solo pagina \"{name}\" (sostituisce) · ◨ ancora destra: globale (tutte le pagine)",
+  "map_scope_page": "Solo questa pagina",
+  "map_scope_global": "Globale"
  },
  "fr": {
   "app_title": "Astrion Config Manager",
@@ -1273,8 +1275,6 @@ const I18N = {
   "map_anchor_top": "Déposez une tuile ici : appui / appui long ouvre cet écran",
   "map_anchor_bottom": "Déposez une touche ici : la touche ouvre cet écran",
   "map_anchor_key": "Glissez vers l'ancre du bas d'un écran",
-  "map_keys_page": "Touches de la page « {name} » (remplacent les globales)",
-  "map_keys_global": "Touches globales (toutes les pages)",
   "map_drop_key_title": "{key} → {page}",
   "map_drop_tile_title": "Tuile « {name} » → {page}",
   "map_press": "Appui",
@@ -1344,7 +1344,10 @@ const I18N = {
   "map_new_page": "Nouvelle page",
   "map_delete_page": "Supprimer la page",
   "map_delete_last": "La dernière page ne peut pas être supprimée",
-  "map_delete_confirm": "Supprimer la page « {name} » ? {n} lien(s) y mènent : ils seront signalés comme pages manquantes jusqu'à leur modification. Annuler rétablit la page."
+  "map_delete_confirm": "Supprimer la page « {name} » ? {n} lien(s) y mènent : ils seront signalés comme pages manquantes jusqu'à leur modification. Annuler rétablit la page.",
+  "map_keys_row": "Touches — ◧ ancre gauche : page « {name} » seule (remplace) · ◨ ancre droite : globale (toutes les pages)",
+  "map_scope_page": "Cette page seulement",
+  "map_scope_global": "Globale"
  },
  "es": {
   "app_title": "Astrion Config Manager",
@@ -1721,8 +1724,6 @@ const I18N = {
   "map_anchor_top": "Suelta aquí un mosaico: toque / toque largo abre esta pantalla",
   "map_anchor_bottom": "Suelta aquí una tecla: la tecla abre esta pantalla",
   "map_anchor_key": "Arrastra al ancla inferior de una pantalla",
-  "map_keys_page": "Teclas de la página «{name}» (sustituyen a las globales)",
-  "map_keys_global": "Teclas globales (todas las páginas)",
   "map_drop_key_title": "{key} → {page}",
   "map_drop_tile_title": "Mosaico «{name}» → {page}",
   "map_press": "Pulsación",
@@ -1792,7 +1793,10 @@ const I18N = {
   "map_new_page": "Nueva página",
   "map_delete_page": "Eliminar página",
   "map_delete_last": "La última página no se puede eliminar",
-  "map_delete_confirm": "¿Eliminar la página «{name}»? {n} enlace(s) apuntan a ella: se mostrarán como páginas inexistentes hasta que los cambies. Deshacer recupera la página."
+  "map_delete_confirm": "¿Eliminar la página «{name}»? {n} enlace(s) apuntan a ella: se mostrarán como páginas inexistentes hasta que los cambies. Deshacer recupera la página.",
+  "map_keys_row": "Teclas — ◧ ancla izquierda: solo página «{name}» (sustituye) · ◨ ancla derecha: global (todas las páginas)",
+  "map_scope_page": "Solo esta página",
+  "map_scope_global": "Global"
  },
  "de": {
   "app_title": "Astrion Config Manager",
@@ -2169,8 +2173,6 @@ const I18N = {
   "map_anchor_top": "Kachel hier ablegen: Tippen / langes Tippen öffnet diesen Bildschirm",
   "map_anchor_bottom": "Taste hier ablegen: die Taste öffnet diesen Bildschirm",
   "map_anchor_key": "Auf den unteren Anker eines Bildschirms ziehen",
-  "map_keys_page": "Tasten der Seite „{name}“ (ersetzen die globalen)",
-  "map_keys_global": "Globale Tasten (alle Seiten)",
   "map_drop_key_title": "{key} → {page}",
   "map_drop_tile_title": "Kachel „{name}“ → {page}",
   "map_press": "Drücken",
@@ -2240,7 +2242,10 @@ const I18N = {
   "map_new_page": "Neue Seite",
   "map_delete_page": "Seite löschen",
   "map_delete_last": "Die letzte Seite kann nicht gelöscht werden",
-  "map_delete_confirm": "Seite „{name}“ löschen? {n} Verbindung(en) zeigen darauf: sie werden als fehlende Seiten angezeigt, bis du sie änderst. Rückgängig stellt die Seite wieder her."
+  "map_delete_confirm": "Seite „{name}“ löschen? {n} Verbindung(en) zeigen darauf: sie werden als fehlende Seiten angezeigt, bis du sie änderst. Rückgängig stellt die Seite wieder her.",
+  "map_keys_row": "Tasten — ◧ linker Anker: nur Seite „{name}“ (ersetzt) · ◨ rechter Anker: global (alle Seiten)",
+  "map_scope_page": "Nur diese Seite",
+  "map_scope_global": "Global"
  }
 };
 

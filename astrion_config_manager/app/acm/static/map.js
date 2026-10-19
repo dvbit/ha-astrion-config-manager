@@ -68,8 +68,9 @@ function mapStore(key, val) {
 /* Builds {nodes, edges}. Every edge carries the JSON pointer of the element
  * that creates it (Editor.reveal target) or null for implicit links. */
 function buildNavGraph(doc, hwLabel, opts) {
-  // RF15: global hotkeys start from their key chip ("kg:KEY"), those of the
-  // selected page (opts.keysPage) from "kp:KEY"; other pages' from the page.
+  // RF15: global hotkeys start from their key chip's global anchor ("kg:KEY"),
+  // those of the selected page (opts.keysPage) from its page anchor ("kp:KEY"),
+  // both on the same chip (2.19: one chip per key); other pages' from the page.
   const keysPage = opts && Number.isInteger(opts.keysPage) ? opts.keysPage : null;
   const chips = !!(opts && opts.chips);
   const chipsGlobal = chips && !(opts && opts.chipsGlobal === false);
@@ -333,14 +334,17 @@ class NavMap {
     // chips wrap into a grid no wider than the page row (keeps "fit all" usable)
     const cols = Math.max(6, Math.min(12, Math.floor((span + MAP_CHIP.gap) / (MAP_CHIP.w + MAP_CHIP.gap))));
     let ky = rowY + MAP_SPECIAL.h + 170;
-    for (const scope of ["p", "g"]) {
-      pos["row:" + scope] = { x: left, y: ky - 34, w: 600, h: 26 };
-      const chips = extra.filter((c) => c.kind === "keychip" && c.scope === scope);
-      chips.forEach((n, i) => {
-        pos[n.id] = { x: left + (i % cols) * (MAP_CHIP.w + MAP_CHIP.gap), y: ky + Math.floor(i / cols) * (MAP_CHIP.h + MAP_CHIP.gap + 6), w: MAP_CHIP.w, h: MAP_CHIP.h };
-      });
-      ky += Math.ceil(chips.length / cols) * (MAP_CHIP.h + MAP_CHIP.gap + 6) + 70;
-    }
+    // RF15.3 (2.19): ONE row, one chip per key; each chip has two anchors,
+    // left = "this page only" (kp:KEY), right = "global" (kg:KEY). The anchor
+    // halves get their own rects so key edges start from the right anchor.
+    const chips = extra.filter((c) => c.kind === "keychip");
+    if (chips.length) pos["row:k"] = { x: left, y: ky - 34, w: 600, h: 26 };
+    chips.forEach((n, i) => {
+      const c = { x: left + (i % cols) * (MAP_CHIP.w + MAP_CHIP.gap), y: ky + Math.floor(i / cols) * (MAP_CHIP.h + MAP_CHIP.gap + 6), w: MAP_CHIP.w, h: MAP_CHIP.h };
+      pos[n.id] = c;
+      pos["kp:" + n.key] = { x: c.x, y: c.y, w: c.w / 2, h: c.h };
+      pos["kg:" + n.key] = { x: c.x + c.w / 2, y: c.y, w: c.w / 2, h: c.h };
+    });
     return pos;
   }
   arcHeight(a, b) { return a && b ? 50 + 0.28 * Math.abs((a.x + a.w / 2) - (b.x + b.w / 2)) : 0; }
@@ -407,12 +411,12 @@ class NavMap {
     this.keysPageIdx = this.keysPage();
     const graph = buildNavGraph(this.doc || {}, (k) => this.hwLabel(k),
       { chips: true, keysPage: show.pageKeys ? this.keysPageIdx : null, chipsGlobal: show.globalKeys });
-    // RF15.3: one chip per hardware key, in two rows (selected page / global) - each row can be hidden
+    // RF15.3 (2.19): each hardware key appears ONCE; the switches only hide
+    // its "page" / "global" anchor and edges (row hidden when both are off)
     const keys = (typeof HW_LAYOUT !== "undefined" ? HW_LAYOUT.flat() : []).concat(this.hwKeys || []).filter((k, i, a) => a.indexOf(k) === i);
-    for (const scope of ["p", "g"]) {
-      if (!(scope === "p" ? show.pageKeys : show.globalKeys)) continue;
-      graph.nodes.push({ id: "row:" + scope, kind: "rowlabel", scope });
-      for (const k of keys) graph.nodes.push({ id: `k${scope}:${k}`, kind: "keychip", scope, key: k });
+    if (show.pageKeys || show.globalKeys) {
+      graph.nodes.push({ id: "row:k", kind: "rowlabel" });
+      for (const k of keys) graph.nodes.push({ id: "k:" + k, kind: "keychip", key: k });
     }
     this.graph = graph;
     this.pos = this.layout(graph);
@@ -524,21 +528,30 @@ class NavMap {
     }
     if (n.kind === "rowlabel") {
       const page = (this.doc.pages || [])[this.keysPageIdx];
-      return el("div", { class: "navmap-rowlabel", style }, n.scope === "p"
-        ? t("map_keys_page", { name: page ? page.name || `#${this.keysPageIdx + 1}` : "—" }) : t("map_keys_global"));
+      return el("div", { class: "navmap-rowlabel", style }, t("map_keys_row", { name: page ? page.name || `#${this.keysPageIdx + 1}` : "—" }));
     }
     if (n.kind === "keychip") {
       // RF16.3: the simulator's key icons (HW_LABEL), name as tooltip
       const icon = (typeof HW_LABEL !== "undefined" && HW_LABEL[n.key]) || n.key;
-      // keys with a binding stand out; unbound ones are dimmed (drop targets only)
-      // (any binding counts, also non-navigation ones: service, Harmony, IR, event...)
-      const owner = n.scope === "g" ? this.doc : (this.doc.pages || [])[this.keysPageIdx];
-      const hk = owner ? [...(owner.hotkeys || []), ...(owner.longHotkeys || [])].filter((h) => h && String(h.key).toUpperCase() === n.key) : [];
-      const bound = hk.length > 0;
-      const what = hk.map((h) => hotkeySummary(h)).join(" · ");
-      const d = el("div", { class: `navmap-chip s-${n.scope}${bound ? " bound" : ""}`, style, title: `${this.hwLabel(n.key)} (${n.key})${what ? " — " + what : ""}` },
+      // RF15.3 (2.19): one chip, two scopes. A scope is "bound" when it has any
+      // binding (also non-navigation ones: service, Harmony, IR, event...);
+      // unbound chips are dimmed (drop targets only).
+      const show = this.showOpts();
+      const scopes = [["p", show.pageKeys, (this.doc.pages || [])[this.keysPageIdx]], ["g", show.globalKeys, this.doc]].filter((x) => x[1]);
+      const info = scopes.map(([sc, , owner]) => {
+        const hk = owner ? [...(owner.hotkeys || []), ...(owner.longHotkeys || [])].filter((h) => h && String(h.key).toUpperCase() === n.key) : [];
+        return { sc, bound: hk.length > 0, what: hk.map((h) => hotkeySummary(h)).join(" · ") };
+      });
+      const cls = info.filter((x) => x.bound).map((x) => " bound-" + x.sc).join("");
+      const tip = info.filter((x) => x.bound).map((x) => `\n${x.sc === "p" ? "◧ " + t("map_scope_page") : "◨ " + t("map_scope_global")}: ${x.what}`).join("");
+      const d = el("div", { class: `navmap-chip${cls ? " bound" + cls : ""}`, style, title: `${this.hwLabel(n.key)} (${n.key})${tip}` },
         el("strong", { class: "navmap-chip-icon", text: icon }), el("small", { text: this.hwLabel(n.key) }));
-      if (this.editable()) d.append(el("div", { class: "navmap-anchor a-key", "data-scope": n.scope, "data-key": n.key, title: t("map_anchor_key") }));
+      if (this.editable()) {
+        for (const x of info) {
+          d.append(el("div", { class: `navmap-anchor a-key s-${x.sc}`, "data-scope": x.sc, "data-key": n.key,
+            title: `${x.sc === "p" ? t("map_scope_page") : t("map_scope_global")} — ${t("map_anchor_key")}` }));
+        }
+      }
       return d;
     }
     if (n.kind === "missing") {

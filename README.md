@@ -225,14 +225,15 @@ map; drag its bottom edge to resize it.
 **Editing on the map** (Editor tab):
 
 - drag *Home*'s right ● onto *TV*'s left ● → *TV* becomes *Home*'s swipe neighbour;
-- drag the **Play / Pause** key chip (global row) onto *TV*'s bottom ● → choose
+- each key appears once in the key row, with two anchors: ◧ left = this page only, ◨ right = global;
+- drag the **right (global) ◨ anchor** of the **Play / Pause** key onto *TV*'s bottom ● → choose
   *Long* + *Popup* → `{"key": "PLAY", "page": "TV", "pageMode": "popup"}` in `longHotkeys`;
 - drag the *Movie* tile of a scene grid onto *Cinema*'s top ● → choose *Tap* →
   the tile gets `"page": "Cinema"`;
 - **＋ New page** / **🗑 Delete page** on the map bar add an empty page or delete the selected one;
 - press and hold a connection's icon → confirm → the link is removed;
 - drag a screen by its title bar to arrange the map (saved per remote, **⟲** resets it);
-  **Page keys / Global keys / Links** show or hide those parts.
+  **Page keys / Global keys / Links** show or hide those anchors and links.
 
 Each change is one version: **Undo** reverts it.
 

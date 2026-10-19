@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.19.0 - 2026-10-19
+
+- Map (RF15.3): the hardware keys are now ONE row, each key shown once, with
+  two anchors: ◧ left "this page only" (selected page, overrides global) and
+  ◨ right "global". Links start from the anchor of their scope; orange / blue
+  edge = bound on the page / globally. The "Page keys" / "Global keys"
+  switches hide that anchor and its links. Removes the duplicated key rows.
+
 ## 2.18.0 - 2026-10-19
 
 - Map (RF15.6): big "＋ New page" and "🗑 Delete page" buttons on the map bar,

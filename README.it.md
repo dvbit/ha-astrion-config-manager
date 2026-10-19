@@ -232,14 +232,15 @@ la mappa; trascina il bordo inferiore per ridimensionarla.
 **Modifiche sulla mappa** (scheda Editor):
 
 - trascina il ● destro di *Home* sul ● sinistro di *TV* → *TV* diventa la vicina di swipe di *Home*;
-- trascina il tasto **Play / Pausa** (riga globale) sul ● inferiore di *TV* → scegli
+- ogni tasto compare una sola volta nella riga dei tasti, con due ancore: ◧ sinistra = solo questa pagina, ◨ destra = globale;
+- trascina l'**ancora destra (globale) ◨** del tasto **Play / Pausa** sul ● inferiore di *TV* → scegli
   *Lunga* + *Popup* → `{"key": "PLAY", "page": "TV", "pageMode": "popup"}` in `longHotkeys`;
 - trascina la tile *Film* di una scene grid sul ● superiore di *Cinema* → scegli *Tocco* →
   la tile riceve `"page": "Cinema"`;
 - **＋ Nuova pagina** / **🗑 Elimina pagina** nella barra della mappa aggiungono una pagina vuota o eliminano quella selezionata;
 - tieni premuta l'icona di un collegamento → conferma → il collegamento è rimosso;
 - trascina uno schermo dalla barra del titolo per disporre la mappa (salvata per telecomando, **⟲** la ripristina);
-  **Tasti pagina / Tasti globali / Collegamenti** mostrano o nascondono quelle parti.
+  **Tasti pagina / Tasti globali / Collegamenti** mostrano o nascondono quelle ancore e collegamenti.
 
 Ogni modifica è una versione: **Annulla** la ripristina.
 
