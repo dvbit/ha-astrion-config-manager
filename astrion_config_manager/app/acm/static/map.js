@@ -398,6 +398,21 @@ class NavMap {
     }
     console.debug(`[acm] map: ${Object.keys(this.tileOff).length}/${tiles.size} tile anchors measured`);
   }
+  /* RF19.3 (2.26): the previews may be drawn before the map is laid out (just
+   * appended, hidden tab): nothing measurable yet. Retry on the next frames
+   * until the tiles can be measured (max ~1 s), then redraw the links. */
+  remeasureLater(n) {
+    cancelAnimationFrame(this.measureRaf);
+    const want = this.graph ? this.graph.edges.some((e) => e.tile) : false;
+    if (!want || Object.keys(this.tileOff || {}).length || n > 60) return;
+    this.measureRaf = requestAnimationFrame(() => {
+      if (!this.viewport || !this.viewport.isConnected || !this.viewport.clientWidth) return this.remeasureLater(n + 1);
+      this.measureTiles();
+      if (Object.keys(this.tileOff).length) { this.renderLinks(); console.debug(`[acm] map: tile anchors measured after ${n + 1} frame(s)`); }
+      else this.remeasureLater(n + 1);
+    });
+  }
+
   /* Pointers of every grid item of every page (drag sources when editable). */
   allTiles() {
     const out = [];
@@ -513,6 +528,10 @@ class NavMap {
       this.nodeDivs[n.id] = d;
       world.append(d);
     }
+    // RF19.3 (2.26): links that start from a tile are drawn ABOVE the screen
+    // previews, so the segment from the tile's anchor to the screen edge shows
+    this.svgTop = svgEl("svg", { class: "navmap-edges top" });
+    world.append(this.svgTop);
     this.links = el("div", { class: "navmap-links" });
     world.append(this.links);
     this.world = world;
@@ -543,6 +562,11 @@ class NavMap {
     svg.setAttribute("viewBox", `${box.x0} ${box.y0} ${box.x1 - box.x0} ${box.y1 - box.y0}`);
     svg.setAttribute("style", `left:${box.x0}px;top:${box.y0}px`);
     svg.querySelectorAll("path.navmap-edge").forEach((x) => x.remove());
+    const svgTop = this.svgTop;
+    if (svgTop) {
+      for (const k of ["width", "height", "viewBox", "style"]) svgTop.setAttribute(k, svg.getAttribute(k));
+      svgTop.replaceChildren();
+    }
     this.links.replaceChildren();
     this.edgeEls = [];
     const lanes = new Map();
@@ -561,7 +585,8 @@ class NavMap {
       if (!r) continue;
       const path = svgEl("path", { d: r.d, class: `navmap-edge k-${e.kind}${e.popup ? " popup" : ""}`,
         "marker-end": "url(#navmap-arrow)", "marker-start": e.kind === "swipe" ? "url(#navmap-arrow)" : null });
-      svg.append(path);
+      // RF19.3: from a measured tile anchor -> upper layer (over the preview)
+      (e.tile && this.tilePos[e.tile] && svgTop ? svgTop : svg).append(path);
       const badge = el("button", { class: `navmap-badge k-${e.kind}${e.popup ? " popup" : ""}`, style: `left:${r.bx}px;top:${r.by}px`,
         title: this.edgeTitle(e) },
       el("span", { text: MAP_KINDS[e.kind].icon + (e.popup ? "▣" : "") }), e.label ? el("small", { text: e.label }) : null);
@@ -705,6 +730,7 @@ class NavMap {
     // RF19.3: tile anchors need the drawn previews: measure, then redraw the links
     this.measureTiles();
     this.renderLinks();
+    this.remeasureLater(0);
     if (this.sel) this.highlight(this.sel);
     if (this.onPreviews) this.onPreviews(); // RF17 big preview pane
   }

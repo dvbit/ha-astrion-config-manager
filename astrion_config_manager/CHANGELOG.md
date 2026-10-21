@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.26.0 - 2026-10-21
+
+- Fix (RF19.3): tile links now visibly start from the ● anchor on the tile.
+  The segment from the tile to the screen edge was drawn under the screen
+  preview (it looked like the link started at the screen's top), and the
+  tiles could be measured before the map was laid out (no anchors until the
+  next redraw). Tile links are drawn above the previews and measuring is
+  retried until the map is laid out.
+
 ## 2.25.0 - 2026-10-21
 
 - RF19.1 (upstream 1.3.3-beta): the builder posts "astrion-saved" to the

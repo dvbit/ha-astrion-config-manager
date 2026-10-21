@@ -296,3 +296,5 @@ a.button.primary { background: var(--accent); border-color: var(--accent); color
 /* RF19.3: anchor on a grid tile inside a screen preview (link start) */
 .navmap-anchor.a-tile { width: 12px; height: 12px; margin: -6px 0 0 -6px; border-width: 2px; border-color: #00897b; background: transparent; z-index: 2; }
 .navmap-anchor.a-tile.linked { background: #00897b; box-shadow: 0 0 0 2px #fff; }
+/* RF19.3 (2.26): tile links drawn above the screen previews */
+.navmap-edges.top { z-index: 1; }
