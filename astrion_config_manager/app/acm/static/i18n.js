@@ -459,7 +459,10 @@ const I18N = {
   "ed_mode_sim_hint": "Simulate the remote: navigation only, no action is executed",
   "ed_mode_exec": "Simulate & run",
   "ed_mode_exec_hint": "Simulate the remote and really execute the actions (Home Assistant, Harmony Hub, IR)",
-  "map_splitter": "Drag to resize the map and the panel below (↑/↓ when focused)"
+  "map_splitter": "Drag to resize the map and the panel below (↑/↓ when focused)",
+  "map_anchor_tile": "Tile: its links start here · drag onto a screen's top anchor to link it · click to edit",
+  "nb_saved_msg": "Saved in the builder ({reason})",
+  "nb_drift_msg": "The remote's builder saved a change: check the drift banner"
  },
  "it": {
   "app_title": "Astrion Config Manager",
@@ -918,7 +921,10 @@ const I18N = {
   "ed_mode_sim_hint": "Simula il telecomando: solo navigazione, nessuna azione viene eseguita",
   "ed_mode_exec": "Simula ed esegui",
   "ed_mode_exec_hint": "Simula il telecomando ed esegue davvero le azioni (Home Assistant, Harmony Hub, IR)",
-  "map_splitter": "Trascina per ridimensionare la mappa e il pannello sotto (↑/↓ con il focus)"
+  "map_splitter": "Trascina per ridimensionare la mappa e il pannello sotto (↑/↓ con il focus)",
+  "map_anchor_tile": "Tile: i suoi collegamenti partono da qui · trascina sull'ancora superiore di uno schermo per collegarlo · clic per modificarlo",
+  "nb_saved_msg": "Salvato nel builder ({reason})",
+  "nb_drift_msg": "Il builder del telecomando ha salvato una modifica: controlla l'avviso di disallineamento"
  },
  "fr": {
   "app_title": "Astrion Config Manager",
@@ -1377,7 +1383,10 @@ const I18N = {
   "ed_mode_sim_hint": "Simuler la télécommande : navigation seule, aucune action n'est exécutée",
   "ed_mode_exec": "Simuler et exécuter",
   "ed_mode_exec_hint": "Simuler la télécommande et exécuter réellement les actions (Home Assistant, Harmony Hub, IR)",
-  "map_splitter": "Faites glisser pour redimensionner la carte et le panneau du dessous (↑/↓ avec le focus)"
+  "map_splitter": "Faites glisser pour redimensionner la carte et le panneau du dessous (↑/↓ avec le focus)",
+  "map_anchor_tile": "Tuile : ses liens partent d'ici · glissez sur l'ancre du haut d'un écran pour la lier · clic pour la modifier",
+  "nb_saved_msg": "Enregistré dans le builder ({reason})",
+  "nb_drift_msg": "Le builder de la télécommande a enregistré une modification : voir l'avertissement de dérive"
  },
  "es": {
   "app_title": "Astrion Config Manager",
@@ -1836,7 +1845,10 @@ const I18N = {
   "ed_mode_sim_hint": "Simular el mando: solo navegación, no se ejecuta ninguna acción",
   "ed_mode_exec": "Simular y ejecutar",
   "ed_mode_exec_hint": "Simular el mando y ejecutar realmente las acciones (Home Assistant, Harmony Hub, IR)",
-  "map_splitter": "Arrastra para redimensionar el mapa y el panel inferior (↑/↓ con el foco)"
+  "map_splitter": "Arrastra para redimensionar el mapa y el panel inferior (↑/↓ con el foco)",
+  "map_anchor_tile": "Tile: sus enlaces salen de aquí · arrastra al ancla superior de una pantalla para enlazarlo · clic para editarlo",
+  "nb_saved_msg": "Guardado en el builder ({reason})",
+  "nb_drift_msg": "El builder del mando guardó un cambio: revisa el aviso de desalineación"
  },
  "de": {
   "app_title": "Astrion Config Manager",
@@ -2295,7 +2307,10 @@ const I18N = {
   "ed_mode_sim_hint": "Fernbedienung simulieren: nur Navigation, keine Aktion wird ausgeführt",
   "ed_mode_exec": "Simulieren und ausführen",
   "ed_mode_exec_hint": "Fernbedienung simulieren und Aktionen wirklich ausführen (Home Assistant, Harmony Hub, IR)",
-  "map_splitter": "Ziehen, um Karte und unteres Feld anzupassen (↑/↓ mit Fokus)"
+  "map_splitter": "Ziehen, um Karte und unteres Feld anzupassen (↑/↓ mit Fokus)",
+  "map_anchor_tile": "Kachel: ihre Verbindungen beginnen hier · auf den oberen Anker eines Bildschirms ziehen zum Verknüpfen · Klick zum Bearbeiten",
+  "nb_saved_msg": "Im Builder gespeichert ({reason})",
+  "nb_drift_msg": "Der Builder der Fernbedienung hat gespeichert: Abweichungshinweis prüfen"
  }
 };
 

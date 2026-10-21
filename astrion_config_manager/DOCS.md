@@ -34,14 +34,14 @@ Open **Astrion** in the sidebar (admins only).
    live preview of the head; taps and HA100 keys are executed
    for real (HA, the remote's Harmony hubs, IR via its `remote.*` entity or extenders).
 
-6. **Navigation map** (above the Editor): every page as a live mini
+6. **Navigation map** (above the Editor; tile links start from a ● on the tile): every page as a live mini
    preview with the ways to reach it; click a card or a link to edit it. In the
    Editor the map is editable: drag ● anchors, key chips or tiles to create swipe
    order, hotkeys and tile jumps; press and hold a link to remove it. Screens can
    be dragged (layout saved per remote); switches hide keys and links.
    **Open in builder ↗** opens the remote's own builder in a new tab; the remote
    option *Edit with the remote's builder* makes the add-on a read-only backup
-   that imports the builder's saves when you come back. A large preview of the
+   that imports the builder's saves right away (app 1.3.3-beta) or when you come back. A large preview of the
    selected screen sits on the left of the Editor.
    **Themes** tab: shared theme library (presets, save/load in the Editor, export,
    import, apply to several remotes).

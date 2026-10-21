@@ -1,9 +1,9 @@
-# Requirement — Astrion Config Manager (HA add-on) v1.17
+# Requirement — Astrion Config Manager (HA add-on) v1.18
 
 > English translation of [SPEC.md](SPEC.md). The Italian document is the
 > reference; in case of discrepancy the Italian text prevails.
 
-Status: approved by the requester. v1.3: added RF6.12 (navigation-only mode). v1.4: added RF7 (icons and entity catalog). v1.5: added RF8 (multiple Harmony hubs and IR targets). v1.6: added RF3.5 (dropdowns and palettes). v1.7: added RF3.6 (structured lists) and RF9 (upstream 1.2.0, direct Apple TV). v1.8: RF9.6–RF9.7 (upstream 1.2.1-beta and 1.2.0 recheck). v1.9: RF10 (upstream 1.2.2–1.2.7-beta). v1.10: RF11 (upstream 1.2.8–1.2.9-beta, push/pull on the main screen). v1.11: RF12 (upstream 1.3.0, integration with the remote's version history). v1.12: RF13 (navigation map) and RF14 (theme library). v1.13: RF15 (editable navigation map). v1.14: RF16 (upstream 1.3.1–1.3.2-beta, map layout and switches, the remote's builder). v1.15: RF17 (large preview pane, builder opened by a link). v1.16: RF15.3 one key row with two anchors. v1.17: RF18 (Editor and Simulator merged). Supersedes v1.0: Harmony and IR are now in scope; named versions added (RF2.11–RF2.13). Original document language: Italian.
+Status: approved by the requester. v1.3: added RF6.12 (navigation-only mode). v1.4: added RF7 (icons and entity catalog). v1.5: added RF8 (multiple Harmony hubs and IR targets). v1.6: added RF3.5 (dropdowns and palettes). v1.7: added RF3.6 (structured lists) and RF9 (upstream 1.2.0, direct Apple TV). v1.8: RF9.6–RF9.7 (upstream 1.2.1-beta and 1.2.0 recheck). v1.9: RF10 (upstream 1.2.2–1.2.7-beta). v1.10: RF11 (upstream 1.2.8–1.2.9-beta, push/pull on the main screen). v1.11: RF12 (upstream 1.3.0, integration with the remote's version history). v1.12: RF13 (navigation map) and RF14 (theme library). v1.13: RF15 (editable navigation map). v1.14: RF16 (upstream 1.3.1–1.3.2-beta, map layout and switches, the remote's builder). v1.15: RF17 (large preview pane, builder opened by a link). v1.16: RF15.3 one key row with two anchors. v1.17: RF18 (Editor and Simulator merged). v1.18: RF19 (upstream 1.3.3-beta, tile anchors). Supersedes v1.0: Harmony and IR are now in scope; named versions added (RF2.11–RF2.13). Original document language: Italian.
 
 ## 1. Purpose
 
@@ -15,7 +15,7 @@ Home Assistant add-on with an Ingress panel that manages the configurations (`da
 
 ## 3. References
 
-- Reference schema: `dashboard.json` as defined by the most recent release of the repo at development time (last observed: 1.3.0 stable, 1.3.2-beta). Card and action behaviour: Kotlin sources (`cards/impl/`, `config/DashboardLoader.kt`) and web editor (`docs/index.html`, `cards.js`).
+- Reference schema: `dashboard.json` as defined by the most recent release of the repo at development time (last observed: 1.3.0 stable, 1.3.3-beta). Card and action behaviour: Kotlin sources (`cards/impl/`, `config/DashboardLoader.kt`) and web editor (`docs/index.html`, `cards.js`).
 - Remote: the device exposes no API. The add-on issues the same HTTP requests as the browser on the configuration page `http://<host>:<port>` (download and upload of `dashboard.json`), derived from the repo's `web/` sources. Editing happens only in the add-on's web interface.
 - Home Assistant: WebSocket API via the add-on's Supervisor token; no token entered by the user.
 - Harmony Hub: the Hub's local protocol as used by the app's Harmony client (Kotlin sources of the repo).
@@ -229,6 +229,14 @@ Starting requirement: "merge the Simulator and Editor screens; add Simulate and 
 - RF18.2 Modify = editor with the big preview (RF17). Simulate = simulator in navigation only (RF6.12: actions listed, not executed). Simulate & run = real execution (HA, Harmony, IR). One simulation session: switching between Simulate and Simulate & run keeps page, popups and states. The "Navigation only" switch is replaced by the selector; Docked, Reset device states, live state, hardware keys, device states, ◀ ▲ ▶ navigation stay.
 - RF18.3 In the remote's-builder mode (RF16.4) the editor is read-only but simulation stays available.
 - RF18.4 While simulating, a click on a screen of the map moves the simulator to that page and the map highlights the current page; the map is not editable. In Modify a click selects in the editor.
+
+### RF19 — Upstream 1.3.3-beta, tile anchors
+
+Starting requirement: "the new beta posts astrion-saved to window.opener after each save: adapt the add-on to use it. Move the navigation arcs of UI elements onto new anchors overlaid on the elements themselves".
+
+- RF19.1 After each **Save to device** or history restore the builder (1.3.3-beta) posts `{type: "astrion-saved", versionId, reason: "save"|"restore"}` to the page that opened it. The add-on accepts it only from the open remote's builder origin (`http://<ip>:<port>`). In "Edit with the remote's builder" mode (RF16.4) it imports right away (same flow as **Done**: history note, conflicts asked, never merged; one import at a time); outside that mode it re-checks drift and shows the banner, never an automatic import. Tab return and **Done** stay as fallbacks (e.g. builder opened by hand).
+- RF19.2 The rest of 1.3.3-beta is already covered: **IR command** action on hardware keys (`irDevice` + `irCommand`: editor, validation, simulator, ⚡ on the map); `versionId` from `POST /history/restore` is not used by the add-on; no new card field (schema regenerated).
+- RF19.3 Map: tap, long-press and Activity links of tiles/buttons (`button_grid`, `scene_grid`, also inside `row`) start from a ● anchor overlaid on the tile in the preview (filled = linked), go up out of the screen and reach the target's top anchor; tile not visible in the preview → from the screen's bottom edge. When editing, anchors appear on every tile and drag like the tile (RF15.4); click = opens the tile in the editor. Anchors follow the screen when it is moved.
 
 ## 6. Non-functional requirements
 

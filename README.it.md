@@ -20,7 +20,7 @@ push/pull con rilevamento della deriva, simulatore live.
 3. Installa **Astrion Config Manager**, avvialo e apri **Astrion** nella barra laterale.
 
 Su ogni telecomando abilita il **config server** dell'app (porta 8080, pagina impostazioni).
-Schema seguito: release upstream **1.3.0** e beta **1.3.2-beta** ( campi delle card rigenerati con `tools/extract_card_schema.py`). Le chiavi aggiunte dalle beta sono ignorate dalle app più vecchie.
+Schema seguito: release upstream **1.3.0** e beta **1.3.3-beta** ( campi delle card rigenerati con `tools/extract_card_schema.py`). Le chiavi aggiunte dalle beta sono ignorate dalle app più vecchie.
 
 ## Funzioni
 
@@ -238,7 +238,9 @@ la mappa; trascina il bordo tra la mappa e il pannello sotto (la maniglia ▬) p
   ⚡ indica un tasto assegnato a un'azione che non apre pagine (es. un servizio): non ha collegamento;
 - trascina l'**ancora destra (globale) ◨** del tasto **Play / Pausa** sul ● inferiore di *TV* → scegli
   *Lunga* + *Popup* → `{"key": "PLAY", "page": "TV", "pageMode": "popup"}` in `longHotkeys`;
-- trascina la tile *Film* di una scene grid sul ● superiore di *Cinema* → scegli *Tocco* →
+- i collegamenti di tocco, pressione lunga e Activity di una tile partono dal ● sulla tile stessa
+  nell'anteprima (dal bordo inferiore dello schermo se la tile non è visibile);
+- trascina la tile *Film* (o il suo ●) di una scene grid sul ● superiore di *Cinema* → scegli *Tocco* →
   la tile riceve `"page": "Cinema"`;
 - **＋ Nuova pagina** / **🗑 Elimina pagina** nella barra della mappa aggiungono una pagina vuota o eliminano quella selezionata;
 - tieni premuta l'icona di un collegamento → conferma → il collegamento è rimosso;
@@ -278,6 +280,10 @@ builder** chiede prima di inviare o scartare le modifiche non ancora inviate;
 salva nel builder, torna su questa scheda (o premi **Fatto**) e la modifica è
 importata come versione con la nota scritta nel builder. Modifiche su entrambi i
 lati? Scegli tu quale tenere: mai unite.
+Con l'app **1.3.3-beta** non serve nemmeno tornare: il builder avvisa l'add-on dopo
+ogni **Salva sul dispositivo** (o ripristino dalla cronologia) e la modifica è
+importata subito. Fuori da questa modalità lo stesso avviso aggiorna solo il
+banner di disallineamento (nulla viene importato da solo).
 
 ### 15. Meteo integrato (app 1.3.2-beta)
 

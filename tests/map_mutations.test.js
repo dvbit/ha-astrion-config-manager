@@ -35,6 +35,8 @@ assert(g.edges.some((e) => e.from === "kp:MAIN" && e.to === "p2" && e.kind === "
 assert(g.edges.some((e) => e.from === "kg:BACK" && e.to === "p0"));
 g = M.buildNavGraph(doc, hw);
 assert(g.edges.some((e) => e.from === "p0" && e.kind === "key") && g.edges.some((e) => e.from === "any"));
+// RF19.3: links created by grid tiles carry the tile pointer (anchor on the tile)
+assert(M.buildNavGraph(doc, hw).edges.filter((e) => e.kind === "tap" || e.kind === "long").every((e) => e.tile && e.path.startsWith(e.tile)));
 // 2.19.1: "Global keys" OFF in the map hides global hotkeys (never back on the "any" box)
 g = M.buildNavGraph(doc, hw, { chips: true, keysPage: 0, chipsGlobal: false });
 assert(g.edges.some((e) => e.from === "kp:MAIN") && !g.edges.some((e) => e.from === "any" || e.from.startsWith("kg:")));

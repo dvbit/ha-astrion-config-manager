@@ -1,5 +1,18 @@
 # Changelog
 
+## 2.25.0 - 2026-10-21
+
+- RF19.1 (upstream 1.3.3-beta): the builder posts "astrion-saved" to the
+  add-on after each Save to device / history restore. In "Edit with the
+  remote's builder" mode the change is imported right away; otherwise the
+  drift banner is refreshed (never an automatic import). Messages accepted only
+  from the open remote's builder origin; one import at a time.
+- RF19.2: reference schema 1.3.3-beta (IR command on hardware keys already
+  supported; no new card fields).
+- RF19.3 Map: tap / long-press / Activity links of grid tiles start from a ●
+  anchor on the tile in the screen preview (bottom edge when the tile is not
+  visible); anchors can be dragged to create links and clicked to edit.
+
 ## 2.24.0 - 2026-10-19
 
 - RF13.1: the map and the lower pane (Editor / simulator) are resized by

@@ -20,7 +20,7 @@ against your HA entities, push/pull with drift detection, live simulator.
 3. Install **Astrion Config Manager**, start it, open **Astrion** in the sidebar.
 
 On each remote, enable the app's **config server** (port 8080, settings page).
-Schema followed: upstream release **1.3.0** and beta **1.3.2-beta** (card fields regenerated with `tools/extract_card_schema.py`; card fields regenerated with `tools/extract_card_schema.py`). Keys added by the betas are ignored by older apps.
+Schema followed: upstream release **1.3.0** and beta **1.3.3-beta** (card fields regenerated with `tools/extract_card_schema.py`; card fields regenerated with `tools/extract_card_schema.py`). Keys added by the betas are ignored by older apps.
 
 ## Features
 
@@ -232,7 +232,9 @@ map; drag the border between the map and the panel below (the ▬ grip) to resiz
   ⚡ marks a key bound to an action that opens no page (e.g. a service): it has no link;
 - drag the **right (global) ◨ anchor** of the **Play / Pause** key onto *TV*'s bottom ● → choose
   *Long* + *Popup* → `{"key": "PLAY", "page": "TV", "pageMode": "popup"}` in `longHotkeys`;
-- drag the *Movie* tile of a scene grid onto *Cinema*'s top ● → choose *Tap* →
+- tap, long-press and Activity links of a tile start from the ● on the tile itself in the
+  screen preview (from the screen's bottom edge when the tile is scrolled out of view);
+- drag the *Movie* tile (or its ●) of a scene grid onto *Cinema*'s top ● → choose *Tap* →
   the tile gets `"page": "Cinema"`;
 - **＋ New page** / **🗑 Delete page** on the map bar add an empty page or delete the selected one;
 - press and hold a connection's icon → confirm → the link is removed;
@@ -271,6 +273,10 @@ becomes the read-only backup. **Edit in builder** first asks to push or discard
 add-on changes not yet sent; save in the builder, come back to this tab (or
 press **Done**) and the change is imported as a version with the note you typed
 in the builder. Changes on both sides? You choose which to keep — never merged.
+With app **1.3.3-beta** you don't even need to come back: the builder tells the
+add-on after every **Save to device** (or history restore) and the change is
+imported right away. Outside this mode the same message only refreshes the drift
+banner (nothing is imported on its own).
 
 ### 15. Built-in weather (app 1.3.2-beta)
 

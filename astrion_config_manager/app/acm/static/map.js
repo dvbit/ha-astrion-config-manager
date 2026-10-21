@@ -17,6 +17,8 @@
  *           creates a connection (via Editor.reveal); Simulator -> jump there.
  * - RF13.6  redrawn on every new version, keeping the current zoom.
  *
+ * - RF19.3  tile links start from a ● anchor on the tile in the preview
+ *           (screen bottom edge when the tile is scrolled out); draggable.
  * - RF15    editable map (Editor tab, Modify mode only - RF18): side anchors = swipe order (drag
  *           A.right -> B.left moves B after A), top anchor = UI jumps (drag a
  *           grid tile onto it), bottom anchor = hotkeys (drag a key chip onto
@@ -145,13 +147,14 @@ function buildNavGraph(doc, hwLabel, opts) {
         const label = it.name || "";
         // SceneGridCard: "activity" wins over "page" (the Activity's own page is shown)
         const act = listKey === "scenes" && it.activity && acts.find((a) => a.id === it.activity);
-        if (act && act.page) add(from, act.page, "activity", { label, path: ip });
-        else if (it.page) add(from, it.page, "tap", { popup: popupOf(it.pageMode), label, path: ip });
+        // RF19.3: "tile" = pointer of the grid item the link starts from (map anchor on it)
+        if (act && act.page) add(from, act.page, "activity", { label, path: ip, tile: ip });
+        else if (it.page) add(from, it.page, "tap", { popup: popupOf(it.pageMode), label, path: ip, tile: ip });
         const lp = it.long_press;
         if (lp && typeof lp === "object") {
           const lact = lp.activity && acts.find((a) => a.id === lp.activity);
-          if (lact && lact.page) add(from, lact.page, "activity", { label: `✋ ${label}`, path: `${ip}/long_press` });
-          else if (lp.page) add(from, lp.page, "long", { popup: popupOf(lp.pageMode), label, path: `${ip}/long_press` });
+          if (lact && lact.page) add(from, lact.page, "activity", { label: `✋ ${label}`, path: `${ip}/long_press`, tile: ip });
+          else if (lp.page) add(from, lp.page, "long", { popup: popupOf(lp.pageMode), label, path: `${ip}/long_press`, tile: ip });
         }
       });
     });
@@ -350,6 +353,77 @@ class NavMap {
     });
     return pos;
   }
+  /* RF19.3: a link created by a grid tile starts from the tile's anchor in the
+   * preview: straight up out of the screen, then the usual arc to the target's
+   * top. Tile not visible in the preview (scrolled out) -> from the screen's
+   * bottom edge, arcing under the row. */
+  tileRoute(e, a, b, lane) {
+    const t0 = this.tilePos && this.tilePos[e.tile];
+    const cx = (n) => n.x + n.w / 2;
+    const ex = cx(b) + lane * 10, ey = b.y;
+    if (!t0) { // fallback: bottom edge of the screen
+      const sx = cx(a) + 26 + lane * 12, sy = a.y + a.h;
+      const peak = Math.max(sy, b.y + b.h) + this.arcHeight(a, b) * 0.6 + 40 + lane * 18;
+      const ey2 = /^p\d+$/.test(e.to) ? b.y + b.h : b.y;
+      return { d: `M${sx},${sy} C${sx},${peak} ${ex},${peak} ${ex},${ey2}`, bx: (sx + ex) / 2, by: peak - 10 };
+    }
+    const sx = t0.x + t0.w / 2, sy = t0.y + t0.h / 2;
+    const top = Math.min(a.y, ey);
+    const hgt = (e.from === e.to ? 70 : this.arcHeight(a, b)) + lane * 22;
+    const peak = top - hgt;
+    const ex2 = e.from === e.to ? a.x + a.w - 14 : ex;
+    const d = `M${sx},${sy} L${sx},${a.y} C${sx},${peak} ${ex2},${peak} ${ex2},${ey}`;
+    return { d, bx: (sx + ex2) / 2, by: peak + hgt * 0.25 };
+  }
+
+  /* RF19.3: where each linked grid tile sits inside its screen preview, as an
+   * offset from the screen node (kept across screen drags). Measured after the
+   * previews are drawn; tiles outside the visible preview are left out. */
+  measureTiles() {
+    this.tileOff = {};
+    if (!this.nodeEls || !this.open) return;
+    const tiles = new Set(this.graph.edges.filter((e) => e.tile).map((e) => e.tile));
+    if (this.editable()) this.allTiles().forEach((x) => tiles.add(x));
+    for (const path of tiles) {
+      const m = path.match(/^\/pages\/(\d+)\/cards\//);
+      const ne = m && this.nodeEls[m[1]];
+      const elx = ne && this.tileEl(ne.d, path);
+      if (!elx) continue;
+      const nr = ne.d.getBoundingClientRect(), sr = ne.screen.getBoundingClientRect(), r = elx.getBoundingClientRect();
+      const k = nr.width / MAP_NODE_W; // current zoom
+      if (!k || !r.width) continue;
+      // visible part of the preview only (overflowing content is clipped)
+      if (r.top < sr.top - 1 || r.bottom > sr.bottom + 1) continue;
+      this.tileOff[path] = { p: +m[1], dx: (r.left - nr.left) / k, dy: (r.top - nr.top) / k, w: r.width / k, h: r.height / k };
+    }
+    console.debug(`[acm] map: ${Object.keys(this.tileOff).length}/${tiles.size} tile anchors measured`);
+  }
+  /* Pointers of every grid item of every page (drag sources when editable). */
+  allTiles() {
+    const out = [];
+    const walk = (cards, base) => (cards || []).forEach((c, ci) => {
+      const o = (c && c.options) || {};
+      if (c && c.type === "row") walk(o.cards, `${base}/${ci}/options/cards`);
+      const lk = { button_grid: "buttons", scene_grid: "scenes" }[c && c.type];
+      if (lk) (o[lk] || []).forEach((it, k) => { if (it && typeof it === "object") out.push(`${base}/${ci}/options/${lk}/${k}`); });
+    });
+    (this.doc.pages || []).forEach((p, i) => walk(p && p.cards, `/pages/${i}/cards`));
+    return out;
+  }
+  /* DOM element of a grid item in a screen preview (same structure tileAt walks). */
+  tileEl(node, path) {
+    const page = node.querySelector(".sim-page");
+    const parts = path.split("/").slice(4); // after /pages/<p>/cards
+    let elx = page && page.children[+parts[0]];
+    for (let i = 1; elx && i < parts.length; i += 2) {
+      if (parts[i] !== "options") return null;
+      const idx = +parts[i + 2];
+      elx = elx.children[idx];
+      i += 1;
+    }
+    return elx || null;
+  }
+
   arcHeight(a, b) { return a && b ? 50 + 0.28 * Math.abs((a.x + a.w / 2) - (b.x + b.w / 2)) : 0; }
 
   /* Route of one edge: curve + badge position. Works for any node position
@@ -359,6 +433,7 @@ class NavMap {
     const a = pos[e.from], b = pos[e.to];
     if (!a || !b) return null;
     const cx = (n) => n.x + n.w / 2;
+    if (e.tile) { const r = this.tileRoute(e, a, b, lane); if (r) return r; }
     const isPage = (id) => /^p\d+$/.test(id);
     if (e.kind === "swipe") {
       const y1 = a.y + a.h / 2 + lane * 18, y2 = b.y + b.h / 2 + lane * 18;
@@ -471,6 +546,12 @@ class NavMap {
     this.links.replaceChildren();
     this.edgeEls = [];
     const lanes = new Map();
+    // RF19.3: tile positions follow their screen (also while it is dragged)
+    this.tilePos = {};
+    for (const [path, o] of Object.entries(this.tileOff || {})) {
+      const sp = pos["p" + o.p];
+      if (sp) this.tilePos[path] = { x: sp.x + o.dx, y: sp.y + o.dy, w: o.w, h: o.h };
+    }
     const visible = (e) => show.edges && show.kinds[e.kind] !== false;
     for (const e of graph.edges.filter(visible)) {
       const key = [e.from, e.to].sort().join("|") + (e.kind === "back" ? "b" : "");
@@ -499,6 +580,16 @@ class NavMap {
       for (const ev of ["pointerup", "pointerleave", "pointercancel"]) badge.addEventListener(ev, () => clearTimeout(this.holdTimer));
       this.links.append(badge);
       this.edgeEls.push({ e, path, badge });
+    }
+    // RF19.3 tile anchors: on linked tiles always (filled), on the other tiles
+    // only when editable (hollow); dragging one starts a tile link (RF15.4)
+    const linked = new Set(graph.edges.filter(visible).map((e) => e.tile).filter(Boolean));
+    for (const [path, tp] of Object.entries(this.tilePos)) {
+      if (!linked.has(path) && !this.editable()) continue;
+      const a = el("div", { class: `navmap-anchor a-tile${linked.has(path) ? " linked" : ""}`, "data-tile": path,
+        style: `left:${tp.x + tp.w / 2}px;top:${tp.y + tp.h / 2}px`, title: t("map_anchor_tile") });
+      a.addEventListener("click", (ev) => { ev.stopPropagation(); if (!this.moved) this.onSelect({ kind: "path", path }); });
+      this.links.append(a);
     }
     // RF15.1 anchors: left/right = swipe order, top = UI jumps, bottom = hotkeys
     if (this.editable()) {
@@ -611,6 +702,9 @@ class NavMap {
       try { s.append(sim.renderPage(page, +p, false)); } catch (e) { s.append(el("p", { text: e.message })); }
       screen.replaceChildren(s);
     }
+    // RF19.3: tile anchors need the drawn previews: measure, then redraw the links
+    this.measureTiles();
+    this.renderLinks();
     if (this.sel) this.highlight(this.sel);
     if (this.onPreviews) this.onPreviews(); // RF17 big preview pane
   }
@@ -823,6 +917,11 @@ class NavMap {
     const a = e.target.closest && e.target.closest(".navmap-anchor");
     if (a && (a.dataset.side === "left" || a.dataset.side === "right")) return { kind: "side", p: +a.dataset.p, side: a.dataset.side, el: a };
     if (a && a.dataset.key) return { kind: "key", scope: a.dataset.scope, key: a.dataset.key, el: a };
+    if (a && a.dataset.tile) { // RF19.3: same as dragging the tile itself
+      const item = mapAt(this.doc, a.dataset.tile);
+      const k = +a.dataset.tile.split("/").pop();
+      return { kind: "tile", path: a.dataset.tile, name: (item && item.name) || `#${k + 1}`, el: a, scene: a.dataset.tile.includes("/scenes/") };
+    }
     const node = e.target.closest && e.target.closest(".navmap-node");
     if (node) {
       const tile = this.tileAt(node, +node.dataset.p, e.clientX, e.clientY);

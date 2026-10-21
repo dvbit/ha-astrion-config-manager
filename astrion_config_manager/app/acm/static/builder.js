@@ -14,6 +14,12 @@
  *          again, or Done): pull; changes imported as a new version with the
  *          remote's history note; both sides changed -> the user chooses,
  *          never merged.
+ * - RF19.1 upstream 1.3.3-beta: after each "Save to device" / history restore
+ *          the builder posts {type: "astrion-saved", versionId, reason} to
+ *          window.opener (this page, opened with rel="opener"). Accepted only
+ *          from the open remote's builder origin. Builder mode -> import now;
+ *          otherwise -> drift re-check + banner, never an automatic import.
+ *          Tab return / Done stay as fallbacks.
  */
 "use strict";
 
@@ -103,8 +109,15 @@ async function refreshNativeUnsynced() {
 }
 
 /* Back from the builder: the tab is visible again, or "Done" was pressed. */
-async function nativeReturn(manual) {
+async function nativeReturn(manual, saved) {
   if (S.view !== "remote" || (!manual && (!NB.open || NB.open.rid !== S.rid))) return;
+  // one import at a time (message + tab return can arrive together)
+  if (NB.busy) { NB.again = true; return; }
+  NB.busy = true;
+  try { await nativeReturnOnce(manual, saved); } finally { NB.busy = false; }
+  if (NB.again) { NB.again = false; await nativeReturn(false); }
+}
+async function nativeReturnOnce(manual, saved) {
   const res = await api("POST", `api/remotes/${S.rid}/native/return`, { head: S.remote.head });
   if (res.status === "unchanged") {
     if (manual) toast(t("nb_no_changes"));
@@ -112,7 +125,8 @@ async function nativeReturn(manual) {
     S.drift[S.rid] = "in_sync";
     applyResult(res);
     const o = res.version && res.version.origin;
-    toast(res.version ? `${t("nb_imported", { v: res.version.id })}${o && o.note ? ` — ${o.note}` : ""}` : t("nb_no_changes"));
+    const why = saved ? ` · ${t("nb_saved_msg", { reason: saved.reason || "save" })}` : "";
+    toast(res.version ? `${t("nb_imported", { v: res.version.id })}${o && o.note ? ` — ${o.note}` : ""}${why}` : t("nb_no_changes"));
   } else if (res.status === "conflict") {
     const choice = await nbChoice(t("nb_conflict_title"), t("nb_conflict_text"),
       [["remote", t("nb_keep_remote")], ["addon", t("nb_keep_addon")]]);
@@ -121,14 +135,36 @@ async function nativeReturn(manual) {
   }
   if (manual) NB.open = null;
 }
+/* RF19.1 "astrion-saved" from the builder tab opened by this page. */
+function driftRecheck(rid) {
+  return api("GET", `api/remotes/${rid}/drift`).then((d) => {
+    S.drift[rid] = d.status; S.driftChanges[rid] = d.changes; S.ignored.delete(rid); render();
+    return d.status;
+  });
+}
+window.addEventListener("message", (e) => {
+  const d = e.data;
+  if (!d || typeof d !== "object" || d.type !== "astrion-saved") return;
+  if (S.view !== "remote" || !S.remote) return;
+  let origin = null;
+  try { origin = new URL(builderBase(S.remote)).origin; } catch (err) { origin = null; }
+  if (e.origin !== origin) { console.warn(`[acm] astrion-saved ignored: origin ${e.origin} is not ${origin}`); return; }
+  const saved = { versionId: typeof d.versionId === "string" ? d.versionId : null, reason: d.reason === "restore" ? "restore" : "save" };
+  console.info(`[acm] builder saved (${saved.reason}, version ${saved.versionId || "?"}) for '${S.remote.name}'`);
+  if (S.remote.native_builder) {
+    NB.open = NB.open && NB.open.rid === S.rid ? NB.open : { rid: S.rid };
+    nativeReturn(false, saved).catch(handleError);
+  } else {
+    NB.check = null; // already re-checked here
+    driftRecheck(S.rid).then((st) => { if (st === "drift") toast(t("nb_drift_msg")); }).catch((err) => console.error("[acm] drift re-check failed", err));
+  }
+});
 document.addEventListener("visibilitychange", () => {
   if (document.visibilityState !== "visible") return;
   if (NB.open) nativeReturn(false).catch(handleError);
   else if (NB.check && NB.check === S.rid && S.view === "remote") {
     NB.check = null;
-    api("GET", `api/remotes/${S.rid}/drift`).then((d) => {
-      S.drift[S.rid] = d.status; S.driftChanges[S.rid] = d.changes; S.ignored.delete(S.rid); render();
-    }).catch(() => {});
+    driftRecheck(S.rid).catch(() => {});
   }
 });
 

@@ -1,6 +1,6 @@
-# Requisito — Astrion Config Manager (add-on HA) v1.17
+# Requisito — Astrion Config Manager (add-on HA) v1.18
 
-Stato: approvato dal richiedente. v1.3: aggiunto RF6.12 (modalità solo navigazione). v1.4: aggiunto RF7 (icone e catalogo entità). v1.5: aggiunto RF8 (più hub Harmony e destinazioni IR). v1.6: aggiunto RF3.5 (menu e tavolozze). v1.7: aggiunti RF3.6 (liste strutturate) e RF9 (allineamento a upstream 1.2.0, Apple TV diretto). v1.8: RF9.6–RF9.7 (upstream 1.2.1-beta e ricontrollo 1.2.0). v1.9: RF10 (upstream 1.2.2–1.2.7-beta). v1.10: RF11 (upstream 1.2.8–1.2.9-beta, push/pull nella schermata principale). v1.11: RF12 (upstream 1.3.0, integrazione con la cronologia versioni del telecomando). v1.12: RF13 (mappa di navigazione) e RF14 (libreria temi). v1.13: RF15 (mappa di navigazione modificabile). v1.14: RF16 (upstream 1.3.1–1.3.2-beta, disposizione e interruttori della mappa, builder del telecomando). v1.15: RF17 (pannello anteprima grande, builder aperto da un link). v1.16: RF15.3 una riga di tasti con due ancore. v1.17: RF18 (Editor e Simulatore uniti). Sostituisce la v1.0: Harmony e IR rientrano nell'ambito; aggiunte le versioni con nome (RF2.11–RF2.13). Lingua del documento: italiano. Traduzione inglese: [SPEC.en.md](SPEC.en.md).
+Stato: approvato dal richiedente. v1.3: aggiunto RF6.12 (modalità solo navigazione). v1.4: aggiunto RF7 (icone e catalogo entità). v1.5: aggiunto RF8 (più hub Harmony e destinazioni IR). v1.6: aggiunto RF3.5 (menu e tavolozze). v1.7: aggiunti RF3.6 (liste strutturate) e RF9 (allineamento a upstream 1.2.0, Apple TV diretto). v1.8: RF9.6–RF9.7 (upstream 1.2.1-beta e ricontrollo 1.2.0). v1.9: RF10 (upstream 1.2.2–1.2.7-beta). v1.10: RF11 (upstream 1.2.8–1.2.9-beta, push/pull nella schermata principale). v1.11: RF12 (upstream 1.3.0, integrazione con la cronologia versioni del telecomando). v1.12: RF13 (mappa di navigazione) e RF14 (libreria temi). v1.13: RF15 (mappa di navigazione modificabile). v1.14: RF16 (upstream 1.3.1–1.3.2-beta, disposizione e interruttori della mappa, builder del telecomando). v1.15: RF17 (pannello anteprima grande, builder aperto da un link). v1.16: RF15.3 una riga di tasti con due ancore. v1.17: RF18 (Editor e Simulatore uniti). v1.18: RF19 (upstream 1.3.3-beta, ancore sui tile). Sostituisce la v1.0: Harmony e IR rientrano nell'ambito; aggiunte le versioni con nome (RF2.11–RF2.13). Lingua del documento: italiano. Traduzione inglese: [SPEC.en.md](SPEC.en.md).
 
 ## 1. Scopo
 
@@ -12,7 +12,7 @@ Add-on di Home Assistant con pannello Ingress che gestisce le configurazioni (`d
 
 ## 3. Riferimenti
 
-- Schema di riferimento: `dashboard.json` secondo la release più recente del repo al momento dello sviluppo (ultima osservata: 1.3.0 stabile, 1.3.2-beta). Comportamento di card e azioni: sorgenti Kotlin (`cards/impl/`, `config/DashboardLoader.kt`) e editor web (`docs/index.html`, `cards.js`).
+- Schema di riferimento: `dashboard.json` secondo la release più recente del repo al momento dello sviluppo (ultima osservata: 1.3.0 stabile, 1.3.3-beta). Comportamento di card e azioni: sorgenti Kotlin (`cards/impl/`, `config/DashboardLoader.kt`) e editor web (`docs/index.html`, `cards.js`).
 - Telecomando: il dispositivo non espone un'API. L'add-on esegue le stesse richieste HTTP del browser sulla pagina di configurazione `http://<host>:<porta>` (download e upload di `dashboard.json`), ricavate dai sorgenti `web/` del repo. L'editing avviene solo nell'interfaccia web dell'add-on.
 - Home Assistant: API WebSocket tramite token Supervisor dell'add-on; nessun token inserito dall'utente.
 - Hub Harmony: protocollo locale dell'Hub usato dal client Harmony dell'app (sorgenti Kotlin del repo).
@@ -226,6 +226,14 @@ Requisito di partenza: "unire le schermate Simulatore ed Editor; aggiungere Simu
 - RF18.2 Modifica = editor con anteprima grande (RF17). Simula = simulatore in sola navigazione (RF6.12: azioni elencate, non eseguite). Simula ed esegui = esecuzione reale (HA, Harmony, IR). Una sola sessione di simulazione: passando da Simula a Simula ed esegui pagina, popup e stati restano. Lo switch «Solo navigazione» è sostituito dal selettore; restano Sulla base, Azzera stati dispositivi, stato live, tasti fisici, stati dispositivi, navigazione ◀ ▲ ▶.
 - RF18.3 In modalità builder del telecomando (RF16.4) l'editor è in sola lettura ma la simulazione resta disponibile.
 - RF18.4 In simulazione il clic su uno schermo della mappa porta il simulatore su quella pagina e la mappa evidenzia la pagina corrente; la mappa non è modificabile. In Modifica il clic seleziona nell'editor.
+
+### RF19 — Upstream 1.3.3-beta, ancore sui tile
+
+Requisito di partenza: "la nuova beta invia astrion-saved al window.opener dopo ogni salvataggio: adegua l'add-on per usarlo. Sposta gli archi di navigazione associati a elementi UI su nuove ancore sovrapposte agli elementi stessi".
+
+- RF19.1 Dopo ogni **Salva sul dispositivo** o ripristino dalla cronologia, il builder (1.3.3-beta) invia alla pagina che l'ha aperto `{type: "astrion-saved", versionId, reason: "save"|"restore"}`. L'add-on accetta il messaggio solo dall'origine del builder del telecomando aperto (`http://<ip>:<porta>`). In modalità "Modifica con il builder" (RF16.4) importa subito (stesso flusso di "Fatto": nota della cronologia, conflitti chiesti, mai uniti; un import alla volta); fuori modalità ricontrolla il disallineamento e mostra l'avviso, mai un import automatico. Ritorno sulla scheda e **Fatto** restano come ripiego (es. builder aperto a mano).
+- RF19.2 Il resto della 1.3.3-beta è già coperto: azione **Comando IR** sui tasti fisici (`irDevice` + `irCommand`, editor, validazione, simulatore, ⚡ sulla mappa); `versionId` di `POST /history/restore` non usato dall'add-on; nessun campo card nuovo (schema rigenerato).
+- RF19.3 Mappa: i collegamenti di tocco, pressione lunga e Activity di tile/pulsanti (`button_grid`, `scene_grid`, anche dentro `row`) partono da un'ancora ● sovrapposta al tile nell'anteprima (piena = collegato), salgono fuori dallo schermo e arrivano all'ancora superiore della destinazione; tile non visibile nell'anteprima → dal bordo inferiore dello schermo. In modifica le ancore compaiono su tutti i tile e si trascinano come il tile (RF15.4); clic = apre il tile nell'editor. Le ancore seguono lo schermo quando viene spostato.
 
 ## 6. Requisiti non funzionali
 
