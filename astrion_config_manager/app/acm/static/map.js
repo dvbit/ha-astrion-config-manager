@@ -17,6 +17,8 @@
  *           creates a connection (via Editor.reveal); Simulator -> jump there.
  * - RF13.6  redrawn on every new version, keeping the current zoom.
  *
+ * - RF20    hierarchy view: arrange-by-hierarchy layout, sibling bands, ①②③
+ *           swipe order + dotted chain, popup-only pages at popup size.
  * - RF19.3  tile links start from a ● anchor on the tile in the preview
  *           (screen bottom edge when the tile is scrolled out); draggable.
  * - RF15    editable map (Editor tab, Modify mode only - RF18): side anchors = swipe order (drag
@@ -45,6 +47,7 @@ const MAP_KINDS = {
   broken: { icon: "⚠" },        // target page not found
 };
 const MAP_NODE_W = 220;          // preview width in map units
+const MAP_BAND_COLORS = ["#26a69a", "#ab47bc", "#ffa726", "#42a5f5", "#ec407a", "#9ccc65", "#8d6e63", "#5c6bc0"]; // RF20.3
 const MAP_GAP = 110;             // horizontal gap between pages
 const MAP_SPECIAL = { w: 170, h: 64 };
 const MAP_CHIP = { w: 118, h: 46, gap: 14 };    // RF15.3 hardware key chips
@@ -275,6 +278,87 @@ function mapDeletePage(doc, p) {
   return d;
 }
 
+/* ---------- RF20 hierarchy view (pure: doc in, drawing hints out) ---------- */
+
+/* RF20.5 pages reached ONLY as a popup (every page-opening link is a popup;
+ * swipe does not count) -> {index: {wf, hf}} popup size fractions. A page
+ * opened only by swipe-up popups uses the SOURCE page's popupWidth/Height
+ * (upstream Dashboard.kt LinkedPagePopupState); otherwise its own. Defaults
+ * and clamping as DashboardLoader (0.7 / 0.5, 0.1..1). */
+function mapPopupPages(doc) {
+  const pages = Array.isArray(doc && doc.pages) ? doc.pages : [];
+  const frac = (v, d) => (typeof v === "number" && isFinite(v) ? Math.min(1, Math.max(0.1, v)) : d);
+  const g = buildNavGraph(doc, (k) => k, {});
+  const out = {};
+  pages.forEach((page, i) => {
+    if (Number.isInteger(doc.startPage) ? doc.startPage === i : i === 0) return; // shown at boot as a page
+    const inc = g.edges.filter((e) => e.to === "p" + i && e.kind !== "swipe" && e.from !== "p" + i);
+    if (!inc.length || !inc.every((e) => e.popup)) return;
+    const src = inc.every((e) => e.kind === "swipe_up") ? pages[+inc[0].from.slice(1)] : page;
+    out[i] = { wf: frac(src && src.popupWidth, 0.7), hf: frac(src && src.popupHeight, 0.5) };
+  });
+  return out;
+}
+
+/* RF20.3 sibling groups = the remote's dot groups: index -> parent index
+ * (only pages whose parent exists, not themselves). */
+function mapParentOf(doc) {
+  const pages = Array.isArray(doc && doc.pages) ? doc.pages : [];
+  const byName = new Map(pages.map((p, i) => [String((p && p.name) || "").toLowerCase(), i]));
+  const out = {};
+  pages.forEach((p, i) => {
+    const q = p && p.parent ? byName.get(String(p.parent).toLowerCase()) : undefined;
+    if (q !== undefined && q !== i) out[i] = q;
+  });
+  return out;
+}
+
+/* RF20.1 "Arrange by hierarchy": {pageName: {x, y}} for the map layout.
+ * Roots (no parent) on the main row in file order; children one row lower
+ * under their parent (parent above its first child, columns in file order);
+ * a linked page with no parent and no children goes above its first main-row
+ * source, slightly offset (tree position wins). size(i) -> {w, h} of a node. */
+function mapHierarchyLayout(doc, size, gap, rowGap) {
+  const pages = Array.isArray(doc && doc.pages) ? doc.pages : [];
+  const parent = mapParentOf(doc);
+  const kids = pages.map(() => []);
+  Object.entries(parent).forEach(([c, q]) => kids[q].push(+c));
+  // cycles (A parent of B parent of A): those pages are treated as roots
+  const inCycle = (i) => { const seen = new Set(); let j = i; while (parent[j] !== undefined) { if (seen.has(j)) return true; seen.add(j); j = parent[j]; } return false; };
+  const isRoot = (i) => parent[i] === undefined || inCycle(i);
+  const byName = new Map(pages.map((p, i) => [String((p && p.name) || "").toLowerCase(), i]));
+  const above = {}; // linked page -> source
+  pages.forEach((p, i) => {
+    const l = p && p.linkedPage ? byName.get(String(p.linkedPage).toLowerCase()) : undefined;
+    if (l === undefined || l === i || above[l] !== undefined) return;
+    if (parent[l] === undefined && !kids[l].length && isRoot(i)) above[l] = i;
+  });
+  // a source that is itself placed above another page keeps its linked page in the row
+  Object.keys(above).forEach((l) => { if (above[above[l]] !== undefined) delete above[l]; });
+  const maxH = pages.reduce((m, _p, i) => Math.max(m, size(i).h), 0);
+  const rowH = maxH + rowGap;
+  const colW = pages.reduce((m, _p, i) => Math.max(m, size(i).w), 0) + gap;
+  const pos = {};
+  let col = 0;
+  const placed = new Set();
+  const place = (i, depth) => {
+    if (placed.has(i)) return;
+    placed.add(i);
+    pos[i] = { x: col * colW, y: depth * rowH };
+    const ch = kids[i].filter((c) => !placed.has(c) && !inCycle(c));
+    if (!ch.length) { col += 1; return; }
+    ch.forEach((c) => place(c, depth + 1));
+  };
+  pages.forEach((_p, i) => { if (isRoot(i) && above[i] === undefined) place(i, 0); });
+  pages.forEach((_p, i) => { if (!placed.has(i) && above[i] === undefined) place(i, 0); }); // leftovers
+  Object.entries(above).forEach(([l, src]) => {
+    pos[l] = { x: pos[src].x + 30, y: pos[src].y - size(+l).h - Math.max(60, rowGap / 2) };
+  });
+  const out = {};
+  pages.forEach((p, i) => { if (pos[i]) out[(p && p.name) || `#${i + 1}`] = pos[i]; });
+  return out;
+}
+
 /* ---------- view ---------- */
 
 class NavMap {
@@ -319,9 +403,12 @@ class NavMap {
     const pos = {};
     let x = 0;
     const saved = (this.remote && this.remote.map_layout) || {};
+    this.popups = mapPopupPages(this.doc || {}); // RF20.5 popup-only pages
     graph.nodes.filter((n) => n.kind === "page").forEach((n) => {
       const sp = saved[n.name]; // RF16.3: dragged positions, by page name
-      pos[n.id] = sp ? { x: sp.x, y: sp.y, w: MAP_NODE_W, h: nh } : { x, y: 0, w: MAP_NODE_W, h: nh };
+      const sz = this.nodeSize(n.p);
+      // row layout: a smaller popup node is centred in its slot
+      pos[n.id] = sp ? { x: sp.x, y: sp.y, ...sz } : { x: x + (MAP_NODE_W - sz.w) / 2, y: 0, ...sz };
       x += MAP_NODE_W + MAP_GAP;
     });
     const pagePos = graph.nodes.filter((n) => n.kind === "page").map((n) => pos[n.id]);
@@ -390,7 +477,7 @@ class NavMap {
       const elx = ne && this.tileEl(ne.d, path);
       if (!elx) continue;
       const nr = ne.d.getBoundingClientRect(), sr = ne.screen.getBoundingClientRect(), r = elx.getBoundingClientRect();
-      const k = nr.width / MAP_NODE_W; // current zoom
+      const k = nr.width / this.pos["p" + m[1]].w; // current zoom (node width varies, RF20.5)
       if (!k || !r.width) continue;
       // visible part of the preview only (overflowing content is clipped)
       if (r.top < sr.top - 1 || r.bottom > sr.bottom + 1) continue;
@@ -439,6 +526,26 @@ class NavMap {
     return elx || null;
   }
 
+  /* RF20.5 node size: full screen, or the popup's size for popup-only pages. */
+  nodeSize(p) {
+    const { nh } = this.screen;
+    const pp = this.popups && this.popups[p];
+    if (!pp) return { w: MAP_NODE_W, h: nh };
+    return { w: Math.round(MAP_NODE_W * pp.wf), h: Math.round((nh - 26) * pp.hf) + 26 };
+  }
+
+  /* RF20.1 "Arrange by hierarchy": positions saved like dragged ones (RF16.3). */
+  async arrangeHierarchy() {
+    const layout = mapHierarchyLayout(this.doc || {}, (i) => this.nodeSize(i), MAP_GAP, 150);
+    console.info(`[acm] map: hierarchy layout for ${Object.keys(layout).length} page(s)`);
+    try {
+      const res = await api("PUT", `api/remotes/${this.rid}/map-layout`, { layout });
+      if (this.remote) this.remote.map_layout = res.layout;
+      this.build();
+      this.fit();
+    } catch (err) { toast(err.message, true); }
+  }
+
   arcHeight(a, b) { return a && b ? 50 + 0.28 * Math.abs((a.x + a.w / 2) - (b.x + b.w / 2)) : 0; }
 
   /* Route of one edge: curve + badge position. Works for any node position
@@ -450,6 +557,12 @@ class NavMap {
     const cx = (n) => n.x + n.w / 2;
     if (e.tile) { const r = this.tileRoute(e, a, b, lane); if (r) return r; }
     const isPage = (id) => /^p\d+$/.test(id);
+    if (e.kind === "swipe" && (Math.abs(a.y - b.y) > 12 || cx(b) < cx(a))) {
+      // RF20.4: neighbours not side by side on one row -> thin dotted chain
+      const x1 = a.x + a.w, y1 = a.y + a.h / 2, x2 = b.x, y2 = b.y + b.h / 2;
+      const dx = Math.max(60, Math.abs(x2 - x1) / 2);
+      return { d: `M${x1},${y1} C${x1 + dx},${y1} ${x2 - dx},${y2} ${x2},${y2}`, bx: (x1 + x2) / 2, by: (y1 + y2) / 2, chain: true };
+    }
     if (e.kind === "swipe") {
       const y1 = a.y + a.h / 2 + lane * 18, y2 = b.y + b.h / 2 + lane * 18;
       const fwd = cx(b) >= cx(a);
@@ -461,6 +574,14 @@ class NavMap {
         const x0 = a.x + a.w * 0.65, y0 = a.y;
         const d = `M${x0},${y0} C${x0 + 40},${y0 - 90 - lane * 20} ${x0 + 100},${y0 - 40} ${a.x + a.w},${y0 + 20}`;
         return { d, bx: x0 + 55, by: y0 - 60 - lane * 15 };
+      }
+      // RF20.2 screens on different rows: short vertical curve between facing edges
+      if (a.y >= b.y + b.h + 30 || b.y >= a.y + a.h + 30) {
+        const up = a.y > b.y;
+        const sx = cx(a) + lane * 14, sy = up ? a.y : a.y + a.h;
+        const ex = cx(b) + lane * 14, ey = up ? b.y + b.h : b.y;
+        const my = (sy + ey) / 2;
+        return { d: `M${sx},${sy} C${sx},${my} ${ex},${my} ${ex},${ey}`, bx: (sx + ex) / 2, by: my };
       }
       const under = e.kind === "back";
       const dir = cx(b) > cx(a) ? 1 : -1;
@@ -514,6 +635,8 @@ class NavMap {
     this.graph = graph;
     this.pos = this.layout(graph);
     const world = el("div", { class: "navmap-world" });
+    this.bands = el("div", { class: "navmap-bands" }); // RF20.3, under the screens
+    world.append(this.bands);
     this.svg = svgEl("svg", { class: "navmap-edges" });
     const defs = svgEl("defs");
     const marker = svgEl("marker", { id: "navmap-arrow", viewBox: "0 0 10 10", refX: "9", refY: "5", markerWidth: "7", markerHeight: "7", orient: "auto-start-reverse" });
@@ -583,7 +706,7 @@ class NavMap {
       lanes.set(key, lane + 1);
       const r = this.route(e, pos, lane);
       if (!r) continue;
-      const path = svgEl("path", { d: r.d, class: `navmap-edge k-${e.kind}${e.popup ? " popup" : ""}`,
+      const path = svgEl("path", { d: r.d, class: `navmap-edge k-${e.kind}${e.popup ? " popup" : ""}${r.chain ? " chain" : ""}`,
         "marker-end": "url(#navmap-arrow)", "marker-start": e.kind === "swipe" ? "url(#navmap-arrow)" : null });
       // RF19.3: from a measured tile anchor -> upper layer (over the preview)
       (e.tile && this.tilePos[e.tile] && svgTop ? svgTop : svg).append(path);
@@ -606,6 +729,25 @@ class NavMap {
       this.links.append(badge);
       this.edgeEls.push({ e, path, badge });
     }
+    // RF20.3 sibling groups (= the remote's dot groups): coloured strip under
+    // each child screen; one joined band when the siblings sit side by side
+    if (this.bands) this.bands.replaceChildren();
+    const parentOf = mapParentOf(this.doc || {});
+    const groups = {};
+    Object.entries(parentOf).forEach(([c, q]) => { (groups[q] = groups[q] || []).push(+c); });
+    Object.entries(groups).forEach(([q, kids], gi) => {
+      const pname = ((this.doc.pages || [])[q] || {}).name || `#${+q + 1}`;
+      const color = MAP_BAND_COLORS[gi % MAP_BAND_COLORS.length];
+      const ps = kids.map((c) => pos["p" + c]).filter(Boolean).sort((u, v) => u.x - v.x);
+      const joined = ps.length > 1 && ps.every((u) => Math.abs(u.y - ps[0].y) < 2 && Math.abs(u.y + u.h - (ps[0].y + ps[0].h)) < 2)
+        && ps.every((u, i) => i === 0 || u.x - (ps[i - 1].x + ps[i - 1].w) <= MAP_GAP + 40);
+      const strips = joined ? [{ x: ps[0].x, y: ps[0].y + ps[0].h, w: ps[ps.length - 1].x + ps[ps.length - 1].w - ps[0].x }]
+        : ps.map((u) => ({ x: u.x, y: u.y + u.h, w: u.w }));
+      for (const st of strips) {
+        this.bands && this.bands.append(el("div", { class: "navmap-band", style: `left:${st.x}px;top:${st.y + 12}px;width:${st.w}px;--band:${color}`,
+          title: t("map_band", { name: pname, n: kids.length }) }, el("span", { text: `▸ ${pname}` })));
+      }
+    });
     // RF19.3 tile anchors: on linked tiles always (filled), on the other tiles
     // only when editable (hollow); dragging one starts a tile link (RF15.4)
     const linked = new Set(graph.edges.filter(visible).map((e) => e.tile).filter(Boolean));
@@ -683,7 +825,11 @@ class NavMap {
     }
     const badges = [n.start ? el("span", { title: t("map_start"), text: "⭐" }) : null,
       n.hidden ? el("span", { class: n.hidden.full ? "crossed" : "", title: `${t("map_hidden")} ${n.hidden.activity}${n.hidden.full ? " (hideMode: full)" : ""}`, text: "👁" }) : null];
-    const label = el("div", { class: "navmap-label", title: t("map_drag_screen") }, el("span", { class: "navmap-idx", text: String(n.p + 1) }), el("strong", { text: n.name }), ...badges);
+    // RF20.4 swipe-order number (①②③…); RF20.5 ▣ = shown only as a popup
+    const num = n.p < 20 ? String.fromCharCode(0x2460 + n.p) : `(${n.p + 1})`;
+    const isPop = this.popups && this.popups[n.p];
+    const label = el("div", { class: "navmap-label", title: t("map_drag_screen") }, el("span", { class: "navmap-idx", text: num, title: t("map_swipe_order", { n: n.p + 1 }) }),
+      el("strong", { text: (isPop ? "▣ " : "") + n.name, title: isPop ? t("map_popup_only") : null }), ...badges);
     const screen = el("div", { class: "navmap-screen" });
     const d = el("div", { class: "navmap-node", style, "data-p": n.p }, label, screen);
     d.addEventListener("click", (ev) => {
@@ -723,7 +869,10 @@ class NavMap {
     for (const [p, { screen }] of Object.entries(this.nodeEls)) {
       const page = (this.doc.pages || [])[p];
       if (!page) continue;
-      const s = el("div", { class: "sim-screen", style: `width:${w}px;height:${h}px;transform:scale(${scale});background:${th.background};color:${th.primaryText};--card:${th.cardSurface};--inset:${th.insetSurface};--ctl:${th.controlBackground};--muted:${th.mutedText};--acc:${th.accent};--amber:${th.amber};--danger:${th.danger};--ok:${th.success}` });
+      // RF20.5: a popup-only page is previewed at its popup size
+      const pp = this.popups && this.popups[p];
+      const pw = pp ? Math.round(w * pp.wf) : w, ph = pp ? Math.round(h * pp.hf) : h;
+      const s = el("div", { class: "sim-screen", style: `width:${pw}px;height:${ph}px;transform:scale(${scale});background:${th.background};color:${th.primaryText};--card:${th.cardSurface};--inset:${th.insetSurface};--ctl:${th.controlBackground};--muted:${th.mutedText};--acc:${th.accent};--amber:${th.amber};--danger:${th.danger};--ok:${th.success}` });
       try { s.append(sim.renderPage(page, +p, false)); } catch (e) { s.append(el("p", { text: e.message })); }
       screen.replaceChildren(s);
     }
@@ -745,6 +894,7 @@ class NavMap {
       el("span", { class: "spacer" }),
       ...(this.open && this.editable() ? this.pageButtons() : []),
       ...(this.open ? this.switches() : []),
+      this.open ? el("button", { class: "icon", title: t("map_arrange_hint"), text: "⇅ " + t("map_arrange"), onclick: () => this.arrangeHierarchy() }) : null,
       this.open ? el("button", { class: "icon", title: t("map_reset_layout"), text: "⟲", onclick: () => this.saveLayout(true) }) : null,
       this.open ? el("button", { class: "icon", title: t("map_zoom_out"), text: "−", onclick: () => this.zoomBy(1 / 1.25) }) : null,
       this.open ? el("button", { class: "icon", title: t("map_zoom_in"), text: "+", onclick: () => this.zoomBy(1.25) }) : null,

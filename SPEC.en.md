@@ -1,9 +1,9 @@
-# Requirement — Astrion Config Manager (HA add-on) v1.18
+# Requirement — Astrion Config Manager (HA add-on) v1.19
 
 > English translation of [SPEC.md](SPEC.md). The Italian document is the
 > reference; in case of discrepancy the Italian text prevails.
 
-Status: approved by the requester. v1.3: added RF6.12 (navigation-only mode). v1.4: added RF7 (icons and entity catalog). v1.5: added RF8 (multiple Harmony hubs and IR targets). v1.6: added RF3.5 (dropdowns and palettes). v1.7: added RF3.6 (structured lists) and RF9 (upstream 1.2.0, direct Apple TV). v1.8: RF9.6–RF9.7 (upstream 1.2.1-beta and 1.2.0 recheck). v1.9: RF10 (upstream 1.2.2–1.2.7-beta). v1.10: RF11 (upstream 1.2.8–1.2.9-beta, push/pull on the main screen). v1.11: RF12 (upstream 1.3.0, integration with the remote's version history). v1.12: RF13 (navigation map) and RF14 (theme library). v1.13: RF15 (editable navigation map). v1.14: RF16 (upstream 1.3.1–1.3.2-beta, map layout and switches, the remote's builder). v1.15: RF17 (large preview pane, builder opened by a link). v1.16: RF15.3 one key row with two anchors. v1.17: RF18 (Editor and Simulator merged). v1.18: RF19 (upstream 1.3.3-beta, tile anchors). Supersedes v1.0: Harmony and IR are now in scope; named versions added (RF2.11–RF2.13). Original document language: Italian.
+Status: approved by the requester. v1.3: added RF6.12 (navigation-only mode). v1.4: added RF7 (icons and entity catalog). v1.5: added RF8 (multiple Harmony hubs and IR targets). v1.6: added RF3.5 (dropdowns and palettes). v1.7: added RF3.6 (structured lists) and RF9 (upstream 1.2.0, direct Apple TV). v1.8: RF9.6–RF9.7 (upstream 1.2.1-beta and 1.2.0 recheck). v1.9: RF10 (upstream 1.2.2–1.2.7-beta). v1.10: RF11 (upstream 1.2.8–1.2.9-beta, push/pull on the main screen). v1.11: RF12 (upstream 1.3.0, integration with the remote's version history). v1.12: RF13 (navigation map) and RF14 (theme library). v1.13: RF15 (editable navigation map). v1.14: RF16 (upstream 1.3.1–1.3.2-beta, map layout and switches, the remote's builder). v1.15: RF17 (large preview pane, builder opened by a link). v1.16: RF15.3 one key row with two anchors. v1.17: RF18 (Editor and Simulator merged). v1.18: RF19 (upstream 1.3.3-beta, tile anchors). v1.19: RF20 (hierarchy view of the map). Supersedes v1.0: Harmony and IR are now in scope; named versions added (RF2.11–RF2.13). Original document language: Italian.
 
 ## 1. Purpose
 
@@ -237,6 +237,18 @@ Starting requirement: "the new beta posts astrion-saved to window.opener after e
 - RF19.1 After each **Save to device** or history restore the builder (1.3.3-beta) posts `{type: "astrion-saved", versionId, reason: "save"|"restore"}` to the page that opened it. The add-on accepts it only from the open remote's builder origin (`http://<ip>:<port>`). In "Edit with the remote's builder" mode (RF16.4) it imports right away (same flow as **Done**: history note, conflicts asked, never merged; one import at a time); outside that mode it re-checks drift and shows the banner, never an automatic import. Tab return and **Done** stay as fallbacks (e.g. builder opened by hand).
 - RF19.2 The rest of 1.3.3-beta is already covered: **IR command** action on hardware keys (`irDevice` + `irCommand`: editor, validation, simulator, ⚡ on the map); `versionId` from `POST /history/restore` is not used by the add-on; no new card field (schema regenerated).
 - RF19.3 Map: tap, long-press and Activity links of tiles/buttons (`button_grid`, `scene_grid`, also inside `row`) start from a ● anchor overlaid on the tile in the preview (filled = linked), go up out of the screen and reach the target's top anchor; tile not visible in the preview → from the screen's bottom edge. When editing, anchors appear on every tile and drag like the tile (RF15.4); click = opens the tile in the editor. Anchors follow the screen when it is moved. The segment from the tile to the screen edge is drawn above the preview (2.26).
+
+### RF20 — Hierarchy view of the map
+
+Starting requirement: "suggest a graphical representation / position for parent pages and linked pages" → accepted proposal: hierarchy arrange button, group bands, numbered swipe chain, popup pages drawn smaller.
+
+Constraint: upstream swipes through all pages in file order; `parent` only changes the dots and Back, `linkedPage` is the swipe up. The map only changes the drawing: `dashboard.json` is never touched.
+
+- RF20.1 **⇅ Arrange by hierarchy** (edit and simulation): pages without a parent on the main row in file order; children one row under their parent (parent above its first child, columns in file order), grandchildren further down; a linked page (`linkedPage`) with no parent and no children goes above its first main-row source, slightly offset (if it is also a child the tree wins). Parent cycles are treated as roots. Positions saved in the per-remote map layout (RF16.3); ⟲ goes back to the single row, which stays the default.
+- RF20.2 Links between screens on different rows: short vertical curve between the facing edges (↩ Back from the child's top to the parent's bottom; ☝️ from the source's top to the linked page).
+- RF20.3 Sibling groups (= the remote's dot group): coloured strip under each child screen, one colour per parent, labelled with the parent's name; one joined band when the siblings sit side by side.
+- RF20.4 Swipe order: ①②③ on each screen's title bar; two swipe neighbours not side by side on one row → thin dotted line; the side anchors reorder as before.
+- RF20.5 A page reached ONLY as a popup (every link opening it — tile, key, linkedPage, openWhenEntity — is a popup; swipe doesn't count; never the start page) is drawn at its popup size (width × `popupWidth`, height × `popupHeight`, clamped 0.1–1, defaults 0.7/0.5). Only swipe-up popups → the source page's values (upstream Dashboard.kt), otherwise the page's own; content previewed, ▣ in the title; it stays in the swipe order.
 
 ## 6. Non-functional requirements
 

@@ -188,7 +188,7 @@ a.button.icon { padding: 2px 8px; }
 .navmap-node.sel { box-shadow: 0 0 0 4px var(--accent), 0 0 0 9px rgba(3,169,244,.3), 0 4px 14px rgba(0,0,0,.35); }
 .navmap-label { height: 26px; display: flex; align-items: center; gap: 6px; padding: 0 8px; background: #111; color: #eee; font-size: 13px; }
 .navmap-label strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
-.navmap-idx { font-size: 11px; opacity: .6; }
+.navmap-idx { font-size: 13px; opacity: .85; margin-right: 2px; } /* RF20.4 swipe order */
 .navmap-label .crossed { text-decoration: line-through; text-decoration-thickness: 2px; color: #f66; }
 .navmap-screen { position: relative; overflow: hidden; height: calc(100% - 26px); }
 .navmap-screen .sim-screen, .navmap-screen .sim-screen * { pointer-events: none !important; }
@@ -298,3 +298,10 @@ a.button.primary { background: var(--accent); border-color: var(--accent); color
 .navmap-anchor.a-tile.linked { background: #00897b; box-shadow: 0 0 0 2px #fff; }
 /* RF19.3 (2.26): tile links drawn above the screen previews */
 .navmap-edges.top { z-index: 1; }
+/* RF20.3 sibling groups (= the remote's dot groups) */
+.navmap-bands { position: absolute; left: 0; top: 0; }
+.navmap-band { position: absolute; height: 18px; border-radius: 9px; background: color-mix(in srgb, var(--band) 22%, transparent);
+  border: 1px solid var(--band); font-size: 11px; line-height: 16px; padding: 0 8px; color: var(--band); font-weight: 600;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; box-sizing: border-box; pointer-events: auto; }
+/* RF20.4 swipe neighbours not side by side: thin dotted chain */
+.navmap-edge.chain { stroke-width: 1.5; stroke-dasharray: 2 5; opacity: .8; }

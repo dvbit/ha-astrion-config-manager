@@ -462,7 +462,12 @@ const I18N = {
   "map_splitter": "Drag to resize the map and the panel below (↑/↓ when focused)",
   "map_anchor_tile": "Tile: its links start here · drag onto a screen's top anchor to link it · click to edit",
   "nb_saved_msg": "Saved in the builder ({reason})",
-  "nb_drift_msg": "The remote's builder saved a change: check the drift banner"
+  "nb_drift_msg": "The remote's builder saved a change: check the drift banner",
+  "map_arrange": "Arrange by hierarchy",
+  "map_arrange_hint": "Children under their parent, linked pages above their source (map only: dashboard.json is not changed; ⟲ = back to one row)",
+  "map_band": "Child pages of \"{name}\" ({n}): one dot group on the remote",
+  "map_swipe_order": "Position {n} in the swipe order",
+  "map_popup_only": "Reached only as a popup: drawn at its popup size"
  },
  "it": {
   "app_title": "Astrion Config Manager",
@@ -924,7 +929,12 @@ const I18N = {
   "map_splitter": "Trascina per ridimensionare la mappa e il pannello sotto (↑/↓ con il focus)",
   "map_anchor_tile": "Tile: i suoi collegamenti partono da qui · trascina sull'ancora superiore di uno schermo per collegarlo · clic per modificarlo",
   "nb_saved_msg": "Salvato nel builder ({reason})",
-  "nb_drift_msg": "Il builder del telecomando ha salvato una modifica: controlla l'avviso di disallineamento"
+  "nb_drift_msg": "Il builder del telecomando ha salvato una modifica: controlla l'avviso di disallineamento",
+  "map_arrange": "Disponi per gerarchia",
+  "map_arrange_hint": "Figlie sotto il genitore, pagine collegate sopra la sorgente (solo mappa: dashboard.json non cambia; ⟲ = torna a una riga)",
+  "map_band": "Pagine figlie di \"{name}\" ({n}): un gruppo di pallini sul telecomando",
+  "map_swipe_order": "Posizione {n} nell'ordine di swipe",
+  "map_popup_only": "Raggiunta solo come popup: disegnata alla dimensione del popup"
  },
  "fr": {
   "app_title": "Astrion Config Manager",
@@ -1386,7 +1396,12 @@ const I18N = {
   "map_splitter": "Faites glisser pour redimensionner la carte et le panneau du dessous (↑/↓ avec le focus)",
   "map_anchor_tile": "Tuile : ses liens partent d'ici · glissez sur l'ancre du haut d'un écran pour la lier · clic pour la modifier",
   "nb_saved_msg": "Enregistré dans le builder ({reason})",
-  "nb_drift_msg": "Le builder de la télécommande a enregistré une modification : voir l'avertissement de dérive"
+  "nb_drift_msg": "Le builder de la télécommande a enregistré une modification : voir l'avertissement de dérive",
+  "map_arrange": "Disposer par hiérarchie",
+  "map_arrange_hint": "Enfants sous leur parent, pages liées au-dessus de leur source (carte seulement : dashboard.json inchangé ; ⟲ = une seule rangée)",
+  "map_band": "Pages enfants de « {name} » ({n}) : un groupe de points sur la télécommande",
+  "map_swipe_order": "Position {n} dans l'ordre de balayage",
+  "map_popup_only": "Atteinte seulement en popup : dessinée à la taille du popup"
  },
  "es": {
   "app_title": "Astrion Config Manager",
@@ -1848,7 +1863,12 @@ const I18N = {
   "map_splitter": "Arrastra para redimensionar el mapa y el panel inferior (↑/↓ con el foco)",
   "map_anchor_tile": "Tile: sus enlaces salen de aquí · arrastra al ancla superior de una pantalla para enlazarlo · clic para editarlo",
   "nb_saved_msg": "Guardado en el builder ({reason})",
-  "nb_drift_msg": "El builder del mando guardó un cambio: revisa el aviso de desalineación"
+  "nb_drift_msg": "El builder del mando guardó un cambio: revisa el aviso de desalineación",
+  "map_arrange": "Ordenar por jerarquía",
+  "map_arrange_hint": "Hijas bajo su padre, páginas enlazadas sobre su origen (solo el mapa: dashboard.json no cambia; ⟲ = una sola fila)",
+  "map_band": "Páginas hijas de «{name}» ({n}): un grupo de puntos en el mando",
+  "map_swipe_order": "Posición {n} en el orden de deslizamiento",
+  "map_popup_only": "Solo se abre como popup: dibujada al tamaño del popup"
  },
  "de": {
   "app_title": "Astrion Config Manager",
@@ -2310,7 +2330,12 @@ const I18N = {
   "map_splitter": "Ziehen, um Karte und unteres Feld anzupassen (↑/↓ mit Fokus)",
   "map_anchor_tile": "Kachel: ihre Verbindungen beginnen hier · auf den oberen Anker eines Bildschirms ziehen zum Verknüpfen · Klick zum Bearbeiten",
   "nb_saved_msg": "Im Builder gespeichert ({reason})",
-  "nb_drift_msg": "Der Builder der Fernbedienung hat gespeichert: Abweichungshinweis prüfen"
+  "nb_drift_msg": "Der Builder der Fernbedienung hat gespeichert: Abweichungshinweis prüfen",
+  "map_arrange": "Nach Hierarchie anordnen",
+  "map_arrange_hint": "Kinder unter ihrem Elternteil, verknüpfte Seiten über ihrer Quelle (nur Karte: dashboard.json bleibt gleich; ⟲ = eine Reihe)",
+  "map_band": "Unterseiten von „{name}“ ({n}): eine Punktgruppe auf der Fernbedienung",
+  "map_swipe_order": "Position {n} in der Wischreihenfolge",
+  "map_popup_only": "Nur als Popup geöffnet: in Popup-Größe gezeichnet"
  }
 };
 

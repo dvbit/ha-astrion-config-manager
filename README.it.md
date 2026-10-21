@@ -244,6 +244,10 @@ la mappa; trascina il bordo tra la mappa e il pannello sotto (la maniglia ▬) p
   la tile riceve `"page": "Cinema"`;
 - **＋ Nuova pagina** / **🗑 Elimina pagina** nella barra della mappa aggiungono una pagina vuota o eliminano quella selezionata;
 - tieni premuta l'icona di un collegamento → conferma → il collegamento è rimosso;
+- **⇅ Disponi per gerarchia** mette le figlie sotto il genitore e le pagine collegate sopra la
+  sorgente (solo mappa; ⟲ torna a una riga). Strisce colorate sotto gli schermi figli = gruppi di
+  pallini del telecomando; ①②③ = ordine di swipe; le pagine aperte solo come popup sono disegnate
+  alla dimensione del popup (▣);
 - trascina uno schermo dalla barra del titolo per disporre la mappa (salvata per telecomando, **⟲** la ripristina);
   **Tasti pagina / Tasti globali / Collegamenti** mostrano o nascondono quelle ancore e collegamenti.
 

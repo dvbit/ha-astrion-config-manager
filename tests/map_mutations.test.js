@@ -12,7 +12,7 @@ vm.createContext(ctx);
 const src = fs.readFileSync(path.join(__dirname, "../astrion_config_manager/app/acm/static/map.js"), "utf8");
 // only the pure part (graph model + document changes), before the DOM view
 vm.runInContext(src.split("/* ---------- view ---------- */")[0] +
-  "\nthis.api = {buildNavGraph, mapAddPage, mapDeletePage, mapMovePage, mapSetHotkey, mapHotkeyOf, mapSetTileTarget, mapRemoveEdge, mapAt};", ctx);
+  "\nthis.api = {buildNavGraph, mapAddPage, mapDeletePage, mapMovePage, mapSetHotkey, mapHotkeyOf, mapSetTileTarget, mapRemoveEdge, mapAt, mapPopupPages, mapParentOf, mapHierarchyLayout};", ctx);
 const M = ctx.api;
 
 const doc = {
@@ -97,4 +97,37 @@ assert.strictEqual(M.mapDeletePage({ pages: [{ name: "only" }] }, 0), null);
 
 // the original document is never modified
 assert.strictEqual(doc.pages[0].cards[0].options.scenes[0].page, "C");
+// ---------- RF20 hierarchy view ----------
+const hdoc = {
+  startPage: 0,
+  pages: [
+    { name: "Home", linkedPage: "Quick", linkedPageMode: "popup", popupWidth: 0.6, popupHeight: 0.4 },
+    { name: "Lights" },
+    { name: "Living", parent: "Lights" },
+    { name: "Kitchen", parent: "Lights", cards: [{ type: "scene_grid", options: { scenes: [{ name: "x", page: "Pop", pageMode: "popup" }] } }] },
+    { name: "Quick" },
+    { name: "Pop", popupWidth: 0.9, popupHeight: 2 },
+    { name: "Shelf", parent: "Living" },
+  ],
+};
+// RF20.5 popup-only: Quick (swipe-up popup -> SOURCE sizes), Pop (tile popup -> own sizes, clamped)
+eq(M.mapPopupPages(hdoc), { 4: { wf: 0.6, hf: 0.4 }, 5: { wf: 0.9, hf: 1 } });
+// a normal link to Pop makes it a page again
+const h2 = clone(hdoc); h2.pages[1].hotkeys = [{ key: "PLAY", page: "Pop" }];
+eq(Object.keys(M.mapPopupPages(h2)), ["4"]);
+// RF20.3 parent map
+eq(M.mapParentOf(hdoc), { 2: 1, 3: 1, 6: 2 });
+// RF20.1 layout: roots Home, Lights, Pop on row 0; Quick above Home; Living/Kitchen under Lights; Shelf under Living
+const L = M.mapHierarchyLayout(hdoc, () => ({ w: 100, h: 200 }), 20, 100);
+eq(L.Home, { x: 0, y: 0 });
+eq(L.Quick, { x: 30, y: -260 });
+eq(L.Lights, { x: 120, y: 0 });
+eq(L.Living, { x: 120, y: 300 });
+eq(L.Shelf, { x: 120, y: 600 });
+eq(L.Kitchen, { x: 240, y: 300 });
+eq(L.Pop, { x: 360, y: 0 });
+// parent cycles do not loop
+const cyc = { pages: [{ name: "A", parent: "B" }, { name: "B", parent: "A" }] };
+eq(Object.keys(M.mapHierarchyLayout(cyc, () => ({ w: 10, h: 10 }), 5, 5)).sort(), ["A", "B"]);
+
 console.log("map mutations: ok");

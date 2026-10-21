@@ -238,6 +238,9 @@ map; drag the border between the map and the panel below (the ▬ grip) to resiz
   the tile gets `"page": "Cinema"`;
 - **＋ New page** / **🗑 Delete page** on the map bar add an empty page or delete the selected one;
 - press and hold a connection's icon → confirm → the link is removed;
+- **⇅ Arrange by hierarchy** puts child pages under their parent and linked pages above their
+  source (map only; ⟲ back to one row). Coloured strips under child screens = the remote's dot
+  groups; ①②③ = swipe order; pages opened only as a popup are drawn at popup size (▣);
 - drag a screen by its title bar to arrange the map (saved per remote, **⟲** resets it);
   **Page keys / Global keys / Links** show or hide those anchors and links.
 

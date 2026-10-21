@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.27.0 - 2026-10-22
+
+- RF20 map hierarchy view (drawing only, dashboard.json untouched):
+  "⇅ Arrange by hierarchy" (children under their parent, linked pages above
+  their source; saved as map layout, ⟲ back to one row); vertical links
+  between rows; coloured sibling bands (= the remote's dot groups); ①②③ swipe
+  order with a dotted chain when neighbours are not side by side; pages
+  reached only as a popup drawn at their popup size (▣).
+
 ## 2.26.0 - 2026-10-21
 
 - Fix (RF19.3): tile links now visibly start from the ● anchor on the tile.
