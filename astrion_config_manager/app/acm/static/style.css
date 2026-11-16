@@ -305,3 +305,51 @@ a.button.primary { background: var(--accent); border-color: var(--accent); color
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; box-sizing: border-box; pointer-events: auto; }
 /* RF20.4 swipe neighbours not side by side: thin dotted chain */
 .navmap-edge.chain { stroke-width: 1.5; stroke-dasharray: 2 5; opacity: .8; }
+
+/* ---------- 3.0 (spec RF21): full-screen remote views ---------- */
+body.full main { max-width: none; padding: 8px 12px; height: calc(100vh - 49px); box-sizing: border-box; display: flex; flex-direction: column; }
+.remote-head { flex-wrap: wrap; gap: 10px; }
+.tabs.inline { border-bottom: 0; margin: 0 0 0 12px; }
+.remote-body { flex: 1; min-height: 0; display: flex; flex-direction: column; margin-top: 6px; }
+/* RF21.2 map fills the remaining height */
+.navmap.navmap-full { flex: 1; display: flex; flex-direction: column; min-height: 0; margin: 0; }
+.navmap-full .navmap-viewport { flex: 1; min-height: 240px; height: auto; }
+.navmap-screen { pointer-events: none; }
+.navmap-node.drop-ok { box-shadow: 0 0 0 4px #00897b, 0 4px 14px rgba(0,0,0,.35); }
+.navmap-node.hover { box-shadow: 0 0 0 6px #00e5ff, 0 0 0 12px rgba(0,229,255,.25); }
+.navmap-render-err { color: var(--muted); font-size: 11px; padding: 8px; }
+.navmap-link-dialog fieldset { border: 1px solid var(--line); border-radius: 8px; margin: 8px 0; padding: 6px 10px; }
+.navmap-link-dialog legend { padding: 0 4px; }
+.navmap-link-dialog .muted { font-size: 12px; }
+/* RF21.3 hidden renderer used for the map's snapshots */
+iframe.acm-renderer { position: fixed; left: -10000px; top: 0; width: 480px; height: 800px; border: 0; visibility: hidden; }
+/* RF21.1 embedded builder */
+.builder-pane { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+.builder-bar { padding: 4px 0; }
+.builder-frame { flex: 1; width: 100%; border: 1px solid var(--line); border-radius: 8px; background: #121212; }
+/* RF21.5 full-screen simulation */
+.sim3 { flex: 1; display: flex; gap: 16px; min-height: 0; }
+.sim3-left { display: flex; flex-direction: column; align-items: center; min-height: 0; height: 100%; }
+.sim3-screen { position: relative; height: calc(100% - 24px); max-width: 60vw; background: #000; border-radius: 14px; overflow: hidden;
+  box-shadow: 0 0 0 6px #000, 0 6px 22px rgba(0,0,0,.4); }
+.sim3-frame { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+.sim3-scrim { position: absolute; inset: 0; background: rgba(0,0,0,.45); }
+.sim3-popup { position: absolute; border-radius: 12px; overflow: hidden; box-shadow: 0 8px 30px rgba(0,0,0,.6); }
+.sim3-popup .sim3-frame { position: absolute; }
+.sim3-popup.pos-center { left: 50%; top: 50%; transform: translate(-50%, -50%); }
+.sim3-popup.pos-top { left: 50%; top: 4%; transform: translateX(-50%); }
+.sim3-popup.pos-bottom { left: 50%; bottom: 4%; transform: translateX(-50%); }
+.sim3-popup.pos-left { left: 4%; top: 50%; transform: translateY(-50%); }
+.sim3-popup.pos-right { right: 4%; top: 50%; transform: translateY(-50%); }
+.sim3-popclose { position: absolute; right: 4px; top: 4px; z-index: 2; padding: 2px 8px; }
+.sim3-overlay { position: absolute; left: 6%; right: 6%; top: 8%; bottom: 8%; background: var(--card); color: var(--fg); border-radius: 12px; padding: 10px; overflow: auto; z-index: 3; }
+.sim3-act { display: block; width: 100%; text-align: left; margin: 4px 0; }
+.sim3-act.on { border-color: var(--accent); }
+.sim3-dots { display: flex; gap: 6px; justify-content: center; padding: 6px; }
+.sim3-dots span { width: 8px; height: 8px; border-radius: 50%; background: var(--line); }
+.sim3-dots span.on { background: var(--accent); }
+.sim3-side { flex: 1; min-width: 260px; overflow: auto; }
+.sim3-title { font-size: 18px; margin-bottom: 4px; }
+.sim3-nav button { font-size: 16px; }
+.sim3-keys { margin: 10px 0; }
+.sim3-status { min-height: 1.4em; margin-top: 8px; }

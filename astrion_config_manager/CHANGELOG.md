@@ -1,5 +1,29 @@
 # Changelog
 
+## 3.0.0 - 2026-11-16
+
+**Scope change (RF21).** Single-screen editing is left to the Astrion app's own
+builder; the add-on becomes a page-linking and full-screen test tool.
+
+- **Builder tab**: the remote's builder embedded full screen through an add-on
+  reverse proxy (works in Ingress over HTTPS; absolute paths remapped). Its
+  `astrion-saved` message reloads the map and the simulation at once.
+- **Map** (main view, full screen): screens drawn by the builder renderer
+  installed on each remote (new card types appear automatically).
+- **Linking**: drag a screen onto another → choose the element (tile/button
+  tap or long press, page or global key short/long, swipe up, parent) and
+  page/popup; the value it replaces is shown. Press and hold a link to cut it;
+  card-level links (media remote `details_page`) shown and cuttable.
+- **Writes** go straight to the remote with a note (`ACM: A → B · …`), refused
+  if the remote changed since it was loaded. Undo = the remote's history.
+- **Simulate**: full-screen, navigation-only test (tiles, long press, swipes,
+  HA100 keys, popups, Activities overlay).
+- **Removed**: form editor and big preview, add-on versions (history, undo/redo,
+  named versions, push/pull, drift, native builder mode), "Simulate & run".
+  Data on disk is left untouched.
+- **Kept**: remote list, theme library (apply writes to the remotes), icon library.
+- Aligned to upstream **1.5.8-beta**.
+
 ## 2.27.0 - 2026-10-22
 
 - RF20 map hierarchy view (drawing only, dashboard.json untouched):

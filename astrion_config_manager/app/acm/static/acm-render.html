@@ -1,0 +1,123 @@
+<!doctype html>
+<!-- ACM screen renderer (spec RF21.3).
+     Served by the add-on at proxy/<rid>/builder/acm-render.html, i.e. INSIDE
+     the remote's proxied /builder/ folder: the builder's own scripts, styles
+     and i18n load from the remote with relative URLs, so every preview is
+     drawn by the app version installed on that remote.
+     The parent page (map node or simulator) calls window.ACM.render(). -->
+<html>
+<head>
+  <meta charset="utf-8">
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    html, body { margin: 0; padding: 0; background: #000; overflow: hidden; width: 100%; height: 100%; }
+    /* the screen fills this frame; the builder's dp canvas is scaled to it */
+    .remote-screen { width: 100vw !important; height: 100vh !important; border: 0 !important; border-radius: 0 !important; cursor: default !important; }
+    .remote-screen-scaler { transform-origin: top left; }
+    /* builder editing chrome is not part of the remote's screen */
+    .ha-draggable-card > .card > .card-title, .card.ha-draggable-card > .card-title, .preview-add-fab, .remove { display: none !important; }
+    .ha-draggable-card { cursor: default !important; }
+    body.acm-sim .acm-tap { cursor: pointer; outline: 1px dashed rgba(0, 229, 255, .0); }
+    body.acm-sim .acm-tap:hover { outline-color: rgba(0, 229, 255, .7); }
+    body.acm-popup .remote-status-bar { display: none; }
+  </style>
+</head>
+<body>
+  <div class="remote-screen"><div class="remote-screen-scaler">
+    <div class="remote-status-bar"><span class="sb-wifi">📶</span><span class="sb-time" id="sbTime">--:--</span><span class="sb-battery">🔋</span></div>
+    <div id="content" class="remote-screen-content"></div>
+  </div></div>
+  <script src="js/i18n.js"></script>
+  <script src="js/mocks.js"></script>
+  <script src="js/pages.js"></script>
+  <script src="js/cards.js"></script>
+  <script src="js/cards-extra.js"></script>
+  <script src="js/card-gallery.js"></script>
+  <script src="js/card-sections.js"></script>
+  <script src="js/card-copy.js"></script>
+  <script src="js/cards-xbox.js"></script>
+  <script src="js/cards-playstation.js"></script>
+  <script src="js/cards-zidoo.js"></script>
+  <script src="js/cards-media-remote.js"></script>
+  <script src="js/cards-info.js"></script>
+  <script src="js/hotkeys.js"></script>
+  <script src="js/activities.js"></script>
+  <script src="js/theme.js"></script>
+  <script src="js/preview.js"></script>
+  <script>
+  /* RF21.3 renderer API, called by the panel (same origin through the proxy). */
+  (function () {
+    "use strict";
+    // the remote's screen in dp: 480x800 px at density 220/160 -> 349x582 dp (builder styles.css)
+    const DENSITY = 220 / 160;
+    const errors = [];
+    window.addEventListener("error", (e) => errors.push(String(e.message)));
+    const exists = (n) => typeof window[n] === "function";
+
+    async function loadStates() {
+      // live HA states as the builder shows them (/ha-states, app 1.4.0+); mocks otherwise
+      try {
+        const res = await fetch("/ha-states");
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data && data.states) haStates = data.states; // eslint-disable-line no-undef
+      } catch (e) { /* older app: example data */ }
+    }
+
+    const ready = (async () => {
+      try { if (window.I18N && I18N.ready) await I18N.ready; } catch (e) { /* default language */ }
+      await loadStates();
+    })();
+
+    /* Render page p of doc. opts: {w, h} remote px; popup: {wf, hf} size fractions. */
+    function render(doc, p, opts) {
+      opts = opts || {};
+      const w = (opts.w || 480) * (opts.popup ? opts.popup.wf : 1), h = (opts.h || 800) * (opts.popup ? opts.popup.hf : 1);
+      const dpW = w / DENSITY, dpH = h / DENSITY;
+      const scaler = document.querySelector(".remote-screen-scaler");
+      scaler.style.width = dpW + "px";
+      scaler.style.height = dpH + "px";
+      const fit = () => { scaler.style.transform = `scale(${window.innerWidth / dpW})`; };
+      fit();
+      window.onresize = fit;
+      document.body.classList.toggle("acm-popup", !!opts.popup);
+      document.body.classList.toggle("acm-sim", !!opts.sim);
+      /* global builder state: dashboardData / currentActivePage (pages.js) */
+      dashboardData = exists("normalizeDashboardData") ? normalizeDashboardData(JSON.parse(JSON.stringify(doc))) : doc; // eslint-disable-line no-undef
+      currentActivePage = p; // eslint-disable-line no-undef
+      try { renderPreview(); } catch (e) { errors.push(String(e && e.message || e)); } // eslint-disable-line no-undef
+      try { if (exists("applyThemeToPreview")) applyThemeToPreview(); } catch (e) { /* older app */ } // eslint-disable-line no-undef
+      // no dragging / editing inside the screen
+      document.querySelectorAll("[draggable]").forEach((x) => x.removeAttribute("draggable"));
+      document.querySelectorAll("[onclick]").forEach((x) => x.removeAttribute("onclick"));
+      return { errors: errors.slice(-5) };
+    }
+
+    /* Grid items in DOM order -> pointers (RF21.4 tile links, RF21.5 simulation).
+     * Nested cards of a row are builder placeholders: one entry per nested card. */
+    function tiles() {
+      const out = [];
+      const page = dashboardData.pages[currentActivePage] || {}; // eslint-disable-line no-undef
+      const base = `/pages/${currentActivePage}/cards`; // eslint-disable-line no-undef
+      document.querySelectorAll("#content [data-card-idx]").forEach((cardEl) => {
+        const ci = +cardEl.dataset.cardIdx;
+        const card = (page.cards || [])[ci] || {};
+        const o = card.options || {};
+        const lk = { button_grid: "buttons", scene_grid: "scenes" }[card.type];
+        if (lk) {
+          cardEl.querySelectorAll(".preview-button-tile, .preview-scene-tile").forEach((el, k) => {
+            if (k < (o[lk] || []).length) out.push({ path: `${base}/${ci}/options/${lk}/${k}`, el });
+          });
+        } else if (card.type === "row") {
+          const holders = cardEl.querySelectorAll(":scope > div:last-child > div");
+          holders.forEach((el, j) => { if ((o.cards || [])[j]) out.push({ path: `${base}/${ci}/options/cards/${j}`, el, nested: true }); });
+        }
+      });
+      return out;
+    }
+
+    window.ACM = { ready, render, tiles, errors };
+  })();
+  </script>
+</body>
+</html>

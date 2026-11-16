@@ -2,322 +2,121 @@
 
 # Astrion Config Manager
 
-**App (add-on)** per Home Assistant che gestisce il `dashboard.json` di uno o
-più telecomandi **Astrion HA100** con
+**App (add-on)** di Home Assistant per i telecomandi **Astrion HA100** con
 [astrion-custom-dashboard](https://github.com/dckiller51/astrion-custom-dashboard):
-editor a form, storico completo con undo/redo e versioni con nome (integrato
-con la cronologia del telecomando dall'app 1.3.0), validazione sulle entità HA,
-push/pull con rilevamento della deriva, simulatore live.
+**mappa delle pagine** a schermo intero, **collegamento delle pagine** con il
+trascinamento, **test di navigazione** a schermo intero e il **builder** del
+telecomando integrato in Home Assistant.
 
 🇬🇧 [English version](README.md) · 📄 Specifica: [Italiano](SPEC.md) · [English](SPEC.en.md)
 
-> La v2.0 implementa l'intera specifica (RF1–RF6), simulatore incluso.
+> **3.0 — cambio di ambito.** Il builder dell'app Astrion ora gestisce molto bene la
+> modifica delle singole schermate, quindi l'add-on non lo duplica più. L'editor a
+> form e la cronologia delle versioni dell'add-on sono stati tolti: ogni schermata si
+> modifica nel builder (integrato nella scheda **Builder**) e la cronologia la tiene il
+> telecomando (app 1.3.0+). Qui resta ciò che il builder non fa: tutta la navigazione
+> a colpo d'occhio, il collegamento delle pagine e il test della navigazione. Vedi
+> [cosa cambia](#cosa-cambia-nella-30).
 
 ## Installazione
 
-1. **Impostazioni → App (Add-on) → Store → ⋮ → Repository**
+1. **Impostazioni → App (Componenti aggiuntivi) → Store → ⋮ → Repository**
 2. Aggiungi `https://github.com/dvbit/ha-astrion-config-manager`
-3. Installa **Astrion Config Manager**, avvialo e apri **Astrion** nella barra laterale.
+3. Installa **Astrion Config Manager**, avvialo, apri **Astrion** nella barra laterale.
 
 Su ogni telecomando abilita il **config server** dell'app (porta 8080, pagina impostazioni).
-Schema seguito: release upstream **1.3.0** e beta **1.3.3-beta** ( campi delle card rigenerati con `tools/extract_card_schema.py`). Le chiavi aggiunte dalle beta sono ignorate dalle app più vecchie.
+Segue la **1.5.8-beta** (funziona con le 1.5.x; le schermate sono disegnate dal builder
+installato su ciascun telecomando, quindi i nuovi tipi di card compaiono da soli).
 
 ## Funzioni
 
 | Area | Cosa offre |
 | --- | --- |
-| Telecomandi | Più telecomandi (nome, IP, porta, risoluzione, orientamento, IP Harmony, entità IR). Archiviazione al posto della cancellazione. |
-| Storico | Ogni modifica è una versione salvata come delta JSON Patch; snapshot ogni 50. Anche undo/redo sono versioni. Ripristino di qualsiasi versione in un passo. |
-| Versioni con nome | Etichette per le tappe ("Prima del cambio TV"), filtro, ripristino. I nomi non alterano la storia. |
-| Editor | Menu per i valori fissi, tavolozze colore (card e tema). Form per pagine, card (21 tipi, campi ricavati dai renderer upstream), hotkey, dispositivi IR, Attività, tema; JSON grezzo per tutto. Card e campi sconosciuti restano intatti. |
-| Validazione | Struttura + esistenza in HA di ogni entità citata. Push bloccato in caso di errori. |
-| Sync | Pull e Push dalla scheda Sincronizzazione, dall'elenco o dall'intestazione del telecomando; push con verifica tramite rilettura, deriva via SHA-256 canonico. La deriva è solo segnalata. |
-| Icone | Libreria condivisa (nei backup), selettore con anteprime, caricamento automatico delle icone mancanti al push, importazione da un telecomando. |
-| Catalogo entità | Form per `haDevices` (entità con nome usate dal web builder del telecomando), validato su HA. |
-| Simulatore | Nella scheda Editor (**▶ Simula** / **⚡ Simula ed esegui**): la testa resa alla risoluzione del telecomando con stati HA live; tocchi e tasti HA100 eseguono **realmente** su HA, Hub Harmony ed emettitore IR Broadlink. |
-| Dock e standby (1.2.7) | Sezioni "Schermo dock" e "Standby e batteria"; pagine nascoste del tutto (`hideMode: full`); pulsanti Off (`stopActivity`); eventi hotkey verso HA; layout Apple TV compact/full con scorciatoie app; identità del telecomando e rilevamento duplicati; eliminazione icone sui telecomandi. |
-| Cronologia telecomando (1.3.0) | Le versioni conservate dal telecomando elencate nello Storico: push etichettati `ACM v<n>`, versioni con nome fissabili, disallineamento spiegato, ogni versione confrontabile e importabile. |
-| Mappa di navigazione | Sopra l'Editor (Modifica / Simula): ogni pagina come anteprima live, un'icona per ogni modo di raggiungerla (swipe, tocco, pressione lunga, tasto, Activity, stato HA, popup, indietro); zoom, spostamento, clic per modificare. |
-| Temi | Libreria di temi condivisa con predefiniti: carica / salva / elimina nell'Editor, scheda Temi per anteprima, esporta, importa e applica a più telecomandi. |
+| Mappa | Ogni pagina disegnata dal renderer del builder del telecomando, un'icona per ogni modo di raggiungerla (👋 swipe, ☝️ swipe in alto, 👆 tocco, ✋ pressione lunga, 🎛 tasto, 🎬 Activity, 🏠 stato HA, 🧩 pagina di una card, ↩ indietro; tratteggio ▣ = popup). Zoom, spostamento, schermi trascinabili, ⇅ disposizione gerarchica, bande dei gruppi, ordine di swipe ①②③. |
+| Collegamento | Trascina uno schermo su un altro: una finestra chiede quale elemento lo apre — un tile/pulsante (tocco o pressione lunga), un tasto fisico (questa pagina o globale, breve o lungo), lo swipe in alto o il genitore (Indietro) — come pagina o popup, e mostra cosa sostituisce. |
+| Taglio | Tieni premuta l'icona di un collegamento per toglierlo (anche quelli di una card, come la pagina ⋯ del media remote). |
+| Scritture | Direttamente sul telecomando con una nota (`ACM: Home → TV · Tocco "TV"`); rifiutate se il telecomando è cambiato dopo il caricamento. Annulla = cronologia del telecomando (Builder → 🕘 Cronologia). |
+| Simula | Test di navigazione a schermo intero: tocca / tieni premuti i tile, scorri sullo schermo, tasti HA100, popup alla loro dimensione e posizione, overlay Activity. Nulla viene inviato ai dispositivi. |
+| Builder | Il builder del telecomando dentro l'add-on (funziona in HTTPS). Salvando lì, mappa e simulazione si aggiornano subito. |
+| Temi | Libreria condivisa di temi con preset: anteprima sul tuo telecomando, esporta, importa, applica a più telecomandi. |
+| Icone | Libreria condivisa di icone (inclusa nei backup). |
 | Lingue | Inglese, italiano, francese, spagnolo, tedesco (segue la lingua di HA). |
 
 ## Esempi d'uso
 
-### 1. Registrare un telecomando
+### 1. Registra un telecomando
 
-**+ Aggiungi telecomando** → `Salotto`, `192.168.2.50`, porta `8080`,
-`480`×`800`, verticale. Il pull iniziale crea la **v1** (`import`). Se il
-telecomando non risponde o non ha `dashboard.json`, non viene registrato nulla.
+**＋ Aggiungi telecomando** → nome *Soggiorno*, IP `192.168.2.50`, porta `8080`,
+dimensione `480×800`, verticale → **Registra**. Il telecomando deve essere raggiungibile.
 
-### 2. Modificare e annullare
+### 2. Leggi la navigazione
 
-Cambia il `name` di una card e premi Invio → **v2** (`edit`). **Annulla
-ultima** → **v3** (`undo`) con lo stato precedente. **Ripeti** → **v4**
-(`redo`). Una nuova modifica azzera i ripeti.
+**🗺 Apri** → tutte le pagine nell'ordine di swipe. *Home* → 👆 *TV* significa che un
+tile di Home apre TV; una linea tratteggiata con ▣ apre un popup. **⇅ Disponi per
+gerarchia** mette le figlie sotto il genitore (⟲ torna a una riga).
 
-### 3. Dare un nome a una tappa e tornarci
+### 3. Collega due pagine
 
-Storico → v12 → **Nome…** → `Prima del cambio TV`. Settimane dopo:
-**Ripristina** sulla versione con nome → nuova versione `restore` con
-esattamente quello stato.
+Trascina lo schermo *Home* su *TV* → scegli:
 
-### 4. Copiare una pagina su un altro telecomando
+- **Tile / pulsante** *TV* · *Tocco* · apri come *Pagina* → il tile riceve `"page": "TV"`;
+- oppure **Tasto fisico** *Play / Pausa* · *Lungo* · *Globale* · *Popup* →
+  `{"key": "PLAY", "page": "TV", "pageMode": "popup"}` in `longHotkeys`;
+- oppure **Swipe in alto** → `"linkedPage": "TV"` su Home;
+- oppure **Genitore** → Home diventa figlia di TV (tasto Indietro, gruppo di pallini).
 
-Editor → pagina → **Copia su telecomando…** → `Camera`. Sulla destinazione
-nasce una sola versione; i nomi in conflitto ricevono un suffisso (`Home 2`),
-collegamenti e dispositivi IR usati dalla pagina vengono copiati e riallineati.
+**Collega** → scritto sul telecomando con la nota `ACM: Home → TV · …`. Trascinando da un
+tile, quel tile è già selezionato. Le ancore ● laterali cambiano ancora l'ordine di swipe.
 
-### 5. Deriva
+### 4. Taglia un collegamento
 
-Qualcuno ha modificato il telecomando dal suo web builder. L'elenco mostra
-**Modificato sul dispositivo**; nel telecomando scegli **Importa come
-versione** (`sync-import`), **Sovrascrivi con la testa** (push) o **Ignora**.
+Tieni premuta l'icona del collegamento → **Rimuovi** → scritto sul telecomando.
 
-### 6. Push bloccato da un'entità mancante
+### 5. Prova la navigazione
 
-```json
-{ "type": "light", "options": { "entity_id": "light.vecchia_lampada" } }
-```
+**▶ Simula** → lo schermo del telecomando a grandezza piena. Tocca *TV*, tieni premuto un
+tile per la pressione lunga, scorri a sinistra / destra / in alto (pagina collegata) / in
+basso (Activity), premi **↩**. Le azioni che non cambiano pagina sono solo indicate
+(*non eseguito*).
 
-`light.vecchia_lampada` non esiste più in HA → *Entità inesistente in Home
-Assistant* sul campo; **Invia** resta disabilitato finché non si corregge.
+### 6. Modifica una schermata
 
-### 7. Simulatore
+**🛠 Builder** → il builder del telecomando si apre sulla pagina selezionata nella mappa.
+Salva: mappa e simulazione si aggiornano subito. **🕘 Cronologia** apre la cronologia del
+telecomando (lì si annulla un collegamento scritto dall'add-on).
 
-Nella scheda **Editor** premi **⚡ Simula ed esegui** nella barra "✎ Editor"
-(sotto la mappa): il pannello inferiore diventa il simulatore. Lo schermo mostra la testa con gli stati live.
-Tocca una luce → `light.toggle` viene eseguito su HA e la card si aggiorna. Una
-scena con `"activity": "guarda_tv"` esegue l'Attività composta (accensioni,
-ingressi, ritardi) e passa alla sua pagina. Scorri di lato per le pagine, in
-alto per la pagina collegata; tieni premuto un tasto HA100 per l'hotkey lungo. Premi **▶ Simula**
-per provare il flusso senza agire sui dispositivi: le azioni vengono elencate,
-non eseguite. Passando dall'uno all'altro pagina e stati restano; **✎ Modifica**
-torna all'editor. In simulazione il clic su uno schermo della mappa lo apre nel simulatore.
+### 7. Temi
 
-I campi opzionali del telecomando abilitano le altre azioni:
-
-| Campo | Esempio | Abilita |
-| --- | --- | --- |
-| Hub letti dal telecomando | *Hub Salotto*, *Hub Camera* | `harmonyCommand`, `activityId`, card Apple TV, instradati da `hub` |
-| IP Hub Harmony (riserva) | `192.168.2.30` | gli stessi, se il telecomando non ha hub |
-| Extender letti dal telecomando | *Ext TV* | dispositivi IR con `target: {"extender": ...}` |
-| Entità emettitore IR | `remote.broadlink_salotto` | dispositivi IR con destinazione `local` (codici inline o ir-database) |
-
-Senza questi campi i pulsanti appaiono disabilitati con il motivo. I codici IR
-sono convertiti in pacchetti Broadlink `b64:`; la portante è fissata dal
-dispositivo Broadlink (~38 kHz).
-
-### 8. Icone e catalogo entità
-
-Scheda **Icone** → carica `disco.png`. In una `button_grid` metti il cursore
-dentro `"icon": ""` di un pulsante e premi **🖼 Inserisci icona** → `disco.png`:
+**Temi** → *OLED black* → **Applica ai telecomandi…** → spunta *Cucina* → scritto sul
+telecomando (`ACM: theme OLED black`). **Esporta** produce:
 
 ```json
-{ "name": "Disco", "icon": "/sdcard/astrion/icons/disco.png", "service": "scene.turn_on", "entity_id": "scene.disco" }
+{ "name": "Soggiorno", "theme": { "background": "#000000", "accent": "#4DA3FF" } }
 ```
 
-Al **push** l'add-on carica `disco.png` sul telecomando se manca. Hai già icone
-su un telecomando? **Sincronizzazione → Importa nella libreria**.
+## Cosa cambia nella 3.0
 
-**Editor → Dispositivi HA (catalogo)** → aggiungi `TV Salotto`, tipo *Media
-Player*, entità `media_player.tv`. La voce finisce in `haDevices` ed è proposta
-con ★ in tutti i campi entità.
+| Rimosso | Al suo posto |
+| --- | --- |
+| Editor a form, anteprima grande, copia card | Il builder del telecomando (scheda **Builder**) |
+| Versioni dell'add-on, annulla/ripeti, versioni con nome, ripristino | La cronologia del telecomando (Builder → 🕘 Cronologia) |
+| Push / pull, disallineamento, modalità "modifica con il builder" | Ogni modifica è scritta direttamente sul telecomando |
+| "Simula ed esegui" (azioni reali sui dispositivi) | Test di sola navigazione |
 
-### 9. Novità con l'app 1.2.7-beta
-
-**Schermo dock** — *Editor → Globale → Schermo dock*: modalità `clock`, meteo
-`weather.home`. Salvato come:
-
-```json
-"dock": { "mode": "clock", "weather_entity": "weather.home", "time_format": 24 },
-"power": { "screen_timeout_seconds": 60, "screen_off_entities": ["binary_sensor.tv_on"] }
-```
-
-In simulazione spunta **Sulla base** per vederne l'anteprima (tocca lo schermo per uscire).
-
-**Pulsante Off stile Harmony** — una tile scena con `"stopActivity": "Salotto"`
-(o `"*"` per tutte le stanze) ferma l'Activity della stanza: stop composto o
-PowerOff Harmony. La stanza si sceglie dal menu.
-
-**Pagina visibile solo durante la sua Activity** — pagina *TV*:
-`hiddenUnlessActivity` `guarda_tv`, `hideMode` `full`: gli swipe la saltano a
-Activity spenta e il telecomando la lascia quando l'Activity si ferma.
-
-**Evento da hotkey per le automazioni** — hotkey `VOICE (Microfono)` con
-`"event": "voice"`; un'automazione lo intercetta:
-
-```yaml
-triggers:
-  - trigger: event
-    event_type: astrion_button
-    event_data:
-      event: voice
-actions:
-  - action: assist_satellite.start_conversation
-    target:
-      entity_id: assist_satellite.cucina
-```
-
-**Telecomando Apple TV compatto con app**:
-
-```json
-{ "type": "apple_tv_remote", "options": { "deviceId": "62846050", "layout": "compact",
-  "entity": "media_player.apple_tv", "apps": [ { "source": "Netflix", "color": "#B3261E" } ] } }
-```
-
-**Stati dei dispositivi** — i dispositivi IR con profilo si avviano stile
-Harmony; il simulatore ricorda quali dispositivi ritiene accesi (pannello sotto
-lo schermo). Se un dispositivo è stato acceso o spento a mano, premi **Azzera
-stati dispositivi**.
-
-### 10. Push / pull rapidi e opzioni 1.2.8–1.2.9
-
-**Push / Pull** sono su ogni telecomando dell'elenco e nell'intestazione del
-telecomando aperto: una modifica fatta nell'Editor o provata nel Simulatore si
-invia senza aprire Sincronizzazione. Un push su un telecomando modificato dal
-suo lato chiede prima conferma.
-
-**Popup da hotkey** (il tasto blu apre la pagina AV sopra quella corrente; ripremi per chiudere):
-
-```json
-{ "key": "BLUE_BUTTON", "page": "AV", "pageMode": "popup" }
-```
-
-**L'orologio dock segue la stanza** — `dock.room` "Salotto" e, sull'Activity,
-`"nowPlayingEntity": "media_player.apple_tv"`: mentre quell'Activity è attiva,
-l'orologio sulla base mostra solo quel player.
-
-**Monitor con valori lunghi** e **select come semplice menu**:
-
-```json
-{ "type": "monitor", "options": { "layout": "vertical", "marquee": true,
-  "entities": [ { "entity_id": "sensor.avr_audio", "name": "Audio" } ] } }
-{ "type": "select", "options": { "entity_id": "input_select.scena", "layout": "dropdown", "font_size": 18 } }
-```
-
-### 11. Due cronologie: add-on e telecomando (app 1.3.0)
-
-Dalla 1.3.0 il telecomando conserva una propria cronologia di `dashboard.json`.
-La cronologia dell'add-on resta il riferimento; quella del telecomando è una
-rete di sicurezza che l'add-on legge ed etichetta.
-
-| | Add-on | Telecomando 1.3.0 |
-| --- | --- | --- |
-| Conservazione | Tutto, per sempre (nei backup di HA) | 30 + fissate |
-| Archiviazione | Differenze tra versioni | Copie complete |
-| Etichette | Nomi univoci per telecomando | Note libere, versioni fissate |
-| Ambito | Tutti i telecomandi, copia tra di essi | Solo quel telecomando |
-| Registra le modifiche fatte sul telecomando | Solo quando emergono come disallineamento | Sì, ogni salvataggio |
-
-- Ogni push viene etichettato sul telecomando: `ACM v42 · "Prima del cambio TV"`.
-- **Modifica telecomando → Fissa le versioni con nome sul telecomando**: le
-  versioni con nome inviate vengono fissate lì, così il limite di 30 versioni
-  del telecomando non le elimina mai.
-- Banner di disallineamento: *"Salvata dal builder o dalla pagina web: nuove luci"*,
-  *"Ripristinata sul telecomando dalla versione 20261017-101500"*, …
-- **Storico → Cronologia del telecomando**: confronta qualsiasi versione del
-  telecomando con la testa, scaricala o **Importa come versione** (poi invia).
-  L'add-on non ripristina né elimina nulla nella cronologia del telecomando.
-
-### 12. Mappa di navigazione
-
-Apri un telecomando: la **🗺 Mappa di navigazione** sta sopra l'Editor. Tutte le
-pagine sono su una riga nell'ordine in cui il telecomando le scorre, ognuna
-disegnata come schermo live in miniatura. Le icone sulle linee dicono come si
-raggiunge una pagina: 👋 swipe, ☝️ swipe in alto, 👆 tocco, ✋ pressione lunga,
-🎛 tasto ("Menu ⏱" = pressione lunga di Menu), 🎬 Activity, 🏠 stato di Home
-Assistant, ↩ indietro; una linea tratteggiata con ▣ apre un popup. Clic su una
-card in anteprima per modificarla, o su una linea per aprire la tile o la
-hotkey che la crea. In simulazione il clic su una pagina la mostra. ▴ nasconde
-la mappa; trascina il bordo tra la mappa e il pannello sotto (la maniglia ▬) per ridimensionarli.
-
-**Modifiche sulla mappa** (scheda Editor):
-
-- trascina il ● destro di *Home* sul ● sinistro di *TV* → *TV* diventa la vicina di swipe di *Home*;
-- ogni tasto compare una sola volta nella riga dei tasti, con due ancore: ◧ sinistra = solo questa pagina, ◨ destra = globale;
-  ⚡ indica un tasto assegnato a un'azione che non apre pagine (es. un servizio): non ha collegamento;
-- trascina l'**ancora destra (globale) ◨** del tasto **Play / Pausa** sul ● inferiore di *TV* → scegli
-  *Lunga* + *Popup* → `{"key": "PLAY", "page": "TV", "pageMode": "popup"}` in `longHotkeys`;
-- i collegamenti di tocco, pressione lunga e Activity di una tile partono dal ● sulla tile stessa
-  nell'anteprima (dal bordo inferiore dello schermo se la tile non è visibile);
-- trascina la tile *Film* (o il suo ●) di una scene grid sul ● superiore di *Cinema* → scegli *Tocco* →
-  la tile riceve `"page": "Cinema"`;
-- **＋ Nuova pagina** / **🗑 Elimina pagina** nella barra della mappa aggiungono una pagina vuota o eliminano quella selezionata;
-- tieni premuta l'icona di un collegamento → conferma → il collegamento è rimosso;
-- **⇅ Disponi per gerarchia** mette le figlie sotto il genitore e le pagine collegate sopra la
-  sorgente (solo mappa; ⟲ torna a una riga). Strisce colorate sotto gli schermi figli = gruppi di
-  pallini del telecomando; ①②③ = ordine di swipe; le pagine aperte solo come popup sono disegnate
-  alla dimensione del popup (▣);
-- trascina uno schermo dalla barra del titolo per disporre la mappa (salvata per telecomando, **⟲** la ripristina);
-  **Tasti pagina / Tasti globali / Collegamenti** mostrano o nascondono quelle ancore e collegamenti.
-
-Ogni modifica è una versione: **Annulla** la ripristina.
-
-### 13. Temi
-
-**Editor → Globale → Tema → 📂 Carica tema** → scegli *OLED black* (anteprima a
-destra) → una nuova versione, Annulla riporta i colori precedenti. **💾 Salva
-come…** salva i colori attuali come *Salotto*. Nella schermata principale,
-**Temi** → *Salotto* → **Applica ai telecomandi…** → spunta *Cucina* e *Camera*
-→ ognuno riceve una versione, pronta da inviare. **Esporta** produce un file come:
-
-```json
-{ "name": "Salotto", "theme": { "background": "#000000", "accent": "#4DA3FF" } }
-```
-
-che **Importa da file** rilegge (va bene anche un intero `dashboard.json`).
-
-### 14. Il builder del telecomando
-
-I link aprono una normale nuova scheda (nessun pop-up), quindi funzionano anche
-nel frame di Home Assistant e nell'app companion.
-
-**Apri nel builder ↗** (intestazione) apre `http://<ip>:8080/builder/` in una
-nuova scheda sul punto selezionato qui, es. pagina *TV* → `/builder/#page=TV`,
-una card → `#page=TV&card=2`, un'Activity → `#activity=guarda_tv`;
-**Cronologia ↗** apre `#history`. Sono disattivati quando il telecomando non è
-raggiungibile (solo rete locale).
-
-Preferisci il builder? **Modifica telecomando → Modifica con il builder del
-telecomando**: l'add-on diventa il backup in sola lettura. **Modifica nel
-builder** chiede prima di inviare o scartare le modifiche non ancora inviate;
-salva nel builder, torna su questa scheda (o premi **Fatto**) e la modifica è
-importata come versione con la nota scritta nel builder. Modifiche su entrambi i
-lati? Scegli tu quale tenere: mai unite.
-Con l'app **1.3.3-beta** non serve nemmeno tornare: il builder avvisa l'add-on dopo
-ogni **Salva sul dispositivo** (o ripristino dalla cronologia) e la modifica è
-importata subito. Fuori da questa modalità lo stesso avviso aggiorna solo il
-banner di disallineamento (nulla viene importato da solo).
-
-### 15. Meteo integrato (app 1.3.2-beta)
-
-**Editor → Globale → Meteo integrato** → *Cerca una località* "Bracciano" →
-selezionala → viene scritto il blocco qui sotto; poi usa `weather.astrion` in
-una card orologio e meteo o nell'orologio dock.
-
-```json
-"weather": { "name": "Bracciano", "latitude": 42.12, "longitude": 12.17, "model": "auto", "unit": "celsius" }
-```
-
-### 16. Anteprima grande
-
-Nell'Editor il pannello a sinistra mostra in grande lo schermo selezionato con
-stati live; clic su una card per modificarla. Trascina il bordo destro per
-ridimensionarlo, **◂** lo nasconde (**▸ Anteprima** lo riporta).
-La freccetta **▴/▾** nella barra **✎ Editor** comprime tutto l'Editor (come la mappa);
-un clic sulla mappa lo riapre.
+I dati esistenti in `/data` (vecchie versioni) non vengono toccati.
 
 ## Dati e backup
 
-Tutto risiede nel volume `/data` dell'app (incluso nei backup HA). Scritture
-atomiche (file temporaneo + fsync + rename): una versione esiste per intero o
-non esiste. Gli stati dispositivi del simulatore sono in `/data/sim_state/`, i temi salvati in `/data/themes/`. Struttura dei file: vedi [README inglese](README.md#data-and-backups).
+`/data` (incluso nei backup di HA): `remotes/<id>/meta.json` (telecomando, disposizione
+della mappa), `icons/` (libreria icone), `themes/` (temi salvati). Le versioni scritte
+dalla 2.x restano su disco, inutilizzate.
 
 ## Log
 
-Opzione `log_level` (`trace`…`error`). INFO: versioni, push/pull, archivio.
-WARNING: deriva, push bloccati, commit rifiutati, HA non raggiungibile.
-ERROR: verifica push fallita. DEBUG: chiamate HTTP, ricostruzioni di stato.
+Opzione `log_level` (`trace`…`error`). INFO: scritture sui telecomandi (con nota),
+salvataggi del builder visti dal proxy, registrazione. WARNING: scrittura rifiutata
+(telecomando cambiato), telecomando non raggiungibile, errori del proxy. DEBUG:
+richieste inoltrate, letture.
 
 ## Sviluppo
 
@@ -331,4 +130,4 @@ I workflow CI sono in `ci/` (da spostare in `.github/workflows/`).
 
 ## Licenza
 
-GPL-3.0, come il progetto upstream da cui deriva lo schema dell'editor.
+GPL-3.0, come il progetto upstream.

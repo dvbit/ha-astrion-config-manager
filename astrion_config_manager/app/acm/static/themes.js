@@ -1,13 +1,12 @@
-/* Theme library UI (spec RF14).
+/* Theme library UI (spec RF14, RF21.6).
  *
- * - RF14.3  Editor -> Global -> Theme toolbar: Load (picker with swatches and
- *           preview; replaces the remote's "theme" block = one version, undoable),
- *           Save as (overwrite asks first), Delete (presets are read-only).
  * - RF14.4  "Themes" tab: list with swatches, preview, rename, duplicate,
- *           delete, export .json, apply to several remotes (one version each,
- *           nothing pushed), import from file (bad colours reported).
- * - RF14.5  preview before applying: the simulator's renderer draws the first
- *           page of the open (or chosen) remote with the theme applied.
+ *           delete, export .json, apply to several remotes, import from file
+ *           (bad colours reported).
+ * - RF21.6  3.0: applying writes the theme straight to each ticked remote
+ *           (note "ACM: theme <name>"; the remote keeps the version). Previews
+ *           are drawn by the chosen remote's own builder renderer (RF21.3).
+ *           Editing a theme colour by colour is done in the builder.
  */
 "use strict";
 
@@ -31,53 +30,21 @@ function themeSwatches(theme) {
     .map((k) => el("span", { class: "theme-swatch", title: `${k} ${c[k] || ""}`, style: `background:${c[k] || "transparent"}` })));
 }
 
-/* RF14.5: first page of `doc` drawn with `theme`, scaled to THEME_PREVIEW_W. */
+/* RF14.5 / RF21.3: first page of `doc` drawn with `theme` by the remote's renderer. */
 function themePreview(theme, doc, remote, rid) {
   const src = doc && Array.isArray(doc.pages) && doc.pages.length ? doc : THEME_SAMPLE_DOC;
   const themedDoc = { ...src, theme: theme || {} };
-  const r = remote || { width: 480, height: 800, orientation: "portrait" };
-  let w = r.width || 480, h = r.height || 800;
-  if (((r.orientation || "portrait") === "portrait") !== (h >= w)) [w, h] = [h, w];
-  const sim = new Simulator({ rid, remote: r, doc: themedDoc, preview: true });
-  if (navmap && navmap.preview) sim.states = navmap.preview.states; // live states when the map has them
-  const th = sim.theme();
-  const scale = THEME_PREVIEW_W / w;
-  const screen = el("div", { class: "sim-screen", style: `width:${w}px;height:${h}px;transform:scale(${scale});background:${th.background};color:${th.primaryText};--card:${th.cardSurface};--inset:${th.insetSurface};--ctl:${th.controlBackground};--muted:${th.mutedText};--acc:${th.accent};--amber:${th.amber};--danger:${th.danger};--ok:${th.success}` });
-  try { screen.append(sim.renderPage(themedDoc.pages[0], 0, false)); } catch (e) { screen.append(el("p", { text: e.message })); }
-  return el("div", { class: "theme-preview", style: `width:${THEME_PREVIEW_W}px;height:${Math.round(h * scale)}px` }, screen);
+  const { w, h } = remoteSize(remote);
+  const host = el("div", { class: "theme-preview", style: `width:${THEME_PREVIEW_W}px;height:${Math.round(h * THEME_PREVIEW_W / w)}px` });
+  if (!rid) return host;
+  if (!TH.renderer || TH.renderer.rid !== rid) { if (TH.renderer) TH.renderer.close(); TH.renderer = new Renderer(rid); }
+  const r = TH.renderer;
+  r.snapshot(themedDoc, 0, { w, h }).then((snap) => r.mount(host, snap, THEME_PREVIEW_W))
+    .catch((e) => host.replaceChildren(el("p", { class: "muted", text: e.message })));
+  return host;
 }
 
 function closeDialog(dlg) { dlg.close(); dlg.remove(); }
-
-/* RF14.3 Load: picker with swatches + live preview; resolves the chosen theme or null. */
-function themePicker(doc, remote, rid) {
-  return new Promise((resolve) => {
-    (async () => {
-      const list = await api("GET", "api/themes");
-      const dlg = el("dialog", { class: "theme-dialog" });
-      const prev = el("div", {});
-      let chosen = null;
-      const items = list.map((th) => {
-        const b = el("button", { class: "theme-item" }, el("strong", { text: th.name }), th.preset ? el("span", { class: "badge", text: t("theme_preset") }) : null, themeSwatches(th.theme));
-        b.onclick = () => {
-          chosen = th;
-          dlg.querySelectorAll(".theme-item").forEach((x) => x.classList.toggle("sel", x === b));
-          prev.replaceChildren(themePreview(th.theme, doc, remote, rid));
-          load.disabled = false;
-        };
-        return b;
-      });
-      const load = el("button", { class: "primary", text: t("theme_load"), disabled: true, onclick: () => { closeDialog(dlg); resolve(chosen); } });
-      dlg.append(el("h2", { text: t("theme_load") }),
-        el("div", { class: "theme-pick" }, el("div", { class: "theme-list" }, ...items), prev),
-        el("p", { class: "muted", text: t("theme_load_hint") }),
-        el("div", { class: "row" }, el("span", { class: "spacer" }),
-          el("button", { text: t("cancel"), onclick: () => { closeDialog(dlg); resolve(null); } }), load));
-      document.body.append(dlg);
-      dlg.showModal();
-    })().catch(async (e) => { await handleError(e); resolve(null); });
-  });
-}
 
 /* RF14.3 Save as: asks a name; on a clash with a saved theme asks to overwrite. */
 async function themeSaveAs(theme, suggested) {
@@ -98,47 +65,15 @@ async function themeSaveAs(theme, suggested) {
   }
 }
 
-/* RF14.3 Delete from the editor: pick one saved theme. */
-async function themeDeleteDialog() {
-  const list = (await api("GET", "api/themes")).filter((x) => !x.preset);
-  if (!list.length) return toast(t("theme_none_saved"));
-  const sel = el("select", {}, ...list.map((x) => el("option", { value: x.id, text: x.name })));
-  const dlg = el("dialog", {}, el("h3", { text: t("theme_delete") }), sel,
-    el("div", { class: "row" }, el("span", { class: "spacer" }),
-      el("button", { text: t("cancel"), onclick: () => closeDialog(dlg) }),
-      el("button", { class: "danger", text: t("delete"), onclick: guard(async () => {
-        const th = list.find((x) => x.id === sel.value);
-        if (!confirm(t("theme_delete_confirm", { name: th.name }))) return;
-        await api("DELETE", `api/themes/${encodeURIComponent(th.id)}`);
-        closeDialog(dlg); toast(t("theme_deleted"));
-      }) })));
-  document.body.append(dlg);
-  dlg.showModal();
-}
-
-/* Toolbar shown above the theme colours in Editor -> Global -> Theme. */
-function themeToolbar(editor) {
-  return el("div", { class: "row theme-toolbar" },
-    el("button", { text: "📂 " + t("theme_load"), onclick: guard(async () => {
-      const th = await themePicker(editor.doc, S.remote, S.rid);
-      if (!th) return;
-      // one version, undoable (RF2.3); empty block = the remote's own defaults
-      await editor.change((d) => { if (Object.keys(th.theme).length) d.theme = clone(th.theme); else delete d.theme; });
-      toast(`${t("theme_loaded")}: ${th.name}`);
-    }) }),
-    el("button", { text: "💾 " + t("theme_save_as"), onclick: guard(() => themeSaveAs((editor.doc && editor.doc.theme) || {}, "")) }),
-    el("button", { class: "danger", text: "🗑 " + t("theme_delete"), onclick: guard(themeDeleteDialog) }));
-}
-
 /* ---------- Themes tab (RF14.4) ---------- */
 
-const TH = { previewRid: null, docs: {} };
+const TH = { previewRid: null, docs: {}, renderer: null };
 
 async function previewDoc(rid) {
   if (!rid) return { doc: null, remote: null };
   if (!TH.docs[rid]) {
-    const st = await api("GET", `api/remotes/${rid}/state`);
-    TH.docs[rid] = { doc: st.state, remote: st.remote };
+    const st = await api("GET", `api/remotes/${rid}/live`);
+    TH.docs[rid] = { doc: st.doc, remote: st.remote };
   }
   return TH.docs[rid];
 }
@@ -196,7 +131,7 @@ async function renderThemes() {
   box.append(grid);
 }
 
-/* RF14.4 Apply to remotes: one version per ticked remote, nothing pushed. */
+/* RF14.4 / RF21.6 Apply to remotes: written straight to each ticked remote. */
 function themeApplyDialog(th, remotes) {
   if (!remotes.length) return toast(t("empty_list"));
   const rows = remotes.map((r) => ({ r, cb: el("input", { type: "checkbox" }) }));
@@ -208,7 +143,7 @@ function themeApplyDialog(th, remotes) {
         const ids = rows.filter((x) => x.cb.checked).map((x) => x.r.id);
         if (!ids.length) return;
         const res = await api("POST", `api/themes/${encodeURIComponent(th.id)}/apply`, { remotes: ids });
-        const msg = res.results.map((x) => `${x.name || x.id}: ${x.error ? t("err_" + x.error) : x.version ? "v" + x.version : t("theme_unchanged")}`).join(" · ");
+        const msg = res.results.map((x) => `${x.name || x.id}: ${x.error ? t("err_" + x.error) : x.result === "written" ? t("written") : t("theme_unchanged")}`).join(" · ");
         closeDialog(dlg);
         TH.docs = {};
         toast(msg, res.results.some((x) => x.error));

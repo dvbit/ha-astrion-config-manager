@@ -2,16 +2,21 @@
 
 # Astrion Config Manager
 
-Home Assistant **app (add-on)** to manage the `dashboard.json` of one or more
-**Astrion HA100** remotes running
+Home Assistant **app (add-on)** for **Astrion HA100** remotes running
 [astrion-custom-dashboard](https://github.com/dckiller51/astrion-custom-dashboard):
-form editor, full version history with undo/redo and named versions
-(integrated with the remote's own history since app 1.3.0), validation
-against your HA entities, push/pull with drift detection, live simulator.
+a full-screen **map of the pages**, **page linking** by drag and drop, a
+full-screen **navigation test**, and the remote's own **builder** embedded in
+Home Assistant.
 
 🇮🇹 [Versione italiana](README.it.md) · 📄 Specification: [English](SPEC.en.md) · [Italiano](SPEC.md)
 
-> v2.0 implements the whole specification (RF1–RF6), simulator included.
+> **3.0 — scope change.** The Astrion app's own builder now does single-screen
+> editing very well, so the add-on no longer duplicates it. The form editor and
+> the add-on's version history are gone: each screen is edited in the builder
+> (embedded in the **Builder** tab), and the remote keeps the history (app 1.3.0+).
+> What stays here is what the builder doesn't do: the whole navigation at a
+> glance, linking pages, and testing the navigation. See
+> [what changed](#what-changed-in-30).
 
 ## Installation
 
@@ -20,306 +25,96 @@ against your HA entities, push/pull with drift detection, live simulator.
 3. Install **Astrion Config Manager**, start it, open **Astrion** in the sidebar.
 
 On each remote, enable the app's **config server** (port 8080, settings page).
-Schema followed: upstream release **1.3.0** and beta **1.3.3-beta** (card fields regenerated with `tools/extract_card_schema.py`; card fields regenerated with `tools/extract_card_schema.py`). Keys added by the betas are ignored by older apps.
+Follows upstream **1.5.8-beta** (works with 1.5.x; the screens are drawn by the
+builder installed on each remote, so new card types appear automatically).
 
 ## Features
 
 | Area | What you get |
 | --- | --- |
-| Remotes | Register many remotes (name, IP, port, screen size, orientation, Harmony IP, IR entity). Archive instead of delete. |
-| History | Every change is a version stored as a JSON Patch delta; snapshots every 50. Undo/redo are versions too. Restore any version in one step. |
-| Remote history (1.3.0) | The remote's own versions listed in History: pushes labelled `ACM v<n>`, named ones optionally pinned, drift explained, any remote version comparable and importable. |
-| Navigation map | Above the Editor (Modify / Simulate): every page as a live mini preview, one icon per way to reach it (swipe, tap, long press, key, Activity, HA state, popup, back); zoom, pan, click to edit. |
-| Themes | Shared theme library with presets: load / save / delete in the Editor, a Themes tab to preview, export, import and apply to several remotes. |
-| Named versions | Label milestones ("Before TV change"), filter them, restore them. Labels never alter history. |
-| Editor | Dropdowns for fixed values, colour palettes (cards and theme). Forms for pages, cards (21 types, fields extracted from upstream renderers), hotkeys, IR devices, Activities, theme; raw JSON for everything. Unknown cards/fields survive untouched. |
-| Validation | Structure + every referenced entity must exist in HA. Push is blocked on errors. |
-| Sync | Pull and Push from the Sync tab, the remote list or the remote's header; push with re-read verification, drift detection by canonical SHA-256. Drift is reported, never auto-applied. |
-| Icons | Shared library (backed up), picker with thumbnails, automatic upload of missing icons on push, import from a remote. |
-| Entity catalog | Form for `haDevices` (named entities used by the remote's web builder), validated against HA. |
-| Simulator | In the Editor tab (**▶ Simulate** / **⚡ Simulate & run**): the head rendered at the remote's resolution with live HA states; taps and HA100 keys run **for real** on HA, the Harmony Hub and the Broadlink IR emitter. |
-| Dock & standby (1.2.7) | "Dock screen" and "Standby & battery" sections; pages hidden completely (`hideMode: full`); Off buttons (`stopActivity`); hotkey events to HA; Apple TV compact/full layouts with app shortcuts; remote identity and duplicate detection; icon deletion on the remotes. |
+| Map | Every page drawn by the remote's own builder renderer, one icon per way to reach it (👋 swipe, ☝️ swipe up, 👆 tap, ✋ long press, 🎛 key, 🎬 Activity, 🏠 HA state, 🧩 card page, ↩ back; dashed ▣ = popup). Zoom, pan, drag screens, ⇅ hierarchy layout, sibling bands, ①②③ swipe order. |
+| Linking | Drag one screen onto another: a chooser asks which element opens it — a tile/button (tap or long press), a hardware key (this page or global, short or long), swipe up, or parent (Back) — page or popup, and shows what it replaces. |
+| Cutting | Press and hold a link's icon to remove it (card-level links such as the media remote's ⋯ page can be cut too). |
+| Writes | Straight to the remote with a note (`ACM: Home → TV · Tap "TV"`); refused if the remote changed since it was loaded. Undo = the remote's history (Builder → 🕘 History). |
+| Simulate | Full-screen navigation test: tap / hold tiles, swipe on the screen, HA100 keys, popups at their size and position, Activities overlay. Nothing is sent to your devices. |
+| Builder | The remote's builder inside the add-on (works over HTTPS). Saving there refreshes the map and the simulation at once. |
+| Themes | Shared theme library with presets: preview on your remote, export, import, apply to several remotes. |
+| Icons | Shared icon library (backed up). |
 | Languages | English, Italian, French, Spanish, German (follows your HA language). |
 
 ## Usage examples
 
 ### 1. Register a remote
 
-**+ Add remote** → `Living room`, `192.168.2.50`, port `8080`, `480`×`800`,
-portrait. The initial pull creates **v1** (`import`). If the remote is
-unreachable or has no `dashboard.json`, nothing is registered.
+**＋ Add remote** → name *Living room*, IP `192.168.2.50`, port `8080`, size
+`480×800`, portrait → **Register**. The remote must be reachable.
 
-### 2. Edit and undo
+### 2. Read the navigation
 
-Change a card's `name` and press Enter → **v2** (`edit`). Press **Undo** →
-**v3** (`undo`) with the previous state. **Redo** → **v4** (`redo`). Any new
-edit clears the redo stack.
+**🗺 Open** → all pages in swipe order. *Home* → 👆 *TV* means a tile on Home opens TV;
+a dashed line with ▣ opens a popup. **⇅ Arrange by hierarchy** puts child pages under
+their parent (⟲ back to one row).
 
-### 3. Name a milestone and go back
+### 3. Link two pages
 
-History → v12 → **Name…** → `Before TV change`. Weeks later: **Restore** on
-the named version → a new `restore` version with exactly that state.
+Drag the *Home* screen onto *TV* → choose:
 
-### 4. Copy a page to another remote
+- **Tile / button** *TV* · *Tap* · open as *Page* → the tile gets `"page": "TV"`;
+- or **Hardware key** *Play / Pause* · *Long* · *Global* · *Popup* →
+  `{"key": "PLAY", "page": "TV", "pageMode": "popup"}` in `longHotkeys`;
+- or **Swipe up** → `"linkedPage": "TV"` on Home;
+- or **Parent** → Home becomes a child of TV (Back key, dots group).
 
-Editor → page → **Copy to remote…** → `Bedroom`. One version is created on
-the destination; name clashes get a numeric suffix (`Home 2`), links and IR
-devices used by the page are copied and re-pointed.
+**Link** → written to the remote with the note `ACM: Home → TV · …`. Dragging from a
+tile preselects that tile. Side ● anchors still change the swipe order.
 
-### 5. Drift
+### 4. Cut a link
 
-Someone edited the remote from its own web builder. The list shows
-**Changed on device**; inside the remote choose **Import as version**
-(`sync-import`), **Overwrite with head** (push) or **Ignore**.
+Press and hold a link's icon → **Remove** → written to the remote.
 
-### 6. Push blocked by a missing entity
+### 5. Test the navigation
 
-```json
-{ "type": "light", "options": { "entity_id": "light.old_lamp" } }
-```
+**▶ Simulate** → the remote's screen full size. Tap *TV*, hold a tile for its long
+press, swipe left / right / up (linked page) / down (Activities), press **↩**.
+Actions that are not page changes are only named (*not executed*).
 
-`light.old_lamp` no longer exists in HA → *Entity not found in Home
-Assistant* shown on the field; **Push** stays disabled until fixed.
+### 6. Edit a screen
 
-### 7. Simulator
+**🛠 Builder** → the remote's builder opens on the page selected on the map. Save:
+the map and the simulation update at once. **🕘 History** opens the remote's history
+(undo a link written by the add-on there).
 
-In the **Editor** tab press **⚡ Simulate & run** in the "✎ Editor" bar (under
-the map): the lower pane becomes the simulator. The screen shows the head with live states. Tap a
-light tile → `light.toggle` runs on HA and the tile updates. A scene tile with
-`"activity": "watch_tv"` runs the composed Activity (power on, inputs, delays)
-and jumps to its page. Swipe sideways for pages, up for the linked page; hold an
-HA100 key for its long-press hotkey. Press **▶ Simulate** to try the
-flow without touching your devices: actions are listed instead of executed.
-Switching between the two keeps the page and states; **✎ Modify** goes back to
-the editor. While simulating, clicking a screen on the map opens it in the simulator.
+### 7. Themes
 
-Optional fields of the remote enable the other actions:
-
-| Field | Example | Enables |
-| --- | --- | --- |
-| Hubs read from the remote | *Hub Salotto*, *Hub Camera* | `harmonyCommand`, `activityId`, Apple TV card, routed by `hub` |
-| Harmony Hub IP (fallback) | `192.168.2.30` | same, when the remote has no hubs |
-| Extenders read from the remote | *Ext TV* | IR devices with `target: {"extender": ...}` |
-| IR emitter entity | `remote.broadlink_salotto` | IR devices with `local` target (inline or ir-database codes) |
-
-Without them those buttons are shown disabled with the reason. IR codes are
-converted to Broadlink `b64:` packets; the carrier frequency is fixed by the
-Broadlink device (~38 kHz).
-
-### 8. Icons and entity catalog
-
-**Icons** tab → upload `disco.png`. In a `button_grid`, put the cursor inside
-`"icon": ""` of a button and press **🖼 Insert icon** → `disco.png`:
-
-```json
-{ "name": "Disco", "icon": "/sdcard/astrion/icons/disco.png", "service": "scene.turn_on", "entity_id": "scene.disco" }
-```
-
-On **Push** the add-on uploads `disco.png` to the remote if it is missing there.
-Already have icons on a remote? **Sync → Import into library**.
-
-**Editor → HA devices (catalog)** → add `Salon TV`, type *Media Player*,
-entity `media_player.tv`. The entry is stored in `haDevices` and shown with ★
-in every entity field.
-
-### 9. What's new with app 1.2.7-beta
-
-**Dock screen** — *Editor → Global → Dock screen*: mode `clock`, weather
-`weather.home`. Stored as:
-
-```json
-"dock": { "mode": "clock", "weather_entity": "weather.home", "time_format": 24 },
-"power": { "screen_timeout_seconds": 60, "screen_off_entities": ["binary_sensor.tv_on"] }
-```
-
-While simulating, tick **Docked** to preview it (tap the screen to leave).
-
-**Harmony-style Off button** — a scene tile with `"stopActivity": "Living room"`
-(or `"*"` for every room) stops that room's Activity: composed stop or Harmony
-PowerOff. Pick the room from the dropdown.
-
-**Page shown only during its Activity** — page *TV*: `hiddenUnlessActivity`
-`watch_tv`, `hideMode` `full`: swipes skip it while the Activity is off, and the
-remote leaves it when the Activity stops.
-
-**Hotkey event for automations** — hotkey `VOICE (Microphone)` with
-`"event": "voice"`; an automation triggers on it:
-
-```yaml
-triggers:
-  - trigger: event
-    event_type: astrion_button
-    event_data:
-      event: voice
-actions:
-  - action: assist_satellite.start_conversation
-    target:
-      entity_id: assist_satellite.kitchen
-```
-
-**Apple TV compact remote with apps**:
-
-```json
-{ "type": "apple_tv_remote", "options": { "deviceId": "62846050", "layout": "compact",
-  "entity": "media_player.apple_tv", "apps": [ { "source": "Netflix", "color": "#B3261E" } ] } }
-```
-
-**Device states** — profiled IR devices are started Harmony-style; the
-simulator remembers which devices it believes are on (panel under the screen).
-If a device was switched by hand, press **Reset device states**.
-
-### 10. Quick push / pull and 1.2.8–1.2.9 options
-
-**Push / Pull** are on every remote of the list and in the header of an open
-remote, so a change made in the Editor or tried in simulation can be sent
-without opening Sync. A push over a remote changed on its own side asks first.
-
-**Hotkey popup** (blue key opens the AV page over the current one; press again to close):
-
-```json
-{ "key": "BLUE_BUTTON", "page": "AV", "pageMode": "popup" }
-```
-
-**Dock clock follows the room** — `dock.room` "Living room" and, on the
-Activity, `"nowPlayingEntity": "media_player.apple_tv"`: while that Activity
-runs, the docked clock shows only that player.
-
-**Monitor with long values** and **select as a plain menu**:
-
-```json
-{ "type": "monitor", "options": { "layout": "vertical", "marquee": true,
-  "entities": [ { "entity_id": "sensor.avr_audio", "name": "Audio" } ] } }
-{ "type": "select", "options": { "entity_id": "input_select.scene", "layout": "dropdown", "font_size": 18 } }
-```
-
-### 11. Two histories: add-on and remote (app 1.3.0)
-
-Since 1.3.0 the remote keeps its own history of `dashboard.json`. The add-on's
-history stays the reference; the remote's is a safety net it reads and labels.
-
-| | Add-on | Remote 1.3.0 |
-| --- | --- | --- |
-| Retention | Everything, forever (in HA backups) | 30 + pinned |
-| Storage | Differences between versions | Full copies |
-| Labels | Unique names per remote | Free notes, pins |
-| Scope | All remotes, copy between them | That remote only |
-| Records edits made on the remote | Only when they're found as drift | Yes, every save |
-
-- Every push is labelled on the remote: `ACM v42 · "Before TV change"`.
-- **Edit remote → Pin named versions on the remote**: pushed named versions are
-  pinned there, so the remote's 30-version limit never removes them.
-- Drift banner: *"Saved from the builder or web page: new lights"*,
-  *"Restored on the remote from version 20261017-101500"*, …
-- **History → Remote history**: compare any remote version with the head,
-  download it, or **Import as version** (then push). The add-on never restores
-  or deletes anything in the remote's history.
-
-### 12. Navigation map
-
-Open a remote: the **🗺 Navigation map** sits above the Editor. All pages are
-in one row in the order the remote swipes through them, each drawn as a live
-mini screen. Icons on the lines tell how a page is reached: 👋 swipe,
-☝️ swipe up, 👆 tap, ✋ long press, 🎛 key ("Menu ⏱" = long press of Menu),
-🎬 Activity, 🏠 Home Assistant state, ↩ back; a dashed line with ▣ opens a
-popup. Click a card in a preview to edit it, or a line to open the tile or
-hotkey behind it. While simulating, clicking a page jumps there. ▴ hides the
-map; drag the border between the map and the panel below (the ▬ grip) to resize both.
-
-**Editing on the map** (Editor tab):
-
-- drag *Home*'s right ● onto *TV*'s left ● → *TV* becomes *Home*'s swipe neighbour;
-- each key appears once in the key row, with two anchors: ◧ left = this page only, ◨ right = global;
-  ⚡ marks a key bound to an action that opens no page (e.g. a service): it has no link;
-- drag the **right (global) ◨ anchor** of the **Play / Pause** key onto *TV*'s bottom ● → choose
-  *Long* + *Popup* → `{"key": "PLAY", "page": "TV", "pageMode": "popup"}` in `longHotkeys`;
-- tap, long-press and Activity links of a tile start from the ● on the tile itself in the
-  screen preview (from the screen's bottom edge when the tile is scrolled out of view);
-- drag the *Movie* tile (or its ●) of a scene grid onto *Cinema*'s top ● → choose *Tap* →
-  the tile gets `"page": "Cinema"`;
-- **＋ New page** / **🗑 Delete page** on the map bar add an empty page or delete the selected one;
-- press and hold a connection's icon → confirm → the link is removed;
-- **⇅ Arrange by hierarchy** puts child pages under their parent and linked pages above their
-  source (map only; ⟲ back to one row). Coloured strips under child screens = the remote's dot
-  groups; ①②③ = swipe order; pages opened only as a popup are drawn at popup size (▣);
-- drag a screen by its title bar to arrange the map (saved per remote, **⟲** resets it);
-  **Page keys / Global keys / Links** show or hide those anchors and links.
-
-Each change is one version: **Undo** reverts it.
-
-### 13. Themes
-
-**Editor → Global → Theme → 📂 Load theme** → pick *OLED black* (preview on the
-right) → one new version, Undo brings the old colours back. **💾 Save as…**
-stores the current colours as *Living room*. On the main screen, **Themes** →
-*Living room* → **Apply to remotes…** → tick *Kitchen* and *Bedroom* → each gets
-a version, ready to push. **Export** gives a file like:
+**Themes** → *OLED black* → **Apply to remotes…** → tick *Kitchen* → written to the
+remote (`ACM: theme OLED black`). **Export** gives:
 
 ```json
 { "name": "Living room", "theme": { "background": "#000000", "accent": "#4DA3FF" } }
 ```
 
-that **Import from file** reads back (a whole `dashboard.json` works too).
+## What changed in 3.0
 
-### 14. The remote's own builder
+| Removed | Use instead |
+| --- | --- |
+| Form editor, big preview, card copy | The remote's builder (**Builder** tab) |
+| Add-on versions, undo/redo, named versions, restore | The remote's history (Builder → 🕘 History) |
+| Push / pull, drift, "edit with the builder" mode | Every change is written straight to the remote |
+| "Simulate & run" (real device actions) | Navigation-only test |
 
-The links open a normal new tab (no pop-up), so they also work inside Home
-Assistant's frame and in the companion app.
-
-**Open in builder ↗** (remote header) opens `http://<ip>:8080/builder/` in a new
-tab at what you selected here, e.g. page *TV* → `/builder/#page=TV`, a card →
-`#page=TV&card=2`, an Activity → `#activity=watch_tv`; **History ↗** opens
-`#history`. Both are greyed out when the remote can't be reached (local network
-only).
-
-Prefer the builder? **Edit remote → Edit with the remote's builder**: the add-on
-becomes the read-only backup. **Edit in builder** first asks to push or discard
-add-on changes not yet sent; save in the builder, come back to this tab (or
-press **Done**) and the change is imported as a version with the note you typed
-in the builder. Changes on both sides? You choose which to keep — never merged.
-With app **1.3.3-beta** you don't even need to come back: the builder tells the
-add-on after every **Save to device** (or history restore) and the change is
-imported right away. Outside this mode the same message only refreshes the drift
-banner (nothing is imported on its own).
-
-### 15. Built-in weather (app 1.3.2-beta)
-
-**Editor → Global → Built-in weather** → *Find a town* "Bracciano" → pick it →
-the block below is written; then use `weather.astrion` in a clock & weather card
-or the dock clock.
-
-```json
-"weather": { "name": "Bracciano", "latitude": 42.12, "longitude": 12.17, "model": "auto", "unit": "celsius" }
-```
-
-### 16. Large preview
-
-In the Editor, the pane on the left shows the selected screen in large size with
-live states; click a card in it to edit that card. Drag its right edge to resize
-it, **◂** hides it (**▸ Preview** brings it back).
-The **▴/▾** chevron in the **✎ Editor** bar collapses the whole Editor (like the map);
-a click on the map reopens it.
+Existing data in `/data` (old versions) is left untouched.
 
 ## Data and backups
 
-Everything lives in the app's `/data` volume (included in HA backups):
-
-```
-/data/remotes/<id>/meta.json          remote + sync state
-/data/remotes/<id>/versions/*.json    one file per version (JSON Patch)
-/data/remotes/<id>/snapshots/*.json.gz full state at v1 and every 50
-/data/remotes/<id>/names.json         version names
-/data/icons/                          shared icon library
-/data/sim_state/<id>.json             simulator device states (RF10.5)
-/data/themes/<id>.json                saved themes (RF14)
-```
-
-Writes are atomic (temp file + fsync + rename): a version exists entirely or not at all.
+`/data` (included in HA backups): `remotes/<id>/meta.json` (remote, map layout),
+`icons/` (icon library), `themes/` (saved themes). Versions written by 2.x stay
+on disk, unused.
 
 ## Logging
 
-Option `log_level` (`trace`…`error`). INFO: versions, push/pull, archive.
-WARNING: drift, blocked push, rejected commits, HA unreachable.
-ERROR: failed push verification. DEBUG: HTTP calls, state rebuilds.
+Option `log_level` (`trace`…`error`). INFO: writes to the remotes (with note), builder
+saves seen by the proxy, remote registration. WARNING: write refused (remote changed),
+remote unreachable, proxy errors. DEBUG: proxied requests, live reads.
 
 ## Development
 
@@ -333,4 +128,4 @@ CI workflows are in `ci/` (move to `.github/workflows/`).
 
 ## License
 
-GPL-3.0, like the upstream project the editor schema is derived from.
+GPL-3.0, like the upstream project.

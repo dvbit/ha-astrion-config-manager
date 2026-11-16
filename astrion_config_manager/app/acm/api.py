@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import asyncio
 import copy
-import json
 import logging
 import os
 import re
@@ -20,19 +19,18 @@ from typing import Any
 from urllib.parse import unquote
 
 import aiohttp
-import jsonpatch
 from aiohttp import web
 
-from . import __version__, copying
+from . import __version__, copying, proxy
 from .actions import Executor
 from .canonical import canonical_hash, pretty_dumps
 from .device import DeviceClient, DeviceError
-from .ha import HAClient, HAError
+from .ha import HAClient
 from .harmony import HarmonyRegistry
 from .icons import IconLibrary, collect_refs, sanitize
-from .store import T_SYNC_IMPORT, Store, StoreError, clean_fields
+from .store import Store, StoreError, clean_fields
 from .themes import ThemeLibrary, clean_theme, theme_from_file
-from .validate import HARDWARE_KEYS, validate
+from .validate import HARDWARE_KEYS
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -122,33 +120,8 @@ async def _body(request: web.Request) -> dict[str, Any]:
     return data
 
 
-def _int(value: Any, code: str = "bad_request") -> int:
-    try:
-        return int(value)
-    except (TypeError, ValueError):
-        raise StoreError(code) from None
-
-
 def _device(app: web.Application, meta: dict[str, Any]) -> DeviceClient:
     return app[K_DEVICE](app[K_HTTP], meta["host"], meta["port"])
-
-
-async def _known_entities(app: web.Application) -> set[str] | None:
-    """Entity ids from HA, or None when HA cannot be queried (RF4.2)."""
-    try:
-        known = await app[K_HA].entity_ids()
-    except HAError as err:
-        # Log the transition only, not every edit (RF4.4 validates on each change).
-        if app[K_HA_OK]["ok"]:
-            _LOGGER.warning("Cannot query HA entities: %s", err)
-        else:
-            _LOGGER.debug("HA still unreachable: %s", err)
-        app[K_HA_OK]["ok"] = False
-        return None
-    if not app[K_HA_OK]["ok"]:
-        _LOGGER.info("Home Assistant entity list available (%s entities)", len(known))
-    app[K_HA_OK]["ok"] = True
-    return known
 
 
 # Remote icon lists are cached briefly: validation runs on every edit (RF4.4).
@@ -163,27 +136,6 @@ async def _device_icons(app: web.Application, meta: dict[str, Any], force: bool 
     names = await _device(app, meta).icons_list()
     app[K_DEV_ICONS][meta["id"]] = (time.monotonic(), names)
     return names
-
-
-async def _known_icons(app: web.Application, meta: dict[str, Any] | None) -> set[str] | None:
-    """Library + remote icons; None when the remote list is unknown (RF7.4)."""
-    if meta is None:
-        return None
-    try:
-        return app[K_ICONS].names() | await _device_icons(app, meta)
-    except DeviceError as err:
-        _LOGGER.debug("Icon list of '%s' unavailable: %s", meta["name"], err)
-        return None
-
-
-def _known_devices(meta: dict[str, Any] | None) -> dict[str, set[str]] | None:
-    """RF8.6: hub/extender ids read from the remote; None if never read."""
-    if not meta or not meta.get("devices_read_at"):
-        return None
-    return {
-        "hubs": {h["localId"] for h in meta.get("harmony_hubs") or []},
-        "extenders": {e["localId"] for e in meta.get("extenders") or []},
-    }
 
 
 async def _refresh_devices(app: web.Application, rid: str) -> None:
@@ -217,74 +169,6 @@ def _duplicates(remotes: list[dict[str, Any]]) -> None:
 SETTINGS_PATHS = ("/dock/mode", "/power/screen_timeout_seconds")
 
 
-def _drift_changes(store: Store, meta: dict[str, Any], device_doc: Any) -> dict[str, Any]:
-    """RF10.12: what differs between the device and the last synced version.
-
-    Paths written by the remote's own Settings (dock mode, screen timeout,
-    1.2.4/1.2.5-beta) are flagged so the banner can say so.
-    """
-    hist = store.history(meta["id"])
-    ref = meta.get("baseline_version") or hist.head
-    try:
-        base = hist.state(min(ref, hist.head))
-    except StoreError:
-        base = hist.state(hist.head)
-    paths = _history_paths(base, device_doc)
-    return {
-        "paths": paths[:12],
-        "count": len(paths),
-        "settings_only": bool(paths) and all(p.startswith(SETTINGS_PATHS) for p in paths),
-    }
-
-
-def _with_apple_tvs(known: set[str] | None, meta: dict[str, Any] | None) -> set[str] | None:
-    """RF9.2: a paired Apple TV's entity exists on the remote, not in HA."""
-    if known is None or not meta:
-        return known
-    return known | {tv["entityId"] for tv in meta.get("apple_tvs") or [] if tv.get("entityId")}
-
-
-def reconcile_apple_tvs(doc: Any, apple_tvs: list[dict[str, str]]) -> Any:
-    """RF9.4: port of upstream ConfigServer.reconcileAppleTvHaDevices.
-
-    The remote (1.2.0) adds/updates a ``haDevices`` entry ``appletv_<localId>``
-    for every paired Apple TV whenever it serves dashboard.json; applying the
-    same change before a push keeps the post-push re-read identical.
-    """
-    if not apple_tvs or not isinstance(doc, dict):
-        return doc
-    out = copy.deepcopy(doc)
-    ha_devices = out.get("haDevices") if isinstance(out.get("haDevices"), list) else []
-    by_id = {d.get("id"): d for d in ha_devices if isinstance(d, dict) and d.get("id")}
-    changed = False
-    for tv in apple_tvs:
-        dev_id = f"appletv_{tv['localId']}"
-        existing = by_id.get(dev_id)
-        if existing is None:
-            ha_devices.append({"id": dev_id, "domain": "media_player", "entityId": tv["entityId"], "name": tv["name"]})
-            changed = True
-        elif existing.get("entityId") != tv["entityId"] or existing.get("name") != tv["name"]:
-            existing["entityId"], existing["name"] = tv["entityId"], tv["name"]
-            changed = True
-    if not changed:
-        return doc
-    out["haDevices"] = ha_devices
-    return out
-
-
-async def _validation(app: web.Application, doc: Any, meta: dict[str, Any] | None = None) -> dict[str, Any]:
-    known = _with_apple_tvs(await _known_entities(app), meta)
-    return validate(doc, known, await _known_icons(app, meta), _known_devices(meta))
-
-
-def _summary(ver: dict[str, Any]) -> dict[str, Any]:
-    """Version metadata + readable delta summary (RF2.7)."""
-    ops = [{"op": p["op"], "path": p["path"]} for p in ver["patch"][:SUMMARY_OPS]]
-    out = {k: v for k, v in ver.items() if k != "patch"}
-    out.update({"ops": ops, "op_count": len(ver["patch"])})
-    return out
-
-
 # --------------------------------------------------------------------------
 # RF12: the remote's own version history (app 1.3.0, DashboardHistory.kt)
 # --------------------------------------------------------------------------
@@ -293,66 +177,6 @@ def _summary(ver: dict[str, Any]) -> dict[str, Any]:
 # in the remote's list (the remote keeps notes up to 200 characters).
 PUSH_NOTE_RE = re.compile(r"^ACM v(\d+)\b")
 REMOTE_NOTE_MAX = 200
-
-
-def push_note(version: int, name: str | None) -> str:
-    """RF12.1: ``ACM v42 · "Before TV change"`` (name only for named versions)."""
-    note = f"ACM v{version}" + (f' · "{name}"' if name else "")
-    return note[:REMOTE_NOTE_MAX]
-
-
-def _remote_entry(entry: dict[str, Any]) -> dict[str, Any]:
-    """Return a remote history entry plus the add-on version it came from, if any."""
-    match = PUSH_NOTE_RE.match(str(entry.get("note") or ""))
-    return {**entry, "addon_version": int(match.group(1)) if match else None}
-
-
-def _history_paths(base: Any, other: Any) -> list[str]:
-    """Leaf paths that differ between two dashboards (RF10.12 / RF12.4)."""
-    paths: list[str] = []
-
-    def leaves(prefix: str, value: Any) -> None:  # an added block -> its leaf paths
-        if isinstance(value, dict) and value:
-            for key, val in value.items():
-                leaves(f"{prefix}/{str(key).replace('~', '~0').replace('/', '~1')}", val)
-        else:
-            paths.append(prefix)
-
-    for op in jsonpatch.make_patch(base, other).patch:
-        if op["op"] in ("add", "replace"):
-            leaves(op["path"], op.get("value"))
-        else:
-            paths.append(op["path"])
-    return paths
-
-
-async def _remote_last(app: web.Application, meta: dict[str, Any]) -> dict[str, Any] | None:
-    """RF12.3: newest entry of the remote's history (why the file changed); None if unsupported."""
-    try:
-        versions = await _device(app, meta).history_list()
-    except DeviceError as err:
-        _LOGGER.debug("Remote history of '%s' unavailable: %s", meta["name"], err.code)
-        return None
-    return _remote_entry(versions[0]) if versions else None
-
-
-async def _drift(app: web.Application, meta: dict[str, Any]) -> dict[str, Any]:
-    """RF5.2: compare canonical hash of the device file with the baseline."""
-    try:
-        pulled = await _device(app, meta).pull()
-    except DeviceError as err:
-        status = {"file_missing": DRIFT_MISSING, "invalid_json": DRIFT_INVALID}.get(err.code, DRIFT_UNREACHABLE)
-        _LOGGER.info("Drift check '%s': %s (%s)", meta["name"], status, err.detail or err.code)
-        return {"status": status, "pulled": None}
-    status = DRIFT_IN_SYNC if pulled.hash == meta.get("baseline") else DRIFT_DRIFT
-    changes = None
-    if status == DRIFT_DRIFT:
-        changes = _drift_changes(app[K_STORE], meta, pulled.content)
-        changes["remote_last"] = await _remote_last(app, meta)
-        _LOGGER.warning("Drift detected on '%s': %s change(s) %s", meta["name"], changes["count"], changes["paths"][:4])
-    else:
-        _LOGGER.debug("Drift check '%s': in sync", meta["name"])
-    return {"status": status, "pulled": pulled, "changes": changes}
 
 
 # --------------------------------------------------------------------------
@@ -385,12 +209,6 @@ async def revalidate_static(request: web.Request, handler):
 async def meta_info(request: web.Request) -> web.Response:
     """Return the current user and static references for the frontend."""
     return web.json_response({"user": _user(request), "hardware_keys": sorted(HARDWARE_KEYS), "version": __version__})
-
-
-async def entities(request: web.Request) -> web.Response:
-    """Entity ids for the editor's autocomplete (empty when HA is unreachable)."""
-    known = await _known_entities(request.app)
-    return web.json_response(sorted(known or []))
 
 
 async def list_remotes(request: web.Request) -> web.Response:
@@ -436,249 +254,9 @@ async def archive(request: web.Request) -> web.Response:
 # --------------------------------------------------------------------------
 
 
-async def get_state(request: web.Request) -> web.Response:
-    """State of the head or of ``?version=N``, plus validation of the head."""
-    rid = request.match_info["rid"]
-    store = request.app[K_STORE]
-    hist = store.history(rid)
-    vid = _int(request.query.get("version", hist.head))
-    state = hist.state(vid)
-    body: dict[str, Any] = {"remote": store.remote_info(rid), "version": vid, "state": state}
-    if vid == hist.head:
-        body["validation"] = await _validation(request.app, state, body["remote"])
-    return web.json_response(body)
-
-
-async def list_versions(request: web.Request) -> web.Response:
-    """RF2.7 / RF2.13: history (newest first) with names."""
-    rid = request.match_info["rid"]
-    store = request.app[K_STORE]
-    hist = store.history(rid)
-    names = store.names(rid)
-    items = []
-    for ver in reversed(hist.versions):
-        item = _summary(ver)
-        item["name"] = names.get(str(ver["id"]))
-        items.append(item)
-    return web.json_response({"head": hist.head, "versions": items, **hist.undo_redo()})
-
-
-async def get_version(request: web.Request) -> web.Response:
-    """Full delta of one version (readable delta, RF2.7)."""
-    rid = request.match_info["rid"]
-    vid = _int(request.match_info["vid"])
-    hist = request.app[K_STORE].history(rid)
-    if vid < 1 or vid > hist.head:
-        raise StoreError("version_not_found", 404)
-    return web.json_response(hist.versions[vid - 1])
-
-
-async def _after_version(request: web.Request, rid: str, ver: dict | None) -> web.Response:
-    store = request.app[K_STORE]
-    state = store.head_state(rid)
-    return web.json_response(
-        {
-            "version": _summary(ver) if ver else None,
-            "remote": store.remote_info(rid),
-            "state": state,
-            "validation": await _validation(request.app, state, store.remote_info(rid)),
-        }
-    )
-
-
-async def commit(request: web.Request) -> web.Response:
-    """RF2.3 / RF2.10: commit a new full state against the client's head."""
-    rid = request.match_info["rid"]
-    data = await _body(request)
-    if "state" not in data:
-        raise StoreError("bad_request")
-    async with request.app[K_LOCKS][rid]:
-        ver = request.app[K_STORE].commit(rid, _int(data.get("head")), data["state"], _user(request))
-    return await _after_version(request, rid, ver)
-
-
-async def undo(request: web.Request) -> web.Response:
-    """RF2.4."""
-    rid = request.match_info["rid"]
-    data = await _body(request)
-    async with request.app[K_LOCKS][rid]:
-        ver = request.app[K_STORE].undo(rid, _int(data.get("head")), _user(request))
-    return await _after_version(request, rid, ver)
-
-
-async def redo(request: web.Request) -> web.Response:
-    """RF2.5."""
-    rid = request.match_info["rid"]
-    data = await _body(request)
-    async with request.app[K_LOCKS][rid]:
-        ver = request.app[K_STORE].redo(rid, _int(data.get("head")), _user(request))
-    return await _after_version(request, rid, ver)
-
-
-async def restore(request: web.Request) -> web.Response:
-    """RF2.6 / RF2.13."""
-    rid = request.match_info["rid"]
-    data = await _body(request)
-    async with request.app[K_LOCKS][rid]:
-        ver = request.app[K_STORE].restore(rid, _int(data.get("head")), _int(data.get("version")), _user(request))
-    return await _after_version(request, rid, ver)
-
-
-async def set_name(request: web.Request) -> web.Response:
-    """RF2.11 / RF2.12: assign, rename or remove a version label."""
-    rid = request.match_info["rid"]
-    vid = _int(request.match_info["vid"])
-    data = await _body(request)
-    async with request.app[K_LOCKS][rid]:
-        names = request.app[K_STORE].set_name(rid, vid, data.get("name"))
-    return web.json_response(names)
-
-
-async def validate_state(request: web.Request) -> web.Response:
-    """RF4.4: validate an arbitrary (unsaved) state for inline errors."""
-    data = await _body(request)
-    meta = request.app[K_STORE].remote_info(str(data["rid"])) if data.get("rid") else None
-    return web.json_response(await _validation(request.app, data.get("state"), meta))
-
-
-async def copy_elements(request: web.Request) -> web.Response:
-    """RF3.3: copy pages/cards into another remote as one version."""
-    data = await _body(request)
-    store = request.app[K_STORE]
-    src, dst = str(data.get("src")), str(data.get("dst"))
-    src_state = store.head_state(src)
-    async with request.app[K_LOCKS][dst]:
-        dst_state = store.head_state(dst)
-        if data.get("kind") == "pages":
-            new = copying.copy_pages(src_state, list(data.get("pages", [])), dst_state)
-        elif data.get("kind") == "cards":
-            new = copying.copy_cards(
-                src_state,
-                _int(data.get("src_page")),
-                list(data.get("cards", [])),
-                dst_state,
-                _int(data.get("dst_page")),
-            )
-        else:
-            raise StoreError("bad_request")
-        ver = store.commit(dst, _int(data.get("head")), new, _user(request))
-    _LOGGER.info("Copied %s from %s to %s", data.get("kind"), src, dst)
-    return await _after_version(request, dst, ver)
-
-
 # --------------------------------------------------------------------------
 # Handlers - synchronisation (RF5)
 # --------------------------------------------------------------------------
-
-
-def _sync_info(meta: dict[str, Any], status: str, changes: dict[str, Any] | None = None) -> dict[str, Any]:
-    return {"id": meta["id"], "status": status, "last_push_version": meta.get("last_push_version"), "changes": changes}
-
-
-async def drift_all(request: web.Request) -> web.Response:
-    """RF5.2: run at panel opening for every non-archived remote."""
-    store = request.app[K_STORE]
-    metas = store.list_remotes(archived=False)
-    results = await asyncio.gather(*(_drift(request.app, m) for m in metas))
-    return web.json_response(
-        [_sync_info(m, r["status"], r.get("changes")) for m, r in zip(metas, results, strict=True)]
-    )
-
-
-async def drift_one(request: web.Request) -> web.Response:
-    """RF5.2 for a single remote."""
-    rid = request.match_info["rid"]
-    meta = request.app[K_STORE].remote_info(rid)
-    res = await _drift(request.app, meta)
-    return web.json_response(_sync_info(meta, res["status"], res.get("changes")))
-
-
-async def pull(request: web.Request) -> web.Response:
-    """RF5.1 / RF5.3 'importa come versione': sync-import if different."""
-    rid = request.match_info["rid"]
-    data = await _body(request)
-    store = request.app[K_STORE]
-    async with request.app[K_LOCKS][rid]:
-        meta = store.remote_info(rid)
-        pulled = await _device(request.app, meta).pull()
-        ver = store.commit(rid, _int(data.get("head")), pulled.content, _user(request), T_SYNC_IMPORT)
-        store.set_sync(rid, baseline=pulled.hash, baseline_version=store.history(rid).head)
-        await _refresh_devices(request.app, rid)  # RF8.1
-    _LOGGER.info("Pull '%s': %s", meta["name"], f"v{ver['id']} created" if ver else "no changes")
-    return await _after_version(request, rid, ver)
-
-
-async def push(request: web.Request) -> web.Response:
-    """RF5.4: validate -> drift check -> upload -> re-read and verify hash."""
-    rid = request.match_info["rid"]
-    data = await _body(request)
-    store = request.app[K_STORE]
-    async with request.app[K_LOCKS][rid]:
-        hist = store.history(rid)
-        if _int(data.get("head")) != hist.head:
-            raise StoreError("head_changed", 409, head=hist.head)
-        # RF9.4: fresh devices (Apple TVs), then align the catalog like the remote
-        await _refresh_devices(request.app, rid)
-        meta = store.remote_info(rid)
-        aligned = reconcile_apple_tvs(hist.state(hist.head), meta.get("apple_tvs") or [])
-        if store.commit(rid, hist.head, aligned, "Astrion remote (Apple TV catalog)", T_SYNC_IMPORT):
-            _LOGGER.info("Push '%s': Apple TV catalog entries added as v%s", meta["name"], hist.head)
-            meta = store.remote_info(rid)
-        head_state = hist.state(hist.head)
-        # 0. fresh icon list of the remote (RF7.3/RF7.4); unreachable blocks
-        device_icons = await _device_icons(request.app, meta, force=True)
-        # 1. validation (RF4.5, icons included)
-        check = validate(
-            head_state,
-            _with_apple_tvs(await _known_entities(request.app), meta),
-            request.app[K_ICONS].names() | device_icons,
-            _known_devices(meta),
-        )
-        if not check["push_allowed"]:
-            _LOGGER.warning("Push '%s' blocked: %s issue(s)", meta["name"], len(check["issues"]))
-            code = "push_blocked" if check["entities_checked"] else "ha_unavailable"
-            return web.json_response({"error": code, "validation": check}, status=422)
-        # 2. drift check (RF5.2): unreachable blocks, drift is only reported (RF5.3)
-        drift = await _drift(request.app, meta)
-        if drift["status"] == DRIFT_UNREACHABLE:
-            raise DeviceError("unreachable")
-        # 3. upload missing icons from the library (RF7.3), then the file
-        device = _device(request.app, meta)
-        uploaded = []
-        for name in sorted(set(collect_refs(head_state)) - device_icons):
-            data, ctype = request.app[K_ICONS].read(name)
-            await device.icon_upload(name, data, ctype)
-            uploaded.append(name)
-        if uploaded:
-            request.app[K_DEV_ICONS].pop(rid, None)
-            _LOGGER.info("Push '%s': %s icon(s) uploaded: %s", meta["name"], len(uploaded), ", ".join(uploaded))
-        # RF12.1 / RF12.2: label the version the remote keeps for this save
-        name = store.names(rid).get(str(hist.head))
-        note = push_note(hist.head, name)
-        remote_vid = await device.upload(head_state, note)  # RF16.1: id from app 1.3.1+
-        # 4. re-read and verify
-        expected = canonical_hash(head_state)
-        reread = await device.pull()
-        if reread.hash != expected:
-            _LOGGER.error("Push '%s' verification failed: device hash differs", meta["name"])
-            raise DeviceError("push_verify_failed")
-        store.set_sync(
-            rid, baseline=expected, baseline_version=hist.head, last_push_version=hist.head, last_push_at=time.time()
-        )
-        if remote_vid:
-            store.set_sync(rid, last_push_remote_version=remote_vid)
-        pinned = await _pin_pushed(request.app, meta, note, remote_vid) if name and meta.get("pin_named") else None
-    _LOGGER.info("Push '%s': v%s sent and verified", meta["name"], hist.head)
-    return web.json_response(
-        {
-            "ok": True,
-            "drift_overwritten": drift["status"] == DRIFT_DRIFT,
-            "icons_uploaded": uploaded,
-            "remote_pinned": pinned,
-            "remote_version": remote_vid,
-            "remote": store.remote_info(rid),
-        }
-    )
 
 
 # --------------------------------------------------------------------------
@@ -791,46 +369,6 @@ async def remote_icons_import(request: web.Request) -> web.Response:
 # --------------------------------------------------------------------------
 
 
-async def sim_live(request: web.Request) -> web.WebSocketResponse:
-    """RF6.4: forward HA states (snapshot + state_changed) to the simulator."""
-    ws = web.WebSocketResponse(heartbeat=30)
-    await ws.prepare(request)
-    _LOGGER.debug("Simulator live stream opened")
-
-    async def pump() -> None:
-        try:
-            async for item in request.app[K_HA].live():
-                await ws.send_json(item)
-        except HAError as err:
-            _LOGGER.warning("Simulator live stream: %s", err)
-            await ws.send_json({"type": "error", "error": "ha_unavailable", "detail": str(err)})
-        except ConnectionResetError:
-            pass
-
-    task = asyncio.create_task(pump())
-    try:
-        async for _msg in ws:  # the client sends nothing; wait for close
-            pass
-    finally:
-        task.cancel()
-        _LOGGER.debug("Simulator live stream closed")
-    return ws
-
-
-async def sim_action(request: web.Request) -> web.Response:
-    """RF6.5-RF6.9: execute the steps of one tap / key press for real."""
-    rid = request.match_info["rid"]
-    data = await _body(request)
-    steps = data.get("steps")
-    if not isinstance(steps, list) or not steps:
-        raise StoreError("bad_request")
-    store = request.app[K_STORE]
-    meta = store.remote_info(rid)
-    # RF6.1: always the head, never a historical version.
-    result = await request.app[K_EXEC].run(meta, store.head_state(rid), steps)
-    return web.json_response(result)
-
-
 async def devices_refresh(request: web.Request) -> web.Response:
     """RF8.1: Refresh button - re-read hubs/extenders from the remote."""
     rid = request.match_info["rid"]
@@ -840,116 +378,8 @@ async def devices_refresh(request: web.Request) -> web.Response:
     return web.json_response(request.app[K_STORE].remote_info(rid))
 
 
-async def sim_active(request: web.Request) -> web.Response:
-    """Composed Activities currently active per room (simulator runtime)."""
-    rid = request.match_info["rid"]
-    request.app[K_STORE].remote_info(rid)
-    st = request.app[K_EXEC].state(rid)
-    return web.json_response({"active": st["active"], "devices": st["devices"]})
-
-
-async def sim_reset(request: web.Request) -> web.Response:
-    """RF10.5: forget the simulator's device states and active Activities."""
-    rid = request.match_info["rid"]
-    request.app[K_STORE].remote_info(rid)
-    request.app[K_EXEC].reset(rid)
-    return web.json_response({"active": {}, "devices": {}})
-
-
-async def _pin_pushed(
-    app: web.Application, meta: dict[str, Any], note: str, remote_vid: str | None = None
-) -> str | None:
-    """RF12.2: pin the remote version just created by a push.
-
-    RF16.1: the id comes from ``X-Astrion-Version-Id`` (app 1.3.1+); on 1.3.0
-    the version is found by its note. Never fatal: the push already succeeded.
-    """
-    try:
-        if remote_vid:
-            match = {"id": remote_vid}
-        else:
-            versions = await _device(app, meta).history_list() or []
-            match = next((v for v in versions if v.get("note") == note), None)
-        if match and await _device(app, meta).history_pin(match["id"], True):
-            _LOGGER.info("Push '%s': remote version %s pinned (%s)", meta["name"], match["id"], note)
-            return match["id"]
-        _LOGGER.warning("Push '%s': pushed version not found in the remote history, not pinned", meta["name"])
-    except DeviceError as err:
-        _LOGGER.warning("Push '%s': pin on the remote failed: %s %s", meta["name"], err.code, err.detail)
-    return None
-
-
-def _remote_vid(request: web.Request) -> str:
-    vid = request.match_info["vid"]
-    if not REMOTE_VID_RE.match(vid):
-        raise StoreError("bad_request")
-    return vid
-
-
 # Same rule as DashboardHistory.ID_PATTERN.
 REMOTE_VID_RE = re.compile(r"^[0-9]{8}-[0-9]{6}(-[0-9]+)?$")
-
-
-async def remote_history(request: web.Request) -> web.Response:
-    """RF12.4: the remote's own versions (read-only), marked when pushed by the add-on."""
-    meta = request.app[K_STORE].remote_info(request.match_info["rid"])
-    versions = await _device(request.app, meta).history_list()
-    if versions is None:
-        _LOGGER.info("Remote history of '%s': not supported (app < 1.3.0)", meta["name"])
-        return web.json_response({"supported": False, "versions": []})
-    _LOGGER.debug("Remote history of '%s': %s version(s)", meta["name"], len(versions))
-    return web.json_response({"supported": True, "versions": [_remote_entry(v) for v in versions]})
-
-
-async def remote_history_get(request: web.Request) -> web.Response:
-    """RF12.4 Download: one remote version as a dashboard.json file."""
-    meta = request.app[K_STORE].remote_info(request.match_info["rid"])
-    vid = _remote_vid(request)
-    content = await _device(request.app, meta).history_get(vid)
-    return web.Response(
-        text=pretty_dumps(content),
-        content_type="application/json",
-        headers={"Content-Disposition": f'attachment; filename="dashboard-{vid}.json"'},
-    )
-
-
-async def remote_history_diff(request: web.Request) -> web.Response:
-    """RF12.4 Compare with head: leaf paths that differ."""
-    rid = request.match_info["rid"]
-    store = request.app[K_STORE]
-    meta = store.remote_info(rid)
-    content = await _device(request.app, meta).history_get(_remote_vid(request))
-    paths = _history_paths(store.head_state(rid), content)
-    return web.json_response({"paths": paths[:40], "count": len(paths)})
-
-
-async def remote_history_import(request: web.Request) -> web.Response:
-    """RF12.4 Import as version: a remote version becomes a new add-on version.
-
-    The remote's file is not touched, so the sync baseline does not change.
-    """
-    rid = request.match_info["rid"]
-    data = await _body(request)
-    store = request.app[K_STORE]
-    vid = _remote_vid(request)
-    async with request.app[K_LOCKS][rid]:
-        meta = store.remote_info(rid)
-        device = _device(request.app, meta)
-        content = await device.history_get(vid)
-        entry = next((v for v in await device.history_list() or [] if v.get("id") == vid), {})
-        origin = {"remote_version": vid, "note": entry.get("note") or "", "reason": entry.get("reason") or ""}
-        ver = store.commit(rid, _int(data.get("head")), content, _user(request), T_SYNC_IMPORT, origin=origin)
-        # The imported version may be the file the remote is using now: then the
-        # head equals the device, exactly as after a pull (baseline realigned).
-        try:
-            current = await device.pull()
-        except DeviceError:
-            current = None
-        if current is not None and current.hash == canonical_hash(content):
-            store.set_sync(rid, baseline=current.hash, baseline_version=store.history(rid).head)
-            _LOGGER.debug("Remote version %s is the current file of '%s': baseline realigned", vid, meta["name"])
-    _LOGGER.info("Remote version %s of '%s' imported: %s", vid, meta["name"], f"v{ver['id']}" if ver else "no changes")
-    return await _after_version(request, rid, ver)
 
 
 # --------------------------------------------------------------------------
@@ -957,97 +387,11 @@ async def remote_history_import(request: web.Request) -> web.Response:
 # --------------------------------------------------------------------------
 
 
-async def weather_search(request: web.Request) -> web.Response:
-    """RF16.2: town search through the remote (``GET /weather-search``, app 1.3.2+)."""
-    meta = request.app[K_STORE].remote_info(request.match_info["rid"])
-    query = request.query.get("q", "").strip()
-    if len(query) < 2:
-        raise StoreError("bad_request")
-    results = await _device(request.app, meta).weather_search(query, request.query.get("lang", ""))
-    if results is None:
-        _LOGGER.info("Weather search on '%s': not supported (app < 1.3.2)", meta["name"])
-        return web.json_response({"supported": False, "results": []})
-    _LOGGER.debug("Weather search on '%s' for %r: %s result(s)", meta["name"], query, len(results))
-    return web.json_response({"supported": True, "results": results})
-
-
 async def map_layout(request: web.Request) -> web.Response:
     """RF16.3: save the map's screen positions (by page name) for this remote."""
     data = await _body(request)
     layout = request.app[K_STORE].set_map_layout(request.match_info["rid"], data.get("layout"))
     return web.json_response({"layout": layout})
-
-
-def _unsynced(store: Store, rid: str) -> bool:
-    """RF16.4: the head differs from the last version synced with the remote."""
-    meta = store.remote_info(rid)
-    hist = store.history(rid)
-    base = meta.get("baseline_version")
-    if not base or base > hist.head:
-        return False
-    return canonical_hash(hist.state(base)) != canonical_hash(hist.state(hist.head))
-
-
-async def native_status(request: web.Request) -> web.Response:
-    """RF16.4: tell whether the add-on has unsynced changes before opening the builder."""
-    rid = request.match_info["rid"]
-    store = request.app[K_STORE]
-    meta = store.remote_info(rid)
-    return web.json_response(
-        {"unsynced": _unsynced(store, rid), "baseline_version": meta.get("baseline_version"), "head": meta["head"]}
-    )
-
-
-async def native_discard(request: web.Request) -> web.Response:
-    """RF16.4 Discard: a ``restore`` version back to the last synced version (nothing deleted)."""
-    rid = request.match_info["rid"]
-    data = await _body(request)
-    store = request.app[K_STORE]
-    async with request.app[K_LOCKS][rid]:
-        meta = store.remote_info(rid)
-        base = meta.get("baseline_version")
-        if not base or not _unsynced(store, rid):
-            return await _after_version(request, rid, None)
-        ver = store.restore(rid, _int(data.get("head")), base, _user(request))
-    _LOGGER.info("Native builder '%s': add-on changes discarded (restore of v%s as v%s)", meta["name"], base, ver["id"])
-    return await _after_version(request, rid, ver)
-
-
-async def native_return(request: web.Request) -> web.Response:
-    """RF16.4 back from the builder: import the remote's changes as a new version.
-
-    ``unchanged`` -> nothing to do; ``imported`` -> new ``sync-import`` version
-    carrying the note/reason of the remote's newest history entry;
-    ``conflict`` -> both sides changed: the UI asks (pull or push), never merged.
-    """
-    rid = request.match_info["rid"]
-    data = await _body(request)
-    store = request.app[K_STORE]
-    async with request.app[K_LOCKS][rid]:
-        meta = store.remote_info(rid)
-        device = _device(request.app, meta)
-        pulled = await device.pull()
-        if pulled.hash == meta.get("baseline"):
-            _LOGGER.debug("Native builder '%s': no change on the remote", meta["name"])
-            return web.json_response({"status": "unchanged", "remote": meta})
-        if _unsynced(store, rid):
-            _LOGGER.warning("Native builder '%s': changes on both sides, asking the user", meta["name"])
-            return web.json_response({"status": "conflict", "remote": meta})
-        last = await _remote_last(request.app, meta)
-        origin = (
-            {"remote_version": last["id"], "note": last.get("note") or "", "reason": last.get("reason") or ""}
-            if last
-            else None
-        )
-        ver = store.commit(rid, _int(data.get("head")), pulled.content, _user(request), T_SYNC_IMPORT, origin=origin)
-        store.set_sync(rid, baseline=pulled.hash, baseline_version=store.history(rid).head)
-    _LOGGER.info(
-        "Native builder '%s': remote changes imported as %s", meta["name"], f"v{ver['id']}" if ver else "no version"
-    )
-    res = await _after_version(request, rid, ver)
-    body = json.loads(res.text)
-    body["status"] = "imported"
-    return web.json_response(body)
 
 
 # --------------------------------------------------------------------------
@@ -1118,10 +462,10 @@ def themed(doc: Any, theme: dict[str, Any]) -> Any:
 
 
 async def theme_apply(request: web.Request) -> web.Response:
-    """RF14.4 Apply to remotes: one version per remote, nothing pushed.
+    """RF14.4 / RF21.6 Apply to remotes: written straight to each remote.
 
-    Body ``{"remotes": [rid, ...]}``; result per remote: ``version`` (new
-    version id), ``unchanged`` or an error code.
+    Body ``{"remotes": [rid, ...]}``; result per remote: ``written``,
+    ``unchanged`` or an error code (the remote keeps the version, 1.3.0+).
     """
     data = await _body(request)
     store = request.app[K_STORE]
@@ -1129,17 +473,69 @@ async def theme_apply(request: web.Request) -> web.Response:
     results = []
     for rid in data.get("remotes") or []:
         try:
+            meta = store.remote_info(rid)
+            dev = _device(request.app, meta)
             async with request.app[K_LOCKS][rid]:
-                meta = store.remote_info(rid)
-                ver = store.commit(rid, meta["head"], themed(store.head_state(rid), item["theme"]), _user(request))
-            results.append({"id": rid, "name": meta["name"], "version": ver["id"] if ver else None})
-            _LOGGER.info(
-                "Theme '%s' applied to '%s': %s", item["name"], meta["name"], f"v{ver['id']}" if ver else "unchanged"
-            )
-        except StoreError as err:
+                now = await dev.pull()
+                new = themed(now.content, item["theme"])
+                if canonical_hash(new) == now.hash:
+                    results.append({"id": rid, "name": meta["name"], "result": "unchanged"})
+                    continue
+                await dev.upload(new, f"ACM: theme {item['name']}")
+            results.append({"id": rid, "name": meta["name"], "result": "written"})
+            _LOGGER.info("Theme '%s' written to '%s'", item["name"], meta["name"])
+        except (StoreError, DeviceError) as err:
             _LOGGER.warning("Theme '%s' not applied to %s: %s", item["name"], rid, err.code)
             results.append({"id": rid, "error": err.code})
     return web.json_response({"results": results})
+
+
+# --------------------------------------------------------------------------
+# Handlers - RF21 live document and builder proxy (3.0: no add-on versions)
+# --------------------------------------------------------------------------
+
+
+async def live_get(request: web.Request) -> web.Response:
+    """RF21.5: the remote's dashboard.json as it is now, plus its hash and app info."""
+    rid = request.match_info["rid"]
+    meta = request.app[K_STORE].remote_info(rid)
+    dev = _device(request.app, meta)
+    pulled = await dev.pull()
+    info = await dev.info()
+    _LOGGER.debug("Live document of '%s' read (%s)", meta["name"], pulled.hash[:10])
+    return web.json_response({"remote": meta, "doc": pulled.content, "hash": pulled.hash, "info": info})
+
+
+async def live_put(request: web.Request) -> web.Response:
+    """RF21.5: write a page-link change straight to the remote.
+
+    Body ``{"doc", "hash", "note"}``. ``hash`` is the hash of the document the
+    change was made on: the remote is read again first and, if it changed in
+    the meantime (builder, another panel), nothing is written and the current
+    document is returned with ``409 remote_changed``.
+    """
+    rid = request.match_info["rid"]
+    data = await _body(request)
+    doc, base, note = data.get("doc"), data.get("hash"), str(data.get("note") or "")[:120]
+    if not isinstance(doc, dict) or not isinstance(base, str):
+        raise StoreError("bad_request")
+    meta = request.app[K_STORE].remote_info(rid)
+    dev = _device(request.app, meta)
+    async with request.app[K_LOCKS][rid]:
+        now = await dev.pull()
+        if now.hash != base:
+            _LOGGER.warning("Not written to '%s': changed on the remote since it was loaded", meta["name"])
+            return web.json_response({"error": "remote_changed", "doc": now.content, "hash": now.hash}, status=409)
+        vid = await dev.upload(doc, note or None)
+        after = await dev.pull()
+    _LOGGER.info("Written to '%s': %s (remote version %s)", meta["name"], note or "-", vid or "?")
+    return web.json_response({"doc": after.content, "hash": after.hash, "version_id": vid})
+
+
+async def proxy_any(request: web.Request) -> web.StreamResponse:
+    """RF21.1: the remote's own web server (builder) through the panel."""
+    meta = request.app[K_STORE].remote_info(request.match_info["rid"])
+    return await proxy.forward(request, request.app[K_HTTP], meta["host"], meta["port"], request.match_info["tail"])
 
 
 # --------------------------------------------------------------------------
@@ -1172,7 +568,7 @@ def create_app(data_dir: Path, device_factory=DeviceClient) -> web.Application:
     r.add_get("/", index)
     r.add_static("/static", STATIC)
     r.add_get("/api/meta", meta_info)
-    r.add_get("/api/entities", entities)
+    # RF7 shared icon library (kept)
     r.add_get("/api/icons", icons_list)
     r.add_post("/api/icons", icon_upload)
     r.add_get("/api/icons/{name}", icon_get)
@@ -1181,36 +577,19 @@ def create_app(data_dir: Path, device_factory=DeviceClient) -> web.Application:
     r.add_get("/api/remotes/{rid}/icons", remote_icons)
     r.add_get("/api/remotes/{rid}/icons/{name}", remote_icon_get)
     r.add_post("/api/remotes/{rid}/icons/import", remote_icons_import)
+    # RF1 remotes registry
     r.add_get("/api/remotes", list_remotes)
     r.add_post("/api/remotes", create_remote)
-    r.add_get("/api/drift", drift_all)
-    r.add_post("/api/copy", copy_elements)
-    r.add_post("/api/validate", validate_state)
     r.add_patch("/api/remotes/{rid}", update_remote)
     r.add_post("/api/remotes/{rid}/archive", archive)
     r.add_post("/api/remotes/{rid}/unarchive", archive)
-    r.add_get("/api/remotes/{rid}/state", get_state)
-    r.add_get("/api/remotes/{rid}/versions", list_versions)
-    r.add_get("/api/remotes/{rid}/versions/{vid}", get_version)
-    r.add_put("/api/remotes/{rid}/versions/{vid}/name", set_name)
-    r.add_post("/api/remotes/{rid}/commit", commit)
-    r.add_post("/api/remotes/{rid}/undo", undo)
-    r.add_post("/api/remotes/{rid}/redo", redo)
-    r.add_post("/api/remotes/{rid}/restore", restore)
-    r.add_get("/api/remotes/{rid}/drift", drift_one)
-    r.add_post("/api/remotes/{rid}/pull", pull)
-    r.add_post("/api/remotes/{rid}/push", push)
-    r.add_get("/api/remotes/{rid}/sim/live", sim_live)
-    r.add_post("/api/remotes/{rid}/sim/action", sim_action)
-    r.add_get("/api/remotes/{rid}/sim/active", sim_active)
-    r.add_post("/api/remotes/{rid}/sim/reset", sim_reset)
-    # RF16
-    r.add_get("/api/remotes/{rid}/weather-search", weather_search)
+    r.add_post("/api/remotes/{rid}/devices/refresh", devices_refresh)
+    # RF21 live document, map layout, builder proxy
+    r.add_get("/api/remotes/{rid}/live", live_get)
+    r.add_put("/api/remotes/{rid}/live", live_put)
     r.add_put("/api/remotes/{rid}/map-layout", map_layout)
-    r.add_get("/api/remotes/{rid}/native", native_status)
-    r.add_post("/api/remotes/{rid}/native/discard", native_discard)
-    r.add_post("/api/remotes/{rid}/native/return", native_return)
-    # RF14: theme library
+    r.add_route("*", "/proxy/{rid}/{tail:.*}", proxy_any)
+    # RF14 theme library (kept; applied by writing to the remotes)
     r.add_get("/api/themes", themes_list)
     r.add_post("/api/themes", theme_save)
     r.add_post("/api/themes/import", theme_import)
@@ -1218,10 +597,4 @@ def create_app(data_dir: Path, device_factory=DeviceClient) -> web.Application:
     r.add_delete("/api/themes/{tid}", theme_delete)
     r.add_get("/api/themes/{tid}/export", theme_export)
     r.add_post("/api/themes/{tid}/apply", theme_apply)
-    # RF12: remote history (app 1.3.0)
-    r.add_get("/api/remotes/{rid}/remote-history", remote_history)
-    r.add_get("/api/remotes/{rid}/remote-history/{vid}", remote_history_get)
-    r.add_get("/api/remotes/{rid}/remote-history/{vid}/diff", remote_history_diff)
-    r.add_post("/api/remotes/{rid}/remote-history/{vid}/import", remote_history_import)
-    r.add_post("/api/remotes/{rid}/devices/refresh", devices_refresh)
     return app

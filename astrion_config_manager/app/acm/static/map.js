@@ -1,32 +1,24 @@
-/* Navigation map (spec RF13).
+/* Navigation map (spec RF13, RF15, RF20, RF21) - 3.0: the main, full-screen view.
  *
- * - RF13.1  collapsible, resizable panel above the Editor and the Simulator;
- *           zoom (wheel / pinch), pan (drag), zoom ± and "fit all"; opens fitted.
- * - RF13.2  every page is a live mini preview drawn by the simulator's own
- *           renderer (theme, current HA states), display-only; ⭐ start page,
- *           👁 hiddenUnlessActivity (crossed with hideMode "full").
- * - RF13.3  layout: upstream Dashboard.kt keeps ONE continuous pager over the
- *           flat page list in file order, so all pages sit in one row, in
- *           file order, with 👋 between swipe neighbours. Child pages are tied
- *           to their parent by ↩ arcs drawn under the row; every other link is
- *           an arc above the row. Special boxes (any page / Home Assistant /
- *           Activities / Settings overlays) sit in a row below.
- * - RF13.4  one connection per way to reach a page (see MAP_KINDS); dashed =
- *           opens as a popup (▣).
- * - RF13.5  click: Editor -> page settings / card form / the element that
- *           creates a connection (via Editor.reveal); Simulator -> jump there.
- * - RF13.6  redrawn on every new version, keeping the current zoom.
- *
- * - RF20    hierarchy view: arrange-by-hierarchy layout, sibling bands, ①②③
- *           swipe order + dotted chain, popup-only pages at popup size.
- * - RF19.3  tile links start from a ● anchor on the tile in the preview
- *           (screen bottom edge when the tile is scrolled out); draggable.
- * - RF15    editable map (Editor tab, Modify mode only - RF18): side anchors = swipe order (drag
- *           A.right -> B.left moves B after A), top anchor = UI jumps (drag a
- *           grid tile onto it), bottom anchor = hotkeys (drag a key chip onto
- *           it); hardware key chips in one row, each key once with two
- *           anchors (selected page / global, RF15.3 2.19); press and hold a connection to remove it. Every
- *           change is one version (app commit), so it can be undone.
+ * - RF21.2  full-screen map of the pages: zoom (wheel / pinch), pan (drag),
+ *           zoom ± and "fit all"; screens dragged by their title bar, layout
+ *           saved per remote (RF16.3), ⇅ hierarchy layout (RF20).
+ * - RF21.3  every screen is drawn by the remote's own builder renderer
+ *           (renderer.js), so previews match the installed app version.
+ * - RF13.3  default layout: upstream keeps ONE continuous pager over the flat
+ *           page list in file order -> one row, 👋 between swipe neighbours,
+ *           ↩ to parents, every other link as an arc; special boxes below.
+ * - RF13.4  one connection per way to reach a page (MAP_KINDS); dashed = popup.
+ * - RF21.4  linking: drag a screen onto another one -> a chooser asks which
+ *           element of the first opens the second (tile/button tap or long
+ *           press, hardware key of the page or global, swipe up, parent/Back),
+ *           page or popup, showing the value it replaces. Side anchors reorder
+ *           the swipe order, key chips can still be dropped on a bottom anchor.
+ *           Press and hold a connection to cut it (card-level page fields such
+ *           as media_remote "details_page" can be cut, not created).
+ *           Every change is written straight to the remote with a note
+ *           (app.js liveWrite); the remote keeps the history.
+ * - RF19.3  tile links start from a ● anchor on the tile.
  *
  * Navigation sent by Home Assistant's page selector or by calls to the
  * remote's web server is not in dashboard.json and cannot be drawn.
@@ -42,6 +34,7 @@ const MAP_KINDS = {
   key: { icon: "🎛" },          // hotkey page / overlay / current Activity
   activity: { icon: "🎬" },     // Activity started -> its page
   ha: { icon: "🏠" },           // openWhenEntity (HA state)
+  card: { icon: "🧩" },         // card-level page field (media_remote details_page, 1.5.8-beta)
   swipe_down: { icon: "👇" },   // swipe down -> Activities overlay
   back: { icon: "↩" },          // child -> parent (parentKey)
   broken: { icon: "⚠" },        // target page not found
@@ -142,6 +135,10 @@ function buildNavGraph(doc, hwLabel, opts) {
       const cp = `${basePath}/${ci}`;
       const o = (c && c.options) || {};
       if (c && c.type === "row") walkCards(o.cards, `${cp}/options/cards`, from);
+      // RF21.4: card-level page fields (1.5.8-beta media_remote "Page for ⋯" opens it as a popup)
+      if (c && typeof o.details_page === "string" && o.details_page) {
+        add(from, o.details_page, "card", { popup: true, label: `${c.type} ⋯`, path: `${cp}/options/details_page` });
+      }
       const listKey = { button_grid: "buttons", scene_grid: "scenes" }[c && c.type];
       if (!listKey) return;
       (Array.isArray(o[listKey]) ? o[listKey] : []).forEach((it, k) => {
@@ -234,10 +231,25 @@ function mapSetTileTarget(doc, tilePath, long, page, popup) {
   return d;
 }
 
+/* RF21.4 swipe up from page a to `page` (page or popup). */
+function mapSetLinked(doc, a, page, popup) {
+  const d = clone(doc);
+  const pg = d.pages[a];
+  pg.linkedPage = page;
+  if (popup) pg.linkedPageMode = "popup"; else delete pg.linkedPageMode;
+  return d;
+}
+/* RF21.4 page a becomes a child of `page` (Back key -> parent; dots group). */
+function mapSetParent(doc, a, page) {
+  const d = clone(doc);
+  d.pages[a].parent = page;
+  return d;
+}
+
 /* RF15.5 removal; null = this connection cannot be removed from the map. */
 function mapRemoveEdge(doc, e) {
   const kind = e.orig || e.kind;
-  if (!e.path || !["tap", "long", "key", "swipe_up", "back", "ha"].includes(kind)) return null;
+  if (!e.path || !["tap", "long", "key", "swipe_up", "back", "ha", "card"].includes(kind)) return null;
   const d = clone(doc);
   if (kind === "key") {
     const parts = e.path.split("/");
@@ -247,11 +259,12 @@ function mapRemoveEdge(doc, e) {
     list.splice(idx, 1);
     return d;
   }
-  const objPath = ["swipe_up", "back", "ha"].includes(kind) ? e.path.split("/").slice(0, -1).join("/") : e.path;
+  const objPath = ["swipe_up", "back", "ha", "card"].includes(kind) ? e.path.split("/").slice(0, -1).join("/") : e.path;
   const o = mapAt(d, objPath);
   if (!o || typeof o !== "object") return null;
   const drop = { tap: ["page", "pageMode"], long: ["page", "pageMode"], swipe_up: ["linkedPage", "linkedPageMode"],
-    back: ["parent", "parentKey"], ha: ["openWhenEntity", "openWhenState", "closeWhenState", "openMode"] }[kind];
+    back: ["parent", "parentKey"], ha: ["openWhenEntity", "openWhenState", "closeWhenState", "openMode"],
+    card: [e.path.split("/").pop()] }[kind];
   for (const k of drop) delete o[k];
   if (kind === "long" && !Object.keys(o).length) delete mapAt(d, e.path.split("/").slice(0, -1).join("/")).long_press;
   return d;
@@ -369,22 +382,18 @@ class NavMap {
     this.fitted = false;
     this.mode = "editor";
     this.sel = null;
-    this.open = mapStore(MAP_STORE.open) !== "0";
-    this.height = parseInt(mapStore(MAP_STORE.height) || "360", 10) || 360;
-    this.root = el("div", { class: "card navmap" });
-    // Preview renderer = the simulator itself, without its own UI (RF13.2)
-    this.preview = new Simulator({ rid: this.rid, remote: opts.remote, doc: opts.doc, preview: true });
-    this.preview.schedule = () => this.schedulePreviews();
-    this.preview.connect();
-    api("GET", `api/remotes/${this.rid}/sim/active`).then((a) => { this.preview.active = a.active || {}; this.drawPreviews(); }).catch(() => {});
+    this.open = true; // RF21.2: the map is the main, full-screen view
+    this.root = el("div", { class: "card navmap navmap-full" });
+    // RF21.3 screens drawn by the remote's own builder renderer (shared with the app)
+    this.snaps = {};
   }
-  close() { this.preview.close(); }
+  close() { this.closed = true; }
 
   /* RF13.6: redraw on every new version; the view (zoom/pan) is kept. */
   setDoc(doc, remote, mode) {
     const changed = doc !== this.doc || remote !== this.remote || mode !== this.mode;
+    if (doc !== this.doc) this.snaps = {}; // new document: draw the screens again
     this.doc = doc; this.remote = remote; this.mode = mode || "editor";
-    this.preview.doc = doc; this.preview.remote = remote;
     if (changed || !this.root.firstChild) this.build();
   }
 
@@ -512,18 +521,14 @@ class NavMap {
     (this.doc.pages || []).forEach((p, i) => walk(p && p.cards, `/pages/${i}/cards`));
     return out;
   }
-  /* DOM element of a grid item in a screen preview (same structure tileAt walks). */
+  /* DOM element of a grid item in a drawn screen (RF21.3 snapshot). */
   tileEl(node, path) {
-    const page = node.querySelector(".sim-page");
-    const parts = path.split("/").slice(4); // after /pages/<p>/cards
-    let elx = page && page.children[+parts[0]];
-    for (let i = 1; elx && i < parts.length; i += 2) {
-      if (parts[i] !== "options") return null;
-      const idx = +parts[i + 2];
-      elx = elx.children[idx];
-      i += 1;
-    }
-    return elx || null;
+    const ne = Object.values(this.nodeEls).find((x) => x.d === node);
+    const root = ne && ne.screen.shadowRoot;
+    if (!root) return null;
+    const p = +node.dataset.p;
+    const hit = acmTiles(root, (this.doc.pages || [])[p], p).find((x) => x.path === path);
+    return hit ? hit.el : null;
   }
 
   /* RF20.5 node size: full screen, or the popup's size for popup-only pages. */
@@ -845,7 +850,7 @@ class NavMap {
   /* Card under a click: previews are display-only (pointer-events: none),
    * so the card is found by geometry among the page's direct children. */
   cardAt(screen, x, y) {
-    const page = screen.querySelector(".sim-page");
+    const page = screen.shadowRoot && screen.shadowRoot.querySelector("#content");
     if (!page) return null;
     const kids = [...page.children];
     for (let i = 0; i < kids.length; i++) {
@@ -860,35 +865,40 @@ class NavMap {
     if (this.previewTimer) return;
     this.previewTimer = setTimeout(() => { this.previewTimer = null; this.drawPreviews(); }, 3000);
   }
+  /* RF21.3: every screen is a static copy drawn by the remote's builder
+   * renderer (one hidden renderer, pages drawn one after the other). */
   drawPreviews() {
-    if (!this.nodeEls || !this.screen || !this.open) { if (this.onPreviews) this.onPreviews(); return; }
-    const sim = this.preview;
-    const th = sim.theme();
+    if (!this.nodeEls || !this.screen || !this.renderer) return;
     const { w, h } = this.screen;
-    const scale = MAP_NODE_W / w;
-    for (const [p, { screen }] of Object.entries(this.nodeEls)) {
-      const page = (this.doc.pages || [])[p];
-      if (!page) continue;
-      // RF20.5: a popup-only page is previewed at its popup size
-      const pp = this.popups && this.popups[p];
-      const pw = pp ? Math.round(w * pp.wf) : w, ph = pp ? Math.round(h * pp.hf) : h;
-      const s = el("div", { class: "sim-screen", style: `width:${pw}px;height:${ph}px;transform:scale(${scale});background:${th.background};color:${th.primaryText};--card:${th.cardSurface};--inset:${th.insetSurface};--ctl:${th.controlBackground};--muted:${th.mutedText};--acc:${th.accent};--amber:${th.amber};--danger:${th.danger};--ok:${th.success}` });
-      try { s.append(sim.renderPage(page, +p, false)); } catch (e) { s.append(el("p", { text: e.message })); }
-      screen.replaceChildren(s);
-    }
-    // RF19.3: tile anchors need the drawn previews: measure, then redraw the links
-    this.measureTiles();
-    this.renderLinks();
-    this.remeasureLater(0);
-    if (this.sel) this.highlight(this.sel);
-    if (this.onPreviews) this.onPreviews(); // RF17 big preview pane
+    const doc = this.doc;
+    const jobs = Object.entries(this.nodeEls).map(async ([p, { screen }]) => {
+      if (!(doc.pages || [])[p]) return;
+      const popup = this.popups && this.popups[p];
+      let snap = this.snaps[p];
+      if (!snap) {
+        try { snap = await this.renderer.snapshot(doc, +p, { w, h, popup }); } catch (e) {
+          screen.replaceChildren(el("p", { class: "navmap-render-err", text: e.message }));
+          return;
+        }
+        if (doc !== this.doc || this.closed) return; // a newer document is being drawn
+        this.snaps[p] = snap;
+      }
+      const node = this.pos["p" + p];
+      this.renderer.mount(screen, snap, node ? node.w : MAP_NODE_W);
+    });
+    Promise.all(jobs).then(() => {
+      if (doc !== this.doc || this.closed) return;
+      // RF19.3: tile anchors need the drawn previews: measure, then redraw the links
+      this.measureTiles();
+      this.renderLinks();
+      this.remeasureLater(0);
+      if (this.sel) this.highlight(this.sel);
+      console.debug(`[acm] map: ${Object.keys(this.snaps).length} screen(s) drawn by the remote's renderer`);
+    });
   }
 
   renderShell() {
-    const toggle = el("button", { class: "icon", title: t("map_toggle"), text: this.open ? "▴" : "▾", onclick: () => {
-      this.open = !this.open; mapStore(MAP_STORE.open, this.open ? "1" : "0"); this.renderShell(); if (this.open) this.drawPreviews();
-    } });
-    const head = el("div", { class: "row navmap-head" }, toggle, el("strong", { text: "🗺 " + t("map_title") }),
+    const head = el("div", { class: "row navmap-head" }, el("strong", { text: "🗺 " + t("map_title") }),
       el("span", { class: "muted", text: this.mode === "simulator" ? t("map_hint_sim") : t("map_hint_editor"),
         title: this.editable() ? t("map_hint_edit") : null }),
       el("span", { class: "spacer" }),
@@ -902,50 +912,11 @@ class NavMap {
       this.open ? el("button", { class: "icon", text: "? " + t("map_legend"), onclick: () => { this.legendOpen = !this.legendOpen; this.renderShell(); } }) : null);
     this.root.replaceChildren(head);
     if (!this.open) return;
-    const vp = el("div", { class: "navmap-viewport", style: `height:${this.height}px` }, this.world);
+    const vp = el("div", { class: "navmap-viewport" }, this.world);
     if (this.legendOpen) vp.append(this.legend());
     this.root.append(vp);
     this.viewport = vp;
     this.bindGestures(vp);
-    // RF13.1: the height follows the drag handle (CSS resize) and is remembered
-    if (this.ro) this.ro.disconnect();
-    this.ro = new ResizeObserver(() => {
-      const hgt = vp.offsetHeight; // border-box: offsetHeight round-trips with style.height (clientHeight lost 2px per load)
-      if (hgt && hgt !== this.height) { this.height = hgt; mapStore(MAP_STORE.height, hgt); }
-    });
-    this.ro.observe(vp);
-    // RF13.1 (2.24): splitter on the border between the map and the lower pane
-    // (Editor / simulator): drag it (or ↑/↓ when focused) to resize both
-    this.root.append(this.splitter(vp));
-  }
-
-  splitter(vp) {
-    const MIN = 160, max = () => Math.round(window.innerHeight * 0.85);
-    const set = (h) => { vp.style.height = `${Math.max(MIN, Math.min(max(), Math.round(h)))}px`; };
-    const bar = el("div", { class: "navmap-splitter", role: "separator", "aria-orientation": "horizontal", tabindex: "0", title: t("map_splitter") },
-      el("span", { class: "navmap-grip" }));
-    bar.addEventListener("pointerdown", (e) => {
-      e.preventDefault();
-      const y0 = e.clientY, h0 = vp.offsetHeight;
-      bar.setPointerCapture(e.pointerId);
-      bar.classList.add("dragging");
-      const move = (ev) => set(h0 + ev.clientY - y0);
-      const up = () => {
-        bar.classList.remove("dragging");
-        bar.removeEventListener("pointermove", move);
-        bar.removeEventListener("pointerup", up);
-        bar.removeEventListener("pointercancel", up);
-        console.debug(`[acm] map height ${vp.clientHeight}px`);
-        if (this.fitted) this.applyView();
-      };
-      bar.addEventListener("pointermove", move);
-      bar.addEventListener("pointerup", up);
-      bar.addEventListener("pointercancel", up);
-    });
-    bar.addEventListener("keydown", (e) => {
-      if (e.key === "ArrowUp" || e.key === "ArrowDown") { e.preventDefault(); set(vp.offsetHeight + (e.key === "ArrowDown" ? 20 : -20)); }
-    });
-    return bar;
   }
 
   /* RF15.6: big "+ New page" / "Delete page" buttons (same as the editor's). */
@@ -956,7 +927,7 @@ class NavMap {
     return [
       el("button", { class: "navmap-big primary", text: "＋ " + t("map_new_page"), onclick: async () => {
         const next = mapAddPage(this.doc, t("page"));
-        await this.onCommit(next);
+        await this.onCommit(next, `ACM: ${t("map_new_page")} ${next.pages[next.pages.length - 1].name}`);
         this.onSelect({ kind: "page", p: next.pages.length - 1 }); // the new page is selected
       } }),
       el("button", { class: "navmap-big danger", text: "🗑 " + t("map_delete_page"), disabled: !cur || pages.length < 2,
@@ -966,7 +937,7 @@ class NavMap {
           const incoming = (this.graph ? this.graph.edges : []).filter((e) => e.to === "p" + p && e.kind !== "swipe" && e.from !== e.to).length;
           if (!(await mapConfirm(t("map_delete_confirm", { name, n: incoming }), false, t("map_remove_btn")))) return;
           const next = mapDeletePage(this.doc, p);
-          if (next) { await this.onCommit(next); this.onSelect({ kind: "page", p: Math.max(0, p - 1) }); }
+          if (next) { await this.onCommit(next, `ACM: ${t("map_delete_page")} ${name}`); this.onSelect({ kind: "page", p: Math.max(0, p - 1) }); }
         } }),
     ];
   }
@@ -1093,49 +1064,38 @@ class NavMap {
     const a = e.target.closest && e.target.closest(".navmap-anchor");
     if (a && (a.dataset.side === "left" || a.dataset.side === "right")) return { kind: "side", p: +a.dataset.p, side: a.dataset.side, el: a };
     if (a && a.dataset.key) return { kind: "key", scope: a.dataset.scope, key: a.dataset.key, el: a };
-    if (a && a.dataset.tile) { // RF19.3: same as dragging the tile itself
-      const item = mapAt(this.doc, a.dataset.tile);
-      const k = +a.dataset.tile.split("/").pop();
-      return { kind: "tile", path: a.dataset.tile, name: (item && item.name) || `#${k + 1}`, el: a, scene: a.dataset.tile.includes("/scenes/") };
+    if (a && a.dataset.tile) { // RF19.3 / RF21.4: page link with this tile preselected
+      return { kind: "page", p: +a.dataset.tile.split("/")[2], el: a, tile: a.dataset.tile };
     }
+    // RF21.4: a drag from a screen's body links that page to the one it is
+    // dropped on (a chooser asks which element); started on a tile, that tile
+    // is preselected
     const node = e.target.closest && e.target.closest(".navmap-node");
     if (node) {
-      const tile = this.tileAt(node, +node.dataset.p, e.clientX, e.clientY);
-      if (tile) return { kind: "tile", ...tile };
+      const p = +node.dataset.p;
+      const tile = this.tileAt(node, p, e.clientX, e.clientY);
+      return { kind: "page", p, el: node, tile: tile ? tile.path : null };
     }
     return null;
   }
 
-  /* Grid tile under a point inside a preview (row cards included) -> JSON path. */
+  /* Grid tile under a point inside a drawn screen (row cards: the nested card) -> JSON path. */
   tileAt(node, p, x, y) {
-    const page = node.querySelector(".sim-page");
-    const cards = ((this.doc.pages || [])[p] || {}).cards || [];
-    if (!page) return null;
+    const ne = this.nodeEls[p];
+    const root = ne && ne.screen.shadowRoot;
+    if (!root) return null;
     const inside = (elx) => { const r = elx.getBoundingClientRect(); return x >= r.left && x <= r.right && y >= r.top && y <= r.bottom; };
-    const walk = (card, elem, path) => {
-      if (!card || !elem) return null;
-      const o = card.options || {};
-      if (card.type === "row") {
-        const kids = [...elem.children];
-        const j = kids.findIndex(inside);
-        return j >= 0 ? walk((o.cards || [])[j], kids[j], `${path}/options/cards/${j}`) : null;
-      }
-      const listKey = { button_grid: "buttons", scene_grid: "scenes" }[card.type];
-      if (!listKey) return null;
-      const kids = [...elem.children];
-      const k = kids.findIndex(inside);
-      const item = (o[listKey] || [])[k];
-      if (k < 0 || !item || typeof item !== "object") return null;
-      return { path: `${path}/options/${listKey}/${k}`, name: item.name || `#${k + 1}`, el: kids[k], scene: listKey === "scenes" };
-    };
-    const kids = [...page.children];
-    const ci = kids.findIndex(inside);
-    return ci >= 0 ? walk(cards[ci], kids[ci], `/pages/${p}/cards/${ci}`) : null;
+    const hit = acmTiles(root, (this.doc.pages || [])[p], p).find((tl) => inside(tl.el));
+    if (!hit) return null;
+    const item = mapAt(this.doc, hit.path) || {};
+    const k = +hit.path.split("/").pop();
+    return { path: hit.path, name: item.name || item.type || `#${k + 1}`, el: hit.el, nested: !!hit.nested };
   }
 
   /* Anchors a link of this kind can be dropped on. */
   dropOk(a, link) {
     const L = link || this.link;
+    if (L && L.kind === "page") return !!(a && a.classList.contains("navmap-node"));
     if (!L || !a.dataset.side) return false;
     if (L.kind === "side") return (a.dataset.side === (L.side === "right" ? "left" : "right")) && +a.dataset.p !== L.p;
     if (L.kind === "key") return a.dataset.side === "bottom";
@@ -1149,7 +1109,7 @@ class NavMap {
       L.started = true;
       vp.setPointerCapture(e.pointerId);
       if (L.el) L.el.classList.add("dragging");
-      this.world.querySelectorAll(".navmap-anchor").forEach((a) => a.classList.toggle("drop-ok", this.dropOk(a)));
+      this.world.querySelectorAll(".navmap-anchor, .navmap-node").forEach((a) => a.classList.toggle("drop-ok", this.dropOk(a)));
       const from = this.toWorld(L.sx, L.sy);
       L.line = svgEl("path", { class: "navmap-drag" });
       L.from = from;
@@ -1158,11 +1118,22 @@ class NavMap {
     const to = this.toWorld(e.clientX, e.clientY);
     L.line.setAttribute("d", `M${L.from.x},${L.from.y} L${to.x},${to.y}`);
     const hit = this.anchorAt(e.clientX, e.clientY);
-    this.world.querySelectorAll(".navmap-anchor.hover").forEach((a) => a.classList.remove("hover"));
+    this.world.querySelectorAll(".navmap-anchor.hover, .navmap-node.hover").forEach((a) => a.classList.remove("hover"));
     if (hit && this.dropOk(hit)) hit.classList.add("hover");
   }
-  anchorAt(x, y) {
+  anchorAt(x, y, link) {
     const els = document.elementsFromPoint(x, y);
+    const L = link || this.link;
+    if (L && L.kind === "page") {
+      // RF21.4: page links drop anywhere on a screen (its anchors included)
+      for (const x2 of els) {
+        const a = x2.closest && x2.closest(".navmap-anchor[data-p]");
+        if (a) return this.nodeEls[a.dataset.p] ? this.nodeEls[a.dataset.p].d : null;
+        const n = x2.closest && x2.closest(".navmap-node");
+        if (n) return n;
+      }
+      return null;
+    }
     return els.map((x2) => x2.closest && x2.closest(".navmap-anchor")).find(Boolean) || null;
   }
   linkEnd(e) {
@@ -1179,8 +1150,8 @@ class NavMap {
     setTimeout(() => { this.moved = false; }, 0);
     if (L.line) L.line.remove();
     if (L.el) L.el.classList.remove("dragging");
-    this.world.querySelectorAll(".navmap-anchor").forEach((a) => a.classList.remove("drop-ok", "hover"));
-    const hit = this.anchorAt(e.clientX, e.clientY);
+    this.world.querySelectorAll(".navmap-anchor, .navmap-node").forEach((a) => a.classList.remove("drop-ok", "hover"));
+    const hit = this.anchorAt(e.clientX, e.clientY, L);
     if (!hit || !this.dropOk(hit, L)) return;
     this.drop(L, +hit.dataset.p).catch((err) => toast(err.message, true));
   }
@@ -1220,7 +1191,7 @@ class NavMap {
     if (L.kind === "side") {
       const after = L.side === "right";
       if ((after && q === L.p + 1) || (!after && q === L.p - 1)) return toast(t("map_already_neighbours"));
-      return this.onCommit(mapMovePage(doc, L.p, q, after));
+      return this.onCommit(mapMovePage(doc, L.p, q, after), `ACM: ${t("map_note_move", { name: doc.pages[L.p].name || "#" + (L.p + 1), target: tname })}`);
     }
     if (L.kind === "key") {
       const scope = L.scope === "p" ? this.keysPageIdx : null;
@@ -1231,18 +1202,37 @@ class NavMap {
       const long = ans.press === "long";
       const old = mapHotkeyOf(doc, scope, L.key, long);
       if (old && !(await mapConfirm(t("map_replace_key", { key: this.hwLabel(L.key), what: hotkeySummary(old) }), false, t("map_replace_btn")))) return;
-      return this.onCommit(mapSetHotkey(doc, scope, L.key, long, tname, ans.open === "popup"));
+      return this.onCommit(mapSetHotkey(doc, scope, L.key, long, tname, ans.open === "popup"),
+        `ACM: ${this.hwLabel(L.key)}${long ? " (" + t("map_long") + ")" : ""} → ${tname}`);
     }
-    const tile = mapAt(doc, L.path);
-    const ans = await mapDialog(t("map_drop_tile_title", { name: L.name, page: tname }),
-      L.scene && tile.activity ? t("map_tile_activity_note") : null, [
-        { name: "press", label: t("map_press"), options: [["tap", t("map_tap")], ["long", t("map_long_tap")]] },
-        { name: "open", label: t("map_open_as"), options: [["page", t("map_as_page")], ["popup", t("map_as_popup")]] }]);
+    if (L.kind === "page") return this.pageLink(L.p, q, L.tile);
+  }
+
+  /* RF21.4 page A dropped on page B: which element of A opens B, and how. */
+  async pageLink(a, q, tilePath) {
+    const doc = this.doc;
+    const pages = doc.pages || [];
+    const from = pages[a] || {}, fname = from.name || `#${a + 1}`, tname = pages[q].name || `#${q + 1}`;
+    const ans = await mapLinkDialog({ doc, a, q, fname, tname, tilePath, hwLabel: (k) => this.hwLabel(k),
+      tiles: this.allTiles().filter((x) => x.startsWith(`/pages/${a}/`)) });
     if (!ans) return;
-    const long = ans.press === "long";
-    const cur = long ? (tile.long_press && (tile.long_press.page || tile.long_press.activity)) : tile.page;
-    if (cur && !(await mapConfirm(t("map_replace_tile", { name: L.name, what: cur }), false, t("map_replace_btn")))) return;
-    return this.onCommit(mapSetTileTarget(doc, L.path, long, tname, ans.open === "popup"));
+    let next = null, what = "";
+    if (ans.kind === "tile") {
+      next = mapSetTileTarget(doc, ans.path, ans.long, tname, ans.popup);
+      const it = mapAt(doc, ans.path) || {};
+      what = `${ans.long ? t("map_long_tap") : t("map_tap")} "${it.name || ans.path.split("/").pop()}"`;
+    } else if (ans.kind === "key") {
+      next = mapSetHotkey(doc, ans.global ? null : a, ans.key, ans.long, tname, ans.popup);
+      what = `${ans.long ? t("map_long") : t("map_short")} ${this.hwLabel(ans.key)}${ans.global ? " (" + t("map_scope_global") + ")" : ""}`;
+    } else if (ans.kind === "swipe_up") {
+      next = mapSetLinked(doc, a, tname, ans.popup);
+      what = t("map_k_swipe_up");
+    } else if (ans.kind === "parent") {
+      next = mapSetParent(doc, a, tname);
+      what = t("map_k_back");
+    }
+    if (!next) return;
+    await this.onCommit(next, `ACM: ${fname} → ${tname} · ${what}${ans.popup ? " ▣" : ""}`);
   }
 
   /* RF15.5: press and hold on a connection. */
@@ -1251,7 +1241,7 @@ class NavMap {
     if (kind === "swipe") return mapConfirm(t("map_swipe_cannot_remove"), true);
     const next = mapRemoveEdge(this.doc, e);
     if (!next) return mapConfirm(t("map_readonly_edge"), true);
-    if (await mapConfirm(t("map_remove_confirm", { what: this.edgeTitle(e) }))) this.onCommit(next);
+    if (await mapConfirm(t("map_remove_confirm", { what: this.edgeTitle(e) }))) this.onCommit(next, `ACM: ${t("map_note_cut")} ${this.edgeTitle(e)}`);
   }
 
   /* ---------- selection (RF13.5) ---------- */
@@ -1282,7 +1272,7 @@ class NavMap {
     if (ne) {
       ne.d.classList.add("sel");
       if (sel.kind === "card") {
-        const page = ne.screen.querySelector(".sim-page");
+        const page = ne.screen.shadowRoot && ne.screen.shadowRoot.querySelector("#content");
         const kid = page && page.children[sel.c];
         if (kid) kid.classList.add("navmap-card-sel");
       }
@@ -1295,7 +1285,72 @@ class NavMap {
   }
 }
 
-/* ---------- RF15 dialogs ---------- */
+/* ---------- RF15 / RF21 dialogs ---------- */
+
+/* RF21.4 Link page A -> page B: choose the element of A and its details.
+ * The current value it would replace is shown next to every choice.
+ * Resolves {kind: "tile"|"key"|"swipe_up"|"parent", path, key, global, long, popup} or null. */
+function mapLinkDialog(o) {
+  const { doc, a, fname, tname } = o;
+  const page = doc.pages[a] || {};
+  const cur = (v) => (v ? `${t("map_now")}: ${v}` : t("map_now_none"));
+  const radio = (v, checked) => el("input", { type: "radio", name: "acm-link-kind", value: v, checked });
+  const sel = (opts, value) => el("select", {}, ...opts.map(([v, l]) => el("option", { value: v, text: l, selected: v === value })));
+  const pressTile = sel([["tap", t("map_tap")], ["long", t("map_long_tap")]]);
+  const pressKey = sel([["short", t("map_short")], ["long", t("map_long")]]);
+  const scope = sel([["page", `${t("map_scope_page")} (${fname})`], ["global", t("map_scope_global")]]);
+  const keys = HW_LAYOUT.flat();
+  const keySel = sel(keys.map((k) => [k, `${HW_LABEL[k] || ""} ${o.hwLabel(k)}`]));
+  const openAs = sel([["page", t("map_as_page")], ["popup", t("map_as_popup")]]);
+  // tiles of A (nested row cards included); a drag started on a row's nested card picks its first tile
+  const tiles = o.tiles;
+  const pre = o.tilePath ? (tiles.find((x) => x === o.tilePath) || tiles.find((x) => x.startsWith(o.tilePath + "/"))) : null;
+  const tileName = (path) => { const it = mapAt(doc, path) || {}; return it.name || `${path.includes("/scenes/") ? "scene" : "button"} #${+path.split("/").pop() + 1}`; };
+  const tileSel = sel(tiles.map((x) => [x, tileName(x)]), pre || tiles[0]);
+  const tileNow = el("span", { class: "muted" }), keyNow = el("span", { class: "muted" });
+  const upd = () => {
+    const it = tiles.length ? mapAt(doc, tileSel.value) || {} : {};
+    const lp = it.long_press || {};
+    const act = (id) => { const x = (doc.activities || []).find((y) => y.id === id); return x ? `🎬 ${x.name || id}` : null; };
+    tileNow.textContent = cur(pressTile.value === "long" ? (lp.page || act(lp.activity)) : (act(it.activity) || it.page));
+    const owner = scope.value === "global" ? doc : page;
+    const list = (owner[pressKey.value === "long" ? "longHotkeys" : "hotkeys"] || []);
+    const hk = list.find((h) => h && hwKey(h.key) === keySel.value);
+    keyNow.textContent = cur(hk ? hotkeySummary(hk) : null);
+  };
+  [pressTile, tileSel, pressKey, scope, keySel].forEach((x) => x.addEventListener("change", upd));
+  const kinds = [
+    tiles.length ? el("fieldset", {}, el("legend", {}, el("label", { class: "row" }, radio("tile", !!pre || tiles.length > 0), "👆 " + t("map_link_tile"))),
+      el("div", { class: "row" }, tileSel, pressTile), tileNow) : el("p", { class: "muted", text: t("map_link_no_tiles") }),
+    el("fieldset", {}, el("legend", {}, el("label", { class: "row" }, radio("key", !tiles.length), "🎛 " + t("map_link_key"))),
+      el("div", { class: "row" }, keySel, pressKey, scope), keyNow),
+    el("fieldset", {}, el("legend", {}, el("label", { class: "row" }, radio("swipe_up", false), "☝️ " + t("map_k_swipe_up"))),
+      el("span", { class: "muted", text: cur(page.linkedPage ? `${page.linkedPage}${page.linkedPageMode === "popup" ? " ▣" : ""}` : null) })),
+    el("fieldset", {}, el("legend", {}, el("label", { class: "row" }, radio("parent", false), "↩ " + t("map_link_parent", { name: tname }))),
+      el("span", { class: "muted", text: cur(page.parent) })),
+  ];
+  upd();
+  return new Promise((resolve) => {
+    const dlg = el("dialog", { class: "navmap-dialog navmap-link-dialog" },
+      el("h3", { text: t("map_link_title", { from: fname, to: tname }) }),
+      el("p", { class: "muted", text: t("map_link_hint") }), ...kinds,
+      el("div", { class: "row" }, el("label", { text: t("map_open_as") }), openAs));
+    const done = (v) => { dlg.close(); dlg.remove(); resolve(v); };
+    dlg.append(el("div", { class: "row" }, el("span", { class: "spacer" }),
+      el("button", { text: t("cancel"), onclick: () => done(null) }),
+      el("button", { class: "primary", text: t("map_link_btn"), onclick: () => {
+        const kind = (dlg.querySelector("input[name=acm-link-kind]:checked") || {}).value;
+        if (!kind) return;
+        const popup = openAs.value === "popup";
+        if (kind === "tile") done({ kind, path: tileSel.value, long: pressTile.value === "long", popup });
+        else if (kind === "key") done({ kind, key: keySel.value, long: pressKey.value === "long", global: scope.value === "global", popup });
+        else done({ kind, popup: kind === "swipe_up" && popup });
+      } })));
+    dlg.addEventListener("cancel", () => done(null));
+    document.body.append(dlg);
+    dlg.showModal();
+  });
+}
 
 /* Short summary of what a hotkey does (replace confirmation). */
 /* Whether a hotkey opens a page/overlay (= has a link on the map). */
@@ -1351,78 +1406,4 @@ function mapConfirm(text, infoOnly, okLabel) {
     document.body.append(dlg);
     dlg.showModal();
   });
-}
-
-/* ---------- RF17 big preview pane (Editor tab, left) ---------- */
-
-/* A large, live picture of the screen selected in the editor, drawn by the
- * map's preview renderer (same live states). Clicking a card opens its form
- * (nothing is executed). Resizable by its right edge, hideable; width and
- * visibility are remembered in the browser. */
-class BigPreview {
-  /* opts: {map: NavMap, onSelect(target)} */
-  constructor(opts) {
-    Object.assign(this, opts);
-    this.open = mapStore("acm-bigprev-open") !== "0";
-    this.width = Math.min(520, Math.max(220, parseInt(mapStore("acm-bigprev-w") || "320", 10) || 320));
-    this.sel = null;
-    this.root = el("aside", { class: "bigprev" });
-    this.map.onPreviews = () => this.draw(); // refreshed together with the map's previews
-  }
-
-  setSel(sel) { this.sel = sel; this.draw(); }
-
-  page() {
-    const pages = (this.map.doc && this.map.doc.pages) || [];
-    const p = this.sel && Number.isInteger(this.sel.p) ? this.sel.p : 0;
-    return pages[p] ? { page: pages[p], p } : null;
-  }
-
-  draw() {
-    if (!this.open) {
-      this.root.className = "bigprev closed";
-      this.root.style.width = "";
-      this.root.replaceChildren(el("button", { class: "bigprev-tab", title: t("bigprev_show"), text: "▸ " + t("bigprev_title"),
-        onclick: () => { this.open = true; mapStore("acm-bigprev-open", "1"); this.draw(); } }));
-      return;
-    }
-    this.root.className = "bigprev card";
-    this.root.style.width = `${this.width}px`;
-    const cur = this.page();
-    const head = el("div", { class: "row bigprev-head" }, el("strong", { text: cur ? `${cur.p + 1}. ${cur.page.name || ""}` : t("bigprev_title") }),
-      el("span", { class: "spacer" }),
-      el("button", { class: "icon", title: t("bigprev_hide"), text: "◂", onclick: () => { this.open = false; mapStore("acm-bigprev-open", "0"); this.draw(); } }));
-    if (!cur) { this.root.replaceChildren(head, el("p", { class: "muted", text: t("empty_list") })); return; }
-    const sim = this.map.preview;
-    const r = this.map.remote || {};
-    let w = r.width || 480, h = r.height || 800;
-    if (((r.orientation || "portrait") === "portrait") !== (h >= w)) [w, h] = [h, w];
-    const inner = this.width - 26;
-    const scale = inner / w;
-    const th = sim.theme();
-    const screen = el("div", { class: "sim-screen", style: `width:${w}px;height:${h}px;transform:scale(${scale});background:${th.background};color:${th.primaryText};--card:${th.cardSurface};--inset:${th.insetSurface};--ctl:${th.controlBackground};--muted:${th.mutedText};--acc:${th.accent};--amber:${th.amber};--danger:${th.danger};--ok:${th.success}` });
-    try { screen.append(sim.renderPage(cur.page, cur.p, false)); } catch (e) { screen.append(el("p", { text: e.message })); }
-    const frame = el("div", { class: "bigprev-screen", style: `width:${inner}px;height:${Math.round(h * scale)}px`, title: t("bigprev_hint") }, screen);
-    frame.addEventListener("click", (ev) => {
-      const c = this.map.cardAt(frame, ev.clientX, ev.clientY);
-      this.onSelect(c !== null ? { kind: "card", p: cur.p, c } : { kind: "page", p: cur.p });
-    });
-    if (this.sel && this.sel.kind === "card") {
-      const kid = screen.querySelector(".sim-page") && screen.querySelector(".sim-page").children[this.sel.c];
-      if (kid) kid.classList.add("navmap-card-sel");
-    }
-    this.root.replaceChildren(head, frame, el("div", { class: "muted bigprev-foot", text: t("bigprev_hint") }));
-    // RF17: width follows the drag handle (CSS resize) and is remembered
-    if (!this.ro) {
-      this.ro = new ResizeObserver(() => {
-        const nw = Math.round(this.root.getBoundingClientRect().width);
-        if (this.open && nw && Math.abs(nw - this.width) > 4) {
-          this.width = Math.min(520, Math.max(220, nw));
-          mapStore("acm-bigprev-w", this.width);
-          clearTimeout(this.rt); this.rt = setTimeout(() => this.draw(), 120);
-        }
-      });
-      this.ro.observe(this.root);
-    }
-  }
 }

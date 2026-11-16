@@ -12,7 +12,7 @@ vm.createContext(ctx);
 const src = fs.readFileSync(path.join(__dirname, "../astrion_config_manager/app/acm/static/map.js"), "utf8");
 // only the pure part (graph model + document changes), before the DOM view
 vm.runInContext(src.split("/* ---------- view ---------- */")[0] +
-  "\nthis.api = {buildNavGraph, mapAddPage, mapDeletePage, mapMovePage, mapSetHotkey, mapHotkeyOf, mapSetTileTarget, mapRemoveEdge, mapAt, mapPopupPages, mapParentOf, mapHierarchyLayout};", ctx);
+  "\nthis.api = {buildNavGraph, mapAddPage, mapDeletePage, mapMovePage, mapSetHotkey, mapHotkeyOf, mapSetTileTarget, mapRemoveEdge, mapAt, mapPopupPages, mapParentOf, mapHierarchyLayout, mapSetLinked, mapSetParent};", ctx);
 const M = ctx.api;
 
 const doc = {
@@ -129,5 +129,21 @@ eq(L.Pop, { x: 360, y: 0 });
 // parent cycles do not loop
 const cyc = { pages: [{ name: "A", parent: "B" }, { name: "B", parent: "A" }] };
 eq(Object.keys(M.mapHierarchyLayout(cyc, () => ({ w: 10, h: 10 }), 5, 5)).sort(), ["A", "B"]);
+
+// ---------- RF21.4 page links (3.0) ----------
+const ldoc = { pages: [{ name: "A", cards: [{ type: "media_remote", options: { entity: "media_player.x", details_page: "B" } }] }, { name: "B" }] };
+let lg = M.buildNavGraph(ldoc, hw);
+const card = lg.edges.find((e) => e.kind === "card");
+assert(card && card.to === "p1" && card.popup && card.path === "/pages/0/cards/0/options/details_page");
+const cut = M.mapRemoveEdge(ldoc, card);
+assert(cut && !("details_page" in cut.pages[0].cards[0].options) && cut.pages[0].cards[0].options.entity === "media_player.x");
+const sl = M.mapSetLinked(ldoc, 0, "B", true);
+assert(sl.pages[0].linkedPage === "B" && sl.pages[0].linkedPageMode === "popup" && !("linkedPage" in ldoc.pages[0]));
+const sl2 = M.mapSetLinked(sl, 0, "B", false);
+assert(!("linkedPageMode" in sl2.pages[0]));
+const sp = M.mapSetParent(ldoc, 1, "A");
+assert(sp.pages[1].parent === "A");
+lg = M.buildNavGraph(sp, hw);
+assert(lg.edges.some((e) => e.kind === "back" && e.from === "p1" && e.to === "p0"));
 
 console.log("map mutations: ok");
